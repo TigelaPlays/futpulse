@@ -95,29 +95,29 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
       : targets?.stadiums;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
       <div
-        className="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up"
+        className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabeçalho */}
-        <div className="p-4 border-b border-[#30363d] flex items-center justify-between bg-[#1c2128]">
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/90">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-2xs">
               <Upload className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-100">
+              <h2 className="text-sm font-bold text-slate-900">
                 Gerenciador de Ativos & Escudos (Convex CDN)
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Armazenamento nativo do Convex com CDN global ultra rápida
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -127,7 +127,7 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
         <div className="p-5 space-y-4 text-xs">
           {/* Categoria */}
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">
+            <label className="block text-slate-700 font-semibold mb-1.5">
               Tipo de Ativo
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -147,8 +147,8 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
                   }}
                   className={`py-2 px-3 rounded-lg border font-semibold transition-all cursor-pointer text-center ${
                     category === tab.id
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-sm"
-                      : "bg-[#0d1117] text-slate-400 border-[#30363d] hover:text-slate-200"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
+                      : "bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
                   {tab.label}
@@ -159,7 +159,7 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
 
           {/* Nome / Seleção do Destino */}
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">
+            <label className="block text-slate-700 font-semibold mb-1.5">
               Nome do {category === "teams" ? "Time" : category === "leagues" ? "Campeonato" : "Estádio"}
             </label>
             <div className="relative">
@@ -168,20 +168,20 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
                 value={targetName}
                 onChange={(e) => setTargetName(e.target.value)}
                 placeholder={`Digite ou selecione (ex: ${category === "teams" ? "Vila Nova" : category === "leagues" ? "Brasileirão Série B" : "Maracanã"})...`}
-                className="w-full bg-[#0d1117] border border-[#30363d] focus:border-emerald-500 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none"
+                className="w-full bg-white border border-slate-200 focus:border-emerald-500 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
               />
 
               {/* Sugestões rápidas */}
               {currentList && currentList.length > 0 && !targetName && (
-                <div className="mt-2 max-h-28 overflow-y-auto no-scrollbar border border-[#21262d] rounded-lg bg-[#0d1117] p-1 space-y-1">
-                  <p className="text-[10px] text-slate-500 px-2 py-0.5">Sugestões salvas no banco:</p>
+                <div className="mt-2 max-h-28 overflow-y-auto no-scrollbar border border-slate-200 rounded-lg bg-slate-50 p-1.5 space-y-1">
+                  <p className="text-[10px] text-slate-500 px-1 py-0.5 font-medium">Sugestões salvas no banco:</p>
                   <div className="flex flex-wrap gap-1">
                     {currentList.slice(0, 12).map((item: { id: string; name: string }) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => setTargetName(item.name)}
-                        className="text-[10px] px-2 py-0.5 rounded bg-[#21262d] text-slate-300 hover:text-white hover:bg-emerald-600 transition-colors"
+                        className="text-[10px] px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 hover:text-white hover:bg-emerald-600 transition-colors shadow-2xs"
                       >
                         {item.name}
                       </button>
@@ -194,7 +194,7 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
 
           {/* Área de Seleção de Arquivo */}
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">
+            <label className="block text-slate-700 font-semibold mb-1.5">
               Arquivo de Imagem (PNG, JPG, WEBP, SVG)
             </label>
             <input
@@ -207,11 +207,11 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
             />
             <label
               htmlFor="asset-file-input"
-              className="border-2 border-dashed border-[#30363d] hover:border-emerald-500/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer bg-[#0d1117]/50 hover:bg-[#0d1117] transition-all"
+              className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer bg-slate-50/70 hover:bg-slate-50 transition-all"
             >
               {previewUrl ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-white/90 p-1 flex items-center justify-center shadow-md">
+                  <div className="w-12 h-12 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs border border-slate-200">
                     <img
                       src={previewUrl}
                       alt="Preview"
@@ -219,18 +219,18 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
                     />
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold text-slate-200 truncate max-w-[220px]">
+                    <p className="font-semibold text-slate-900 truncate max-w-[220px]">
                       {selectedFile?.name}
                     </p>
-                    <p className="text-[10px] text-emerald-400">
+                    <p className="text-[10px] text-emerald-700 font-medium">
                       {(selectedFile?.size ? selectedFile.size / 1024 : 0).toFixed(1)} KB • Clique para trocar
                     </p>
                   </div>
                 </div>
               ) : (
                 <>
-                  <ImageIcon className="w-8 h-8 text-slate-500" />
-                  <span className="text-slate-400 font-medium">
+                  <ImageIcon className="w-8 h-8 text-slate-400" />
+                  <span className="text-slate-600 font-medium">
                     Clique para selecionar um arquivo do seu computador
                   </span>
                 </>
@@ -243,25 +243,25 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
             <div
               className={`p-3 rounded-lg border flex items-center gap-2 animate-fade-in ${
                 feedback.type === "success"
-                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-                  : "bg-rose-500/10 text-rose-300 border-rose-500/30"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : "bg-rose-50 text-rose-800 border-rose-200"
               }`}
             >
               {feedback.type === "success" ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               )}
               <span>{feedback.message}</span>
             </div>
           )}
 
           {/* Botão de Envio */}
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#30363d]">
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-[#30363d] text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               Fechar
             </button>
@@ -269,10 +269,10 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
               type="button"
               onClick={handleUpload}
               disabled={isUploading || !selectedFile || !targetName.trim()}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-slate-950 transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-white transition-all cursor-pointer ${
                 isUploading || !selectedFile || !targetName.trim()
-                  ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                  : "bg-emerald-500 hover:bg-emerald-400 shadow-md active:scale-95"
+                  ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-700 shadow-xs active:scale-95"
               }`}
             >
               <Upload className={`w-4 h-4 ${isUploading ? "animate-bounce" : ""}`} />

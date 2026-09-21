@@ -155,19 +155,19 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
   };
 
   const renderFormPills = (formString?: string) => {
-    if (!formString) return <span className="text-slate-600">-</span>;
+    if (!formString) return <span className="text-slate-400">-</span>;
     // Pega até os últimos 5 jogos
     const chars = formString.slice(-5).split("");
 
     return (
-      <div className="inline-flex items-center gap-1 bg-[#21262d]/70 rounded-full px-2 py-0.5">
+      <div className="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5 border border-slate-200">
         {chars.map((char, index) => {
           const upper = char.toUpperCase();
           if (upper === "W" || upper === "V") {
             return (
               <span
                 key={index}
-                className="w-4 h-4 rounded bg-[#107c41] text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
+                className="w-4 h-4 rounded bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
                 title="Vitória"
               >
                 W
@@ -178,7 +178,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
             return (
               <span
                 key={index}
-                className="w-4 h-4 rounded bg-[#70757a] text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
+                className="w-4 h-4 rounded bg-slate-400 text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
                 title="Empate"
               >
                 D
@@ -188,7 +188,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
           return (
             <span
               key={index}
-              className="w-4 h-4 rounded bg-[#d93025] text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
+              className="w-4 h-4 rounded bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
               title="Derrota"
             >
               L
@@ -200,25 +200,25 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
   };
 
   return (
-    <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-lg animate-fade-in">
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs animate-fade-in">
       {/* Cabeçalho da Classificação */}
-      <div className="p-4 border-b border-[#30363d] flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#1c2128] to-[#161b22]">
+      <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/80">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-2xs">
             <Trophy className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               Tabela de Classificação
-              <span className="text-xs font-normal text-slate-400">• {leagueName}</span>
+              <span className="text-xs font-normal text-slate-500">• {leagueName}</span>
             </h2>
-            <p className="text-[11px] text-slate-400">Classificação atualizada sob demanda</p>
+            <p className="text-[11px] text-slate-500">Classificação atualizada sob demanda</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {syncFeedback && (
-            <span className="text-xs font-medium text-emerald-400 animate-fade-in">
+            <span className="text-xs font-semibold text-emerald-700 animate-fade-in px-2.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
               {syncFeedback}
             </span>
           )}
@@ -228,8 +228,8 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
             disabled={isSyncing}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
               isSyncing
-                ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
-                : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 active:scale-95"
+                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 active:scale-95 shadow-2xs"
             }`}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
@@ -239,14 +239,14 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
       </div>
 
       {/* Sub-navegação Sofascore: Todos | Casa | Fora */}
-      <div className="px-4 py-2.5 border-b border-[#30363d]/60 bg-[#0d1117]/40 flex items-center justify-center">
-        <div className="inline-flex items-center p-0.5 rounded-xl bg-[#21262d]/70 border border-[#30363d]">
+      <div className="px-4 py-2.5 border-b border-slate-200/80 bg-slate-50/40 flex items-center justify-center">
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200">
           <button
             onClick={() => setTableFilter("all")}
             className={`px-4 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               tableFilter === "all"
-                ? "bg-[#0d1117] text-white shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-white text-slate-950 font-bold shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Todos
@@ -255,8 +255,8 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
             onClick={() => setTableFilter("home")}
             className={`px-4 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               tableFilter === "home"
-                ? "bg-[#0d1117] text-white shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-white text-slate-950 font-bold shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Casa
@@ -265,8 +265,8 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
             onClick={() => setTableFilter("away")}
             className={`px-4 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               tableFilter === "away"
-                ? "bg-[#0d1117] text-white shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-white text-slate-950 font-bold shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Fora
@@ -276,14 +276,14 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
 
       {/* Tabela */}
       {standings === undefined ? (
-        <div className="flex justify-center items-center py-20 text-slate-400 gap-2">
-          <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
+          <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-xs">Carregando classificação...</span>
         </div>
       ) : standings.length === 0 ? (
         <div className="text-center py-16 px-4 space-y-3">
-          <AlertCircle className="w-8 h-8 text-slate-500 mx-auto" />
-          <p className="text-sm text-slate-300 font-medium">
+          <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+          <p className="text-sm text-slate-700 font-medium">
             Nenhuma classificação salva para esta competição ainda.
           </p>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -292,7 +292,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-semibold text-xs hover:bg-emerald-400 transition-colors cursor-pointer"
+            className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition-colors cursor-pointer shadow-xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
             {isSyncing ? "Buscando..." : "Buscar Classificação Agora"}
@@ -302,7 +302,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left border-collapse text-xs min-w-[580px]">
             <thead>
-              <tr className="border-b border-[#30363d] bg-[#0d1117]/60 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+              <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                 <th className="py-2.5 pl-3 pr-2 text-center w-10">#</th>
                 <th className="py-2.5 px-3 min-w-[170px]">Clube</th>
                 <th className="py-2.5 px-2 text-center w-9" title="Partidas Jogadas">
@@ -329,12 +329,12 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                 <th className="py-2.5 px-3 text-center hidden md:table-cell min-w-[130px]">
                   Últimos 5
                 </th>
-                <th className="py-2.5 px-3 text-center w-12 font-bold text-slate-200">
+                <th className="py-2.5 px-3 text-center w-12 font-bold text-slate-900">
                   PTS
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#21262d]/60 font-medium">
+            <tbody className="divide-y divide-slate-100 font-medium">
               {standings.map((row) => {
                 const totalTeams = standings.length;
                 const zone = getZoneInfo(row.rank, totalTeams, leagueName, row.description);
@@ -343,10 +343,10 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                   <Fragment key={row._id}>
                     {/* Header de Zona de Classificação (Promoção, Play-off, Rebaixamento) */}
                     {zone.label && (
-                      <tr className="bg-[#0d1117]/50 border-t border-[#30363d]/40">
+                      <tr className="bg-slate-50/80 border-t border-slate-200/60">
                         <td
                           colSpan={10}
-                          className="py-1.5 pl-4 pr-3 text-[11px] font-medium text-slate-400"
+                          className="py-1.5 pl-4 pr-3 text-[11px] font-semibold text-slate-600"
                         >
                           {zone.label}
                         </td>
@@ -354,13 +354,13 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                     )}
 
                     {/* Linha do Time */}
-                    <tr className="hover:bg-[#21262d]/40 transition-colors group">
+                    <tr className="hover:bg-slate-50/90 transition-colors group bg-white">
                       {/* Posição com Barra Lateral Colorida Sofascore */}
                       <td
                         className={`py-2.5 pl-2.5 pr-1.5 text-center border-l-[3px] ${zone.borderColor}`}
                       >
                         <div className="flex items-center justify-center gap-1">
-                          <span className="text-xs font-semibold text-slate-300 w-4 text-right">
+                          <span className="text-xs font-semibold text-slate-700 w-4 text-right">
                             {row.rank}
                           </span>
                           {renderRankMovement(row.rank, row.previousRank)}
@@ -371,7 +371,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-2.5">
                           {row.team?.logoUrl ? (
-                            <div className="w-5 h-5 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                            <div className="w-5 h-5 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 shadow-2xs border border-slate-200">
                               <img
                                 src={row.team.logoUrl}
                                 alt={row.team.name}
@@ -380,43 +380,43 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                               />
                             </div>
                           ) : (
-                            <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] text-slate-400 font-bold shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] text-slate-600 font-bold shrink-0">
                               {row.team?.name?.charAt(0) || "T"}
                             </div>
                           )}
-                          <span className="font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors truncate max-w-[140px] sm:max-w-[200px]">
+                          <span className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors truncate max-w-[140px] sm:max-w-[200px]">
                             {row.team?.name ?? "Time"}
                           </span>
                         </div>
                       </td>
 
                       {/* Partidas (P) */}
-                      <td className="py-2.5 px-2 text-center text-slate-300">
+                      <td className="py-2.5 px-2 text-center text-slate-700">
                         {row.played}
                       </td>
 
                       {/* Vitórias (W) */}
-                      <td className="py-2.5 px-2 text-center text-slate-300">
+                      <td className="py-2.5 px-2 text-center text-slate-700">
                         {row.win}
                       </td>
 
                       {/* Empates (D) */}
-                      <td className="py-2.5 px-2 text-center text-slate-400">
+                      <td className="py-2.5 px-2 text-center text-slate-500">
                         {row.draw}
                       </td>
 
                       {/* Derrotas (L) */}
-                      <td className="py-2.5 px-2 text-center text-slate-400">
+                      <td className="py-2.5 px-2 text-center text-slate-500">
                         {row.lose}
                       </td>
 
                       {/* Saldo de Gols (DIFF) */}
-                      <td className="py-2.5 px-2.5 text-center font-semibold text-slate-300">
+                      <td className="py-2.5 px-2.5 text-center font-semibold text-slate-800">
                         {row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}
                       </td>
 
                       {/* Gols Pró:Contra (GLS) */}
-                      <td className="py-2.5 px-2.5 text-center text-slate-400 tracking-tight">
+                      <td className="py-2.5 px-2.5 text-center text-slate-500 tracking-tight">
                         {row.goalsFor ?? 0}:{row.goalsAgainst ?? 0}
                       </td>
 
@@ -426,7 +426,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                       </td>
 
                       {/* Pontos (PTS) - Coluna Destacada à Direita */}
-                      <td className="py-2.5 px-3 text-center font-bold text-slate-100 text-sm">
+                      <td className="py-2.5 px-3 text-center font-bold text-slate-950 text-sm">
                         {row.points}
                       </td>
                     </tr>
@@ -440,7 +440,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
 
       {/* Legenda de Zonas */}
       {standings && standings.length > 0 && (
-        <div className="p-3 bg-[#0d1117]/80 border-t border-[#30363d] flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
+        <div className="p-3 bg-slate-50/90 border-t border-slate-200 flex flex-wrap items-center gap-4 text-[11px] text-slate-600 font-medium">
           {isSerieB ? (
             <>
               <div className="flex items-center gap-1.5">

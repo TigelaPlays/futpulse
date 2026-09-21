@@ -62,8 +62,8 @@ export function LiveMatchClock({
   // Se estiver no intervalo ou pausado
   if (statusShort === "HT" || status === "PAUSED") {
     return (
-      <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full shadow-sm">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+      <div className="flex items-center gap-1.5 text-amber-800 font-bold text-xs bg-amber-50 border border-amber-300/80 px-2.5 py-0.5 rounded-full shadow-2xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
         <span>Intervalo</span>
       </div>
     );
@@ -74,15 +74,15 @@ export function LiveMatchClock({
   const formattedSeconds = seconds.toString().padStart(2, "0");
 
   return (
-    <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-bold text-xs bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20">
+    <div className="flex items-center gap-1.5 text-emerald-800 font-mono font-bold text-xs bg-emerald-50 border border-emerald-300/80 px-2.5 py-0.5 rounded-full shadow-2xs ring-1 ring-emerald-400/20">
       <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
       </span>
       <span className="tabular-nums">
         {minutes}:{formattedSeconds}
       </span>
-      <span className="text-[10px] text-emerald-300/80 font-sans font-semibold uppercase">
+      <span className="text-[10px] text-emerald-700 font-sans font-semibold uppercase">
         {statusShort}
       </span>
     </div>

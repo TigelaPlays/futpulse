@@ -225,166 +225,317 @@ export default function App() {
     const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
       match.status
     );
+    const isFinished = match.status === "FINISHED";
+    const homeWon = isFinished && match.homeScore > match.awayScore;
+    const awayWon = isFinished && match.awayScore > match.homeScore;
 
     return (
       <div
         key={isFavoriteBlock ? `fav-${match._id}` : match._id}
         onClick={() => setSelectedMatchId(match._id)}
-        className="p-4 hover:bg-[#1f242c]/70 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
+        className="p-3 sm:p-3.5 hover:bg-slate-50/90 transition-colors border-b border-slate-100 last:border-b-0 cursor-pointer"
       >
-        {/* Minuto / Relógio Dinâmico + Favorito */}
-        <div className="flex items-center md:w-36 gap-2">
-          {/* Botão de Favorito */}
-          <button
-            onClick={(e) => toggleFavorite(e, match._id)}
-            className="p-1 text-slate-500 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
-            title={favoriteMatchIds.includes(match._id) ? "Remover dos favoritos" : "Favoritar partida"}
-          >
-            <Star
-              className={`w-4 h-4 ${
-                favoriteMatchIds.includes(match._id)
-                  ? "fill-amber-400 text-amber-400"
-                  : "text-slate-600 hover:text-slate-400"
-              }`}
-            />
-          </button>
+        {/* Layout Desktop / Tablet (md e acima): 3 Zonas Estritamente Simétricas [140px | 1fr | 140px] */}
+        <div className="hidden md:grid grid-cols-[140px_1fr_140px] items-center gap-3">
+          {/* Asa Esquerda (140px): Favorito + Relógio/Status */}
+          <div className="flex items-center gap-2 min-w-0 justify-start">
+            <button
+              onClick={(e) => toggleFavorite(e, match._id)}
+              className="p-1 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer shrink-0"
+              title={favoriteMatchIds.includes(match._id) ? "Remover dos favoritos" : "Favoritar partida"}
+            >
+              <Star
+                className={`w-4 h-4 ${
+                  favoriteMatchIds.includes(match._id)
+                    ? "fill-amber-400 text-amber-500"
+                    : "text-slate-300 hover:text-slate-500"
+                }`}
+              />
+            </button>
 
-          {isLive ? (
-            <LiveMatchClock
-              initialMinute={match.minute}
-              status={match.status}
-              statusShort={match.statusShort}
-              updatedAt={match.elapsedSecondsUpdatedAt ?? match._creationTime}
-            />
-          ) : match.status === "POSTPONED" ? (
-            <span className="text-xs font-semibold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2 py-1 rounded-md">
-              Adiado
-            </span>
-          ) : match.status === "FINISHED" ? (
-            <span className="text-xs font-semibold text-slate-400 bg-slate-800/80 px-2 py-1 rounded-md">
-              Encerrado
-            </span>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <Clock className="w-3.5 h-3.5" />
-              <span>
-                {new Date(match.startTime).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+            {isLive ? (
+              <LiveMatchClock
+                initialMinute={match.minute}
+                status={match.status}
+                statusShort={match.statusShort}
+                updatedAt={match.elapsedSecondsUpdatedAt ?? match._creationTime}
+              />
+            ) : match.status === "POSTPONED" ? (
+              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md shadow-2xs">
+                Adiado
+              </span>
+            ) : isFinished ? (
+              <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs">
+                Fim
+              </span>
+            ) : (
+              <div className="flex items-center gap-1 text-xs text-slate-600 font-medium bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>
+                  {new Date(match.startTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Zona Central (1fr): Confronto 100% Centralizado matematicamente */}
+          <div className="flex items-center justify-center w-full max-w-xl mx-auto min-w-0 px-2">
+            {/* Mandante (50% do espaço, alinhado à direita) */}
+            <div className="flex-1 flex items-center justify-end gap-2.5 min-w-0 text-right">
+              <span
+                className={`text-sm truncate transition-colors ${
+                  homeWon
+                    ? "font-bold text-slate-950"
+                    : isFinished
+                    ? "font-normal text-slate-500"
+                    : "font-semibold text-slate-800"
+                }`}
+                title={match.homeTeam?.name}
+              >
+                {match.homeTeam?.name}
+              </span>
+              {match.homeTeam?.logoUrl ? (
+                <img
+                  src={match.homeTeam.logoUrl}
+                  alt={match.homeTeam?.name ?? "Mandante"}
+                  className="w-6 h-6 object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                  {match.homeTeam?.name?.charAt(0) ?? "M"}
+                </div>
+              )}
+            </div>
+
+            {/* Placar Central (Largura Fixa de 80px para ancorar a simetria de todas as linhas) */}
+            <div className="w-20 shrink-0 flex justify-center items-center px-1">
+              {match.status === "SCHEDULED" ? (
+                <span className="text-[11px] text-slate-500 font-bold tracking-widest px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
+                  VS
+                </span>
+              ) : (
+                <div
+                  className={`w-16 py-0.5 rounded-lg font-mono tabular-nums font-bold text-sm flex items-center justify-center gap-1 shadow-2xs border transition-all ${
+                    isLive
+                      ? "bg-emerald-600 border-emerald-700 text-white shadow-xs"
+                      : "bg-slate-100 border-slate-200 text-slate-900"
+                  }`}
+                >
+                  <span>{match.homeScore}</span>
+                  <span className={`${isLive ? "text-emerald-200" : "text-slate-400"} font-sans text-xs`}>-</span>
+                  <span>{match.awayScore}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Visitante (50% do espaço, alinhado à esquerda) */}
+            <div className="flex-1 flex items-center justify-start gap-2.5 min-w-0 text-left">
+              {match.awayTeam?.logoUrl ? (
+                <img
+                  src={match.awayTeam.logoUrl}
+                  alt={match.awayTeam?.name ?? "Visitante"}
+                  className="w-6 h-6 object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                  {match.awayTeam?.name?.charAt(0) ?? "V"}
+                </div>
+              )}
+              <span
+                className={`text-sm truncate transition-colors ${
+                  awayWon
+                    ? "font-bold text-slate-950"
+                    : isFinished
+                    ? "font-normal text-slate-500"
+                    : "font-semibold text-slate-800"
+                }`}
+                title={match.awayTeam?.name}
+              >
+                {match.awayTeam?.name}
               </span>
             </div>
-          )}
-          <span className="text-xs text-slate-500 hidden sm:inline truncate">
-            • {isFavoriteBlock ? (match.league?.name || match.round) : match.round}
-          </span>
-        </div>
-
-        {/* Confronto e Placar */}
-        <div className="flex-1 grid grid-cols-7 items-center max-w-lg mx-auto w-full">
-          {/* Mandante */}
-          <div className="col-span-3 flex items-center justify-end gap-2.5 text-right">
-            <span
-              className={`text-sm truncate transition-colors ${
-                match.status === "FINISHED" && match.homeScore > match.awayScore
-                  ? "font-bold text-slate-100"
-                  : match.status === "FINISHED"
-                  ? "font-medium text-slate-400"
-                  : "font-semibold text-slate-200"
-              }`}
-            >
-              {match.homeTeam?.name}
-            </span>
-            {match.homeTeam?.logoUrl ? (
-              <img
-                src={match.homeTeam.logoUrl}
-                alt={match.homeTeam?.name ?? "Mandante"}
-                className="w-6 h-6 object-contain shrink-0"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#30363d] flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
-                {match.homeTeam?.name?.charAt(0) ?? "M"}
-              </div>
-            )}
           </div>
 
-          {/* Placar Central */}
-          <div className="col-span-1 flex justify-center items-center">
-            {match.status === "SCHEDULED" ? (
-              <span className="text-[11px] text-slate-400 font-bold tracking-widest px-2 py-0.5 rounded bg-[#0d1117]/80 border border-[#30363d]/60">
-                VS
-              </span>
+          {/* Asa Direita (140px): Ações ao vivo ou Rótulo de Rodada para manter equilíbrio */}
+          <div className="flex items-center justify-end gap-1.5 min-w-0">
+            {isLive ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) =>
+                    handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
+                  }
+                  className="text-[11px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs font-medium"
+                  title={`Adicionar gol para ${match.homeTeam?.name}`}
+                >
+                  <Flame className="w-3 h-3 text-emerald-600 group-hover:text-white" /> +1 {match.homeTeam?.code || "M"}
+                </button>
+                <button
+                  onClick={(e) =>
+                    handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
+                  }
+                  className="text-[11px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs font-medium"
+                  title={`Adicionar gol para ${match.awayTeam?.name}`}
+                >
+                  <Flame className="w-3 h-3 text-emerald-600 group-hover:text-white" /> +1 {match.awayTeam?.code || "V"}
+                </button>
+              </div>
             ) : (
-              <div
-                className={`px-3 py-0.5 rounded-lg font-mono tabular-nums font-bold text-base flex items-center gap-1.5 shadow-inner border transition-all ${
-                  isLive
-                    ? "bg-[#0b1712] border-emerald-500/50 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/25"
-                    : "bg-[#0d1117] border-[#30363d] text-slate-200"
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200/70 truncate max-w-[130px]">
+                {isFavoriteBlock ? (match.league?.name || match.round) : match.round}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Layout Mobile (< md): Cartão Simétrico Responsivo */}
+        <div className="md:hidden space-y-2">
+          {/* Topo: Status + Favorito + Rodada */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={(e) => toggleFavorite(e, match._id)}
+                className="p-1 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer"
+              >
+                <Star
+                  className={`w-3.5 h-3.5 ${
+                    favoriteMatchIds.includes(match._id)
+                      ? "fill-amber-400 text-amber-500"
+                      : "text-slate-300"
+                  }`}
+                />
+              </button>
+              {isLive ? (
+                <LiveMatchClock
+                  initialMinute={match.minute}
+                  status={match.status}
+                  statusShort={match.statusShort}
+                  updatedAt={match.elapsedSecondsUpdatedAt ?? match._creationTime}
+                />
+              ) : isFinished ? (
+                <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                  Fim
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {new Date(match.startTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-slate-500 truncate max-w-[150px]">
+              {isFavoriteBlock ? (match.league?.name || match.round) : match.round}
+            </span>
+          </div>
+
+          {/* Confronto Simétrico em 3 Colunas */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            {/* Mandante */}
+            <div className="flex items-center justify-end gap-1.5 min-w-0 text-right">
+              <span
+                className={`text-xs truncate ${
+                  homeWon
+                    ? "font-bold text-slate-950"
+                    : isFinished
+                    ? "font-normal text-slate-500"
+                    : "font-semibold text-slate-800"
                 }`}
               >
-                <span>{match.homeScore}</span>
-                <span className="text-slate-500 font-sans text-xs">-</span>
-                <span>{match.awayScore}</span>
-              </div>
-            )}
+                {match.homeTeam?.name}
+              </span>
+              {match.homeTeam?.logoUrl ? (
+                <img
+                  src={match.homeTeam.logoUrl}
+                  alt=""
+                  className="w-5 h-5 object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0">
+                  {match.homeTeam?.name?.charAt(0) ?? "M"}
+                </div>
+              )}
+            </div>
+
+            {/* Placar */}
+            <div className="flex justify-center shrink-0">
+              {match.status === "SCHEDULED" ? (
+                <span className="text-[10px] text-slate-500 font-bold px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200">
+                  VS
+                </span>
+              ) : (
+                <div
+                  className={`px-2 py-0.5 rounded font-mono font-bold text-xs flex items-center gap-1 ${
+                    isLive
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-900 border border-slate-200"
+                  }`}
+                >
+                  <span>{match.homeScore}</span>
+                  <span className="text-slate-400 text-[10px]">-</span>
+                  <span>{match.awayScore}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Visitante */}
+            <div className="flex items-center justify-start gap-1.5 min-w-0 text-left">
+              {match.awayTeam?.logoUrl ? (
+                <img
+                  src={match.awayTeam.logoUrl}
+                  alt=""
+                  className="w-5 h-5 object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0">
+                  {match.awayTeam?.name?.charAt(0) ?? "V"}
+                </div>
+              )}
+              <span
+                className={`text-xs truncate ${
+                  awayWon
+                    ? "font-bold text-slate-950"
+                    : isFinished
+                    ? "font-normal text-slate-500"
+                    : "font-semibold text-slate-800"
+                }`}
+              >
+                {match.awayTeam?.name}
+              </span>
+            </div>
           </div>
 
-          {/* Visitante */}
-          <div className="col-span-3 flex items-center justify-start gap-2.5 text-left">
-            {match.awayTeam?.logoUrl ? (
-              <img
-                src={match.awayTeam.logoUrl}
-                alt={match.awayTeam?.name ?? "Visitante"}
-                className="w-6 h-6 object-contain shrink-0"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#30363d] flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
-                {match.awayTeam?.name?.charAt(0) ?? "V"}
-              </div>
-            )}
-            <span
-              className={`text-sm truncate transition-colors ${
-                match.status === "FINISHED" && match.awayScore > match.homeScore
-                  ? "font-bold text-slate-100"
-                  : match.status === "FINISHED"
-                  ? "font-medium text-slate-400"
-                  : "font-semibold text-slate-200"
-              }`}
-            >
-              {match.awayTeam?.name}
-            </span>
-          </div>
+          {/* Botões de Simulação Mobile */}
+          {isLive && (
+            <div className="flex items-center justify-center gap-2 pt-1.5 border-t border-slate-100">
+              <button
+                onClick={(e) =>
+                  handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
+                }
+                className="text-[10px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+              >
+                <Flame className="w-3 h-3 text-emerald-600" /> +1 {match.homeTeam?.code || "M"}
+              </button>
+              <button
+                onClick={(e) =>
+                  handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
+                }
+                className="text-[10px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+              >
+                <Flame className="w-3 h-3 text-emerald-600" /> +1 {match.awayTeam?.code || "V"}
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Botões de Simulação */}
-        {isLive && (
-          <div className="flex items-center gap-1.5 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-[#21262d]">
-            <button
-              onClick={(e) =>
-                handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
-              }
-              className="text-[11px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded border border-[#30363d] text-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
-              title={`Adicionar gol para ${match.homeTeam?.name}`}
-            >
-              <Flame className="w-3 h-3" /> +1 {match.homeTeam?.code || "M"}
-            </button>
-            <button
-              onClick={(e) =>
-                handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
-              }
-              className="text-[11px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded border border-[#30363d] text-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
-              title={`Adicionar gol para ${match.awayTeam?.name}`}
-            >
-              <Flame className="w-3 h-3" /> +1 {match.awayTeam?.code || "V"}
-            </button>
-          </div>
-        )}
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-[#080c10] text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen bg-[#f1f5f9] text-slate-900 font-sans selection:bg-emerald-500 selection:text-white">
       <MatchDetailsModal
         matchId={selectedMatchId}
         onClose={() => setSelectedMatchId(null)}
@@ -395,19 +546,19 @@ export default function App() {
         onClose={() => setIsAssetModalOpen(false)}
       />
 
-      {/* Header Fixo com Glassmorphism Esportivo */}
-      <header className="border-b border-white/[0.07] bg-[#080c10]/85 backdrop-blur-xl sticky top-0 z-40 px-4 py-3 shadow-2xl transition-all">
+      {/* Header Fixo com Efeito Vidro Claro Esportivo */}
+      <header className="border-b border-slate-200/90 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 py-3 shadow-xs transition-all">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="bg-emerald-500/15 p-2 rounded-xl text-emerald-400 border border-emerald-500/25 shadow-[0_0_15px_rgba(16,185,129,0.18)]">
+            <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 border border-emerald-200 shadow-2xs">
               <Activity className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-200 to-white bg-clip-text text-transparent flex items-center gap-1.5">
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5">
                 FutPulse
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping" />
               </h1>
-              <p className="text-[11px] text-slate-400 tracking-wide font-medium">
+              <p className="text-[11px] text-slate-500 tracking-wide font-medium">
                 Live Score & Match Center
               </p>
             </div>
@@ -415,7 +566,7 @@ export default function App() {
 
           <div className="flex items-center gap-2.5 flex-wrap">
             {syncFeedback && (
-              <span className="text-xs font-semibold text-emerald-400 animate-fade-in hidden sm:inline px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-xs font-semibold text-emerald-700 animate-fade-in hidden sm:inline px-2.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 shadow-2xs">
                 {syncFeedback}
               </span>
             )}
@@ -425,8 +576,8 @@ export default function App() {
               disabled={isSyncing}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 isSyncing
-                  ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
-                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 active:scale-95 shadow-sm"
+                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                  : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 active:scale-95 shadow-2xs"
               }`}
               title="Sincronizar jogos ao vivo agora"
             >
@@ -439,32 +590,32 @@ export default function App() {
               disabled={isSyncing}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 isSyncing
-                  ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
-                  : "bg-[#161b22] hover:bg-[#21262d] text-slate-300 border-[#30363d] active:scale-95"
+                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                  : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 active:scale-95 shadow-2xs"
               }`}
               title="Carregar grade do dia inteiro"
             >
-              <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+              <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
               <span className="hidden sm:inline">Grade de Hoje</span>
             </button>
 
             {/* Botão de Upload de Ativos / Escudos */}
             <button
               onClick={() => setIsAssetModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer bg-[#161b22] hover:bg-[#21262d] text-slate-300 border-[#30363d] active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border-slate-200 active:scale-95 shadow-2xs"
               title="Gerenciador de Ativos e Escudos"
             >
-              <Upload className="w-3.5 h-3.5 text-emerald-400" />
+              <Upload className="w-3.5 h-3.5 text-emerald-600" />
               <span className="hidden sm:inline">Escudos</span>
             </button>
 
             {/* Botão de Som */}
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`p-1.5 rounded-lg border text-xs transition-all cursor-pointer ${
+              className={`p-1.5 rounded-lg border text-xs transition-all cursor-pointer shadow-2xs ${
                 soundEnabled
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-sm"
-                  : "bg-[#161b22] text-slate-500 border-[#30363d]"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-white text-slate-400 border-slate-200"
               }`}
               title={soundEnabled ? "Som ativado" : "Som mutado"}
             >
@@ -472,7 +623,7 @@ export default function App() {
             </button>
 
             {/* Filtros de Status com Contadores Vivos */}
-            <div className="flex items-center gap-1 bg-[#0b0f17]/90 p-1 rounded-xl border border-white/[0.08] text-xs font-semibold shadow-inner">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold shadow-inner">
               {(
                 [
                   { id: "ALL", label: "Todos", count: matchCounts.ALL },
@@ -490,24 +641,24 @@ export default function App() {
                     onClick={() => setFilter(item.id)}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                       isActive
-                        ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
+                        ? "bg-emerald-600 text-white font-bold shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
                     }`}
                   >
                     {hasLiveCount && (
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
                       </span>
                     )}
                     <span>{item.label}</span>
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums font-mono ${
                         isActive
-                          ? "bg-slate-950/20 text-slate-900 font-bold"
+                          ? "bg-white/25 text-white font-bold"
                           : hasLiveCount
-                          ? "bg-emerald-500/20 text-emerald-400 font-bold"
-                          : "bg-white/[0.06] text-slate-400"
+                          ? "bg-emerald-100 text-emerald-800 font-bold"
+                          : "bg-slate-200/80 text-slate-600"
                       }`}
                     >
                       {item.count}
@@ -522,17 +673,17 @@ export default function App() {
         {/* Barra de Pesquisa Rápida com Atalho Ctrl+K */}
         <div className="max-w-7xl mx-auto mt-2.5">
           <div className="relative group">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por time ou campeonato..."
-              className="w-full bg-[#0d1117]/80 backdrop-blur-md border border-[#30363d]/80 focus:border-emerald-500/80 focus:ring-2 focus:ring-emerald-500/20 rounded-xl pl-9 pr-16 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-all shadow-sm"
+              className="w-full bg-white border border-slate-200/90 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl pl-9 pr-16 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all shadow-2xs"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-400 bg-[#21262d]/60 border border-[#30363d]/60 rounded">
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-400 bg-slate-100 border border-slate-200 rounded">
                 Ctrl K
               </kbd>
             </div>
@@ -541,7 +692,7 @@ export default function App() {
 
         {/* Pílulas de Navegação Rápida por Campeonato */}
         {leagues && leagues.length > 0 && (
-          <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-slate-200/80 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             <button
               onClick={() => {
                 setSelectedLeagueId(null);
@@ -549,8 +700,8 @@ export default function App() {
               }}
               className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
                 selectedLeagueId === null
-                  ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
-                  : "bg-[#21262d] text-slate-400 hover:text-slate-200 border border-[#30363d]"
+                  ? "bg-emerald-600 text-white font-bold shadow-xs"
+                  : "bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs"
               }`}
             >
               Todas as Ligas
@@ -575,12 +726,12 @@ export default function App() {
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-emerald-500 text-slate-950 font-bold shadow-md scale-105"
-                        : "bg-[#21262d] text-slate-300 hover:text-white border border-[#30363d]"
+                        ? "bg-emerald-600 text-white font-bold shadow-xs scale-105"
+                        : "bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs"
                     }`}
                   >
                     {lg.logoUrl && (
-                      <div className="w-4 h-4 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0">
+                      <div className="w-4 h-4 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-100">
                         <img src={lg.logoUrl} alt="" className="w-full h-full object-contain" />
                       </div>
                     )}
@@ -591,7 +742,7 @@ export default function App() {
 
             {/* Separador se houver outras ligas */}
             {leagues.some((lg) => (lg.priority ?? 99) > 10) && (
-              <span className="text-slate-600 text-xs px-1">|</span>
+              <span className="text-slate-400 text-xs px-1">|</span>
             )}
 
             {/* Ligas Secundárias */}
@@ -611,14 +762,14 @@ export default function App() {
                         setViewMode("standings");
                       }
                     }}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer opacity-85 hover:opacity-100 ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-teal-500 text-slate-950 font-bold shadow-md"
-                        : "bg-[#1c2128] text-slate-400 hover:text-slate-200 border border-[#2d333b]"
+                        ? "bg-teal-600 text-white font-bold shadow-xs"
+                        : "bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200"
                     }`}
                   >
                     {lg.logoUrl && (
-                      <div className="w-3.5 h-3.5 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0">
+                      <div className="w-3.5 h-3.5 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-100">
                         <img src={lg.logoUrl} alt="" className="w-full h-full object-contain" />
                       </div>
                     )}
@@ -634,14 +785,14 @@ export default function App() {
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Alternador de Visualização: Jogos vs Tabela de Classificação */}
         {selectedLeagueId && (
-          <div className="flex items-center justify-between border-b border-[#30363d] pb-3">
-            <div className="flex items-center gap-2 bg-[#161b22] p-1 rounded-lg border border-[#30363d]">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2 bg-slate-200/70 p-1 rounded-lg border border-slate-300/60">
               <button
                 onClick={() => setViewMode("standings")}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "standings"
-                    ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-white text-slate-950 font-bold shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Classificação & Rodadas (Sofascore)
@@ -650,15 +801,15 @@ export default function App() {
                 onClick={() => setViewMode("matches")}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "matches"
-                    ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-white text-slate-950 font-bold shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Grade Geral de Jogos
               </button>
             </div>
             {selectedLeague && (
-              <span className="text-xs text-slate-400 hidden sm:inline font-medium">
+              <span className="text-xs text-slate-600 hidden sm:inline font-medium">
                 {selectedLeague.name}
               </span>
             )}
@@ -667,22 +818,22 @@ export default function App() {
 
         {/* Bloco de Partidas Favoritas (se houver alguma favoritada e estiver no modo jogos) */}
         {viewMode === "matches" && favoriteMatches.length > 0 && (
-          <div className="bg-[#161b22] border border-amber-500/30 rounded-xl overflow-hidden shadow-lg animate-fade-in">
+          <div className="bg-white border border-amber-300/80 rounded-xl overflow-hidden shadow-xs animate-fade-in">
             {/* Cabeçalho de Favoritos */}
-            <div className="bg-gradient-to-r from-amber-500/10 to-[#1c2128] px-4 py-3 border-b border-amber-500/20 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 px-4 py-3 border-b border-amber-200/80 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
-                <span className="font-bold text-sm tracking-wide text-slate-200">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+                <span className="font-bold text-sm tracking-wide text-amber-950">
                   Partidas Favoritas
                 </span>
-                <span className="text-xs text-amber-400/80 font-medium">
+                <span className="text-xs text-amber-700 font-medium">
                   • {favoriteMatches.length} {favoriteMatches.length === 1 ? "jogo fixado" : "jogos fixados"}
                 </span>
               </div>
             </div>
 
             {/* Lista de Partidas Favoritas */}
-            <div className="divide-y divide-[#21262d]">
+            <div className="divide-y divide-slate-100">
               {favoriteMatches.map((match: any) => renderMatchRow(match, true))}
             </div>
           </div>
@@ -694,25 +845,25 @@ export default function App() {
             league={selectedLeague}
           />
         ) : matches === undefined ? (
-          <div className="flex justify-center items-center py-20 text-slate-400 gap-2">
-            <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
+            <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             <span>Sincronizando partidas...</span>
           </div>
         ) : matches.length === 0 ? (
-          <div className="text-center py-16 bg-[#161b22] border border-[#30363d] rounded-xl text-slate-400">
+          <div className="text-center py-16 bg-white border border-slate-200 rounded-xl text-slate-500 shadow-xs">
             Nenhuma partida encontrada neste filtro.
           </div>
         ) : (
           Object.entries(groupedMatches || {}).map(([leagueName, group]) => (
             <div
               key={leagueName}
-              className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-lg"
+              className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs"
             >
               {/* Cabeçalho da Liga */}
-              <div className="bg-[#1c2128] px-4 py-3 border-b border-[#30363d] flex items-center justify-between">
+              <div className="bg-slate-50/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   {group.league?.logoUrl ? (
-                    <div className="w-6 h-6 rounded-full bg-white/90 p-0.5 flex items-center justify-center shadow-sm shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-white p-0.5 flex items-center justify-center shadow-2xs border border-slate-200 shrink-0">
                       <img
                         src={group.league.logoUrl}
                         alt={leagueName}
@@ -720,22 +871,22 @@ export default function App() {
                       />
                     </div>
                   ) : (
-                    <Trophy className="w-5 h-5 text-emerald-400" />
+                    <Trophy className="w-5 h-5 text-emerald-600" />
                   )}
-                  <span className="font-bold text-sm tracking-wide text-slate-200">
+                  <span className="font-bold text-sm tracking-wide text-slate-900">
                     {leagueName}
                   </span>
-                  <span className="text-xs text-slate-400 font-normal">
+                  <span className="text-xs text-slate-500 font-normal">
                     • {group.league?.country}
                   </span>
                 </div>
-                <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-[#30363d] text-slate-300">
+                <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-slate-200/80 text-slate-700 border border-slate-300/60 font-medium">
                   {group.league?.type === "cup" ? "Mata-mata" : "Pontos Corridos"}
                 </span>
               </div>
 
               {/* Lista de Partidas */}
-              <div className="divide-y divide-[#21262d]">
+              <div className="divide-y divide-slate-100">
                 {group.matches.map((match: any) => renderMatchRow(match, false))}
               </div>
             </div>

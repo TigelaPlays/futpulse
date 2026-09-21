@@ -15,18 +15,18 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
   });
 
   return (
-    <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-lg animate-fade-in flex flex-col h-full">
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs animate-fade-in flex flex-col h-full">
       {/* Cabeçalho do Painel */}
-      <div className="p-3.5 border-b border-[#30363d] bg-gradient-to-r from-[#1c2128] to-[#161b22] flex items-center justify-between">
+      <div className="p-3.5 border-b border-slate-200 bg-slate-50/90 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-2xs">
             <Calendar className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               {round}
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               {matches === undefined
                 ? "Carregando jogos..."
                 : `${matches.length} ${matches.length === 1 ? "partida" : "partidas"}`}
@@ -36,16 +36,16 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
       </div>
 
       {/* Lista de Partidas */}
-      <div className="divide-y divide-[#21262d]/70 overflow-y-auto max-h-[700px] no-scrollbar flex-1">
+      <div className="divide-y divide-slate-100 overflow-y-auto max-h-[700px] no-scrollbar flex-1">
         {matches === undefined ? (
-          <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
-            <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-16 text-slate-500 gap-2">
+            <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs">Carregando rodada...</span>
           </div>
         ) : matches.length === 0 ? (
           <div className="text-center py-14 px-4 space-y-2">
-            <Clock className="w-7 h-7 text-slate-500 mx-auto" />
-            <p className="text-xs font-semibold text-slate-300">
+            <Clock className="w-7 h-7 text-slate-400 mx-auto" />
+            <p className="text-xs font-semibold text-slate-700">
               Nenhum jogo cadastrado para a {round}
             </p>
             <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
@@ -64,27 +64,27 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
             return (
               <div
                 key={m._id}
-                className="p-3 hover:bg-[#21262d]/40 transition-colors group cursor-pointer"
+                className="p-3 hover:bg-slate-50/90 transition-colors group cursor-pointer bg-white"
               >
                 {/* Linha de Status / Horário */}
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
                   <div className="flex items-center gap-1.5">
                     {isLive ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
                         {m.minute ? `${m.minute}'` : m.statusShort || "AO VIVO"}
                       </span>
                     ) : isFinished ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700/60">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
                         FIM
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800/60 text-slate-400 border border-slate-700/40">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200/80">
                         {m.statusShort || "AGENDADO"}
                       </span>
                     )}
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 transition-colors" />
                 </div>
 
                 {/* Times e Placares */}
@@ -93,7 +93,7 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {m.homeTeam?.logoUrl ? (
-                        <div className="w-4 h-4 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
+                        <div className="w-4 h-4 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200">
                           <img
                             src={m.homeTeam.logoUrl}
                             alt=""
@@ -102,15 +102,15 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                           />
                         </div>
                       ) : (
-                        <div className="w-4 h-4 rounded-full bg-slate-800 text-[9px] font-bold text-slate-400 flex items-center justify-center shrink-0">
+                        <div className="w-4 h-4 rounded-full bg-slate-100 text-[9px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
                           {m.homeTeam?.name?.charAt(0) || "M"}
                         </div>
                       )}
                       <span
                         className={`text-xs truncate transition-colors ${
                           homeWon
-                            ? "font-bold text-slate-100"
-                            : "font-medium text-slate-300 group-hover:text-slate-100"
+                            ? "font-bold text-slate-950"
+                            : "font-medium text-slate-700 group-hover:text-slate-900"
                         }`}
                       >
                         {m.homeTeam?.name ?? "Mandante"}
@@ -119,10 +119,10 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                     <span
                       className={`text-xs font-bold shrink-0 tabular-nums ${
                         isLive
-                          ? "text-emerald-400"
+                          ? "text-emerald-700"
                           : homeWon
-                          ? "text-slate-100"
-                          : "text-slate-400"
+                          ? "text-slate-950"
+                          : "text-slate-500"
                       }`}
                     >
                       {isFinished || isLive ? m.homeScore : "-"}
@@ -133,7 +133,7 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {m.awayTeam?.logoUrl ? (
-                        <div className="w-4 h-4 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
+                        <div className="w-4 h-4 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200">
                           <img
                             src={m.awayTeam.logoUrl}
                             alt=""
@@ -142,15 +142,15 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                           />
                         </div>
                       ) : (
-                        <div className="w-4 h-4 rounded-full bg-slate-800 text-[9px] font-bold text-slate-400 flex items-center justify-center shrink-0">
+                        <div className="w-4 h-4 rounded-full bg-slate-100 text-[9px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
                           {m.awayTeam?.name?.charAt(0) || "V"}
                         </div>
                       )}
                       <span
                         className={`text-xs truncate transition-colors ${
                           awayWon
-                            ? "font-bold text-slate-100"
-                            : "font-medium text-slate-300 group-hover:text-slate-100"
+                            ? "font-bold text-slate-950"
+                            : "font-medium text-slate-700 group-hover:text-slate-900"
                         }`}
                       >
                         {m.awayTeam?.name ?? "Visitante"}
@@ -159,10 +159,10 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                     <span
                       className={`text-xs font-bold shrink-0 tabular-nums ${
                         isLive
-                          ? "text-emerald-400"
+                          ? "text-emerald-700"
                           : awayWon
-                          ? "text-slate-100"
-                          : "text-slate-400"
+                          ? "text-slate-950"
+                          : "text-slate-500"
                       }`}
                     >
                       {isFinished || isLive ? m.awayScore : "-"}
@@ -172,19 +172,19 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
 
                 {/* Eventos de Gol (se houver) */}
                 {m.events && m.events.length > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-[#30363d]/40 space-y-1">
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1">
                     {m.events.map((ev, idx) => {
                       const isHomeGoal = ev.teamId === m.homeTeamId;
                       return (
                         <div
                           key={idx}
-                          className="flex items-center gap-1.5 text-[10px] text-slate-400"
+                          className="flex items-center gap-1.5 text-[10px] text-slate-500"
                         >
                           <span className="text-[10px]">⚽</span>
-                          <span className="font-semibold text-slate-300 truncate">
+                          <span className="font-semibold text-slate-800 truncate">
                             {ev.playerName}
                           </span>
-                          <span className="text-slate-500 font-medium">({ev.minute}')</span>
+                          <span className="text-slate-400 font-medium">({ev.minute}')</span>
                           <span className="text-[9px] text-slate-500 ml-auto truncate max-w-[90px]">
                             {isHomeGoal ? m.homeTeam?.name : m.awayTeam?.name}
                           </span>
