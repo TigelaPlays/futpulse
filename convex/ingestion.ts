@@ -493,3 +493,112 @@ export const smartLivePolling = action({
     return { skipped: false, matchCount: activeOrUpcomingMatches.length, result: syncResult };
   },
 });
+
+// Sincroniza a tabela de classificação de uma liga sob demanda
+export const syncLeagueStandings = action({
+  args: {
+    leagueId: v.id("leagues"),
+  },
+  handler: async (ctx, args) => {
+    const apiKey = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env?.API_FOOTBALL_KEY;
+    if (!apiKey) {
+      return { success: false, reason: "API_FOOTBALL_KEY_MISSING" };
+    }
+
+    const leagueList: any[] = (await ctx.runQuery(api.leagues.listLeagues, {})) ?? [];
+    const leagueDoc = leagueList.find((l: any) => l._id === args.leagueId);
+    if (!leagueDoc || !leagueDoc.externalId) {
+      return { success: false, reason: "LEAGUE_NOT_FOUND" };
+    }
+
+    try {
+      const response = await fetch(
+        `https://v3.football.api-sports.io/standings?league=${leagueDoc.externalId}&season=${leagueDoc.season}`,
+        {
+          headers: {
+            "x-apisports-key": apiKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro na API externa: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const leagueData = data.response?.[0]?.league;
+      const rawStandings = leagueData?.standings?.[0] || [];
+
+      await ctx.runMutation(internal.ingestion.saveSyncedStandings, {
+        leagueId: args.leagueId,
+        season: leagueDoc.season,
+        standings: rawStandings,
+      });
+
+      return {
+        success: true,
+        count: rawStandings.length,
+      };
+    } catch (error: any) {
+      console.error("Falha ao sincronizar classificação:", error);
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+export const saveSyncedStandings = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    season: v.number(),
+    standings: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("standings")
+      .withIndex("by_league_season", (q) =>
+        q.eq("leagueId", args.leagueId).eq("season", args.season)
+      )
+      .collect();
+
+    for (const row of existing) {
+      await ctx.db.delete(row._id);
+    }
+
+    for (const item of args.standings) {
+      const teamExternalId = item.team?.id;
+
+      let team = await ctx.db
+        .query("teams")
+        .withIndex("by_externalId", (q) => q.eq("externalId", teamExternalId))
+        .first();
+
+      if (!team) {
+        const teamId = await ctx.db.insert("teams", {
+          name: item.team?.name ?? "Time",
+          logoUrl: item.team?.logo ?? "",
+          externalId: teamExternalId,
+        });
+        team = await ctx.db.get(teamId);
+      }
+
+      if (team) {
+        await ctx.db.insert("standings", {
+          leagueId: args.leagueId,
+          season: args.season,
+          rank: item.rank,
+          teamId: team._id,
+          points: item.points ?? 0,
+          goalsDiff: item.goalsDiff ?? 0,
+          form: item.form ?? undefined,
+          played: item.all?.played ?? 0,
+          win: item.all?.win ?? 0,
+          draw: item.all?.draw ?? 0,
+          lose: item.all?.lose ?? 0,
+          goalsFor: item.all?.goals?.for ?? 0,
+          goalsAgainst: item.all?.goals?.against ?? 0,
+          description: item.description ?? undefined,
+        });
+      }
+    }
+  },
+});

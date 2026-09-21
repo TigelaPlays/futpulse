@@ -99,4 +99,24 @@ export default defineSchema({
     homeFouls: v.number(),
     awayFouls: v.number(),
   }).index("by_match", ["matchId"]),
+
+  // 6. Tabela de Classificação
+  standings: defineTable({
+    leagueId: v.id("leagues"),
+    season: v.number(),
+    rank: v.number(),
+    teamId: v.id("teams"),
+    points: v.number(),
+    goalsDiff: v.number(),
+    form: v.optional(v.string()), // Ex: "WWDLW"
+    played: v.number(),
+    win: v.number(),
+    draw: v.number(),
+    lose: v.number(),
+    goalsFor: v.number(),
+    goalsAgainst: v.number(),
+    description: v.optional(v.string()), // Ex: "Libertadores", "Rebaixamento"
+  })
+    .index("by_league_season", ["leagueId", "season"])
+    .index("by_league_rank", ["leagueId", "rank"]),
 });

@@ -6,6 +6,7 @@ import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
+import { StandingsTable } from "./components/StandingsTable";
 import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
@@ -13,6 +14,7 @@ type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 export default function App() {
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [selectedLeagueId, setSelectedLeagueId] = useState<Id<"leagues"> | null>(null);
+  const [viewMode, setViewMode] = useState<"matches" | "standings">("matches");
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
@@ -26,6 +28,7 @@ export default function App() {
     statusFilter: filter,
     leagueId: selectedLeagueId ?? undefined,
   });
+  const selectedLeague = leagues?.find((l) => l._id === selectedLeagueId);
 
   // Detecta quando o placar muda para disparar o Toast de Gol e o Som
   useEffect(() => {
@@ -273,7 +276,10 @@ export default function App() {
         {leagues && leagues.length > 0 && (
           <div className="max-w-5xl mx-auto mt-3 pt-2.5 border-t border-[#21262d] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             <button
-              onClick={() => setSelectedLeagueId(null)}
+              onClick={() => {
+                setSelectedLeagueId(null);
+                setViewMode("matches");
+              }}
               className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
                 selectedLeagueId === null
                   ? "bg-emerald-500 text-slate-950 font-semibold"
@@ -310,7 +316,45 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-        {matches === undefined ? (
+        {/* Alternador de Visualização: Jogos vs Tabela de Classificação */}
+        {selectedLeagueId && (
+          <div className="flex items-center justify-between border-b border-[#30363d] pb-3">
+            <div className="flex items-center gap-2 bg-[#161b22] p-1 rounded-lg border border-[#30363d]">
+              <button
+                onClick={() => setViewMode("matches")}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "matches"
+                    ? "bg-emerald-500 text-slate-950 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Jogos da Liga
+              </button>
+              <button
+                onClick={() => setViewMode("standings")}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "standings"
+                    ? "bg-emerald-500 text-slate-950 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Tabela de Classificação
+              </button>
+            </div>
+            {selectedLeague && (
+              <span className="text-xs text-slate-400 hidden sm:inline font-medium">
+                {selectedLeague.name}
+              </span>
+            )}
+          </div>
+        )}
+
+        {selectedLeagueId && viewMode === "standings" ? (
+          <StandingsTable
+            leagueId={selectedLeagueId}
+            leagueName={selectedLeague?.name ?? "Campeonato"}
+          />
+        ) : matches === undefined ? (
           <div className="flex justify-center items-center py-20 text-slate-400 gap-2">
             <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
             <span>Sincronizando partidas...</span>
