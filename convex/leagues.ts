@@ -7,3 +7,4 @@ export const listLeagues = query({
     return leagues.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
   },
 });
+

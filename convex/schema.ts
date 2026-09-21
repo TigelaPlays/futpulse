@@ -84,4 +84,19 @@ export default defineSchema({
   })
     .index("by_match", ["matchId", "minute"])
     .index("by_externalId", ["externalId"]),
+
+  // 5. Estatísticas Comparativas da Partida
+  matchStatistics: defineTable({
+    matchId: v.id("matches"),
+    homePossession: v.number(),
+    awayPossession: v.number(),
+    homeShotsOnTarget: v.number(),
+    awayShotsOnTarget: v.number(),
+    homeTotalShots: v.number(),
+    awayTotalShots: v.number(),
+    homeCorners: v.number(),
+    awayCorners: v.number(),
+    homeFouls: v.number(),
+    awayFouls: v.number(),
+  }).index("by_match", ["matchId"]),
 });

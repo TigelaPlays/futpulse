@@ -338,3 +338,106 @@ export const saveSyncedEvents = internalMutation({
     }
   },
 });
+
+// Sincroniza estatísticas da partida sob demanda
+export const syncMatchStatistics = action({
+  args: {
+    matchId: v.id("matches"),
+  },
+  handler: async (ctx, args) => {
+    const apiKey = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env?.API_FOOTBALL_KEY;
+
+    if (!apiKey) {
+      return { success: false, reason: "API_FOOTBALL_KEY_MISSING" };
+    }
+
+    const match = await ctx.runQuery(api.matches.getMatchDetails, { matchId: args.matchId });
+    if (!match || !match.externalId) {
+      return { success: false, reason: "MATCH_NOT_FOUND_OR_NO_EXTERNAL_ID" };
+    }
+
+    try {
+      const response = await fetch(
+        `https://v3.football.api-sports.io/fixtures/statistics?fixture=${match.externalId}`,
+        {
+          headers: {
+            "x-apisports-key": apiKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro na API externa: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const rawStats = data.response || [];
+
+      if (rawStats.length < 2) {
+        return { success: false, reason: "INSUFFICIENT_DATA" };
+      }
+
+      const homeApiId = match.homeTeam?.externalId;
+      const homeRaw = rawStats.find((s: any) => s.team?.id === homeApiId) || rawStats[0];
+      const awayRaw = rawStats.find((s: any) => s.team?.id !== homeApiId) || rawStats[1];
+
+      const getStat = (teamStats: any, type: string) => {
+        const item = teamStats.statistics?.find((s: any) => s.type?.toLowerCase() === type.toLowerCase());
+        if (!item || item.value === null || item.value === undefined) return 0;
+        if (typeof item.value === "string") {
+          return parseInt(item.value.replace("%", ""), 10) || 0;
+        }
+        return item.value;
+      };
+
+      await ctx.runMutation(internal.ingestion.saveSyncedStatistics, {
+        matchId: args.matchId,
+        homePossession: getStat(homeRaw, "Ball Possession"),
+        awayPossession: getStat(awayRaw, "Ball Possession"),
+        homeShotsOnTarget: getStat(homeRaw, "Shots on Goal"),
+        awayShotsOnTarget: getStat(awayRaw, "Shots on Goal"),
+        homeTotalShots: getStat(homeRaw, "Total Shots"),
+        awayTotalShots: getStat(awayRaw, "Total Shots"),
+        homeCorners: getStat(homeRaw, "Corner Kicks"),
+        awayCorners: getStat(awayRaw, "Corner Kicks"),
+        homeFouls: getStat(homeRaw, "Fouls"),
+        awayFouls: getStat(awayRaw, "Fouls"),
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Falha ao sincronizar estatísticas:", error);
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+export const saveSyncedStatistics = internalMutation({
+  args: {
+    matchId: v.id("matches"),
+    homePossession: v.number(),
+    awayPossession: v.number(),
+    homeShotsOnTarget: v.number(),
+    awayShotsOnTarget: v.number(),
+    homeTotalShots: v.number(),
+    awayTotalShots: v.number(),
+    homeCorners: v.number(),
+    awayCorners: v.number(),
+    homeFouls: v.number(),
+    awayFouls: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("matchStatistics")
+      .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
+      .first();
+
+    const { matchId, ...stats } = args;
+
+    if (existing) {
+      await ctx.db.patch(existing._id, stats);
+    } else {
+      await ctx.db.insert("matchStatistics", { matchId, ...stats });
+    }
+  },
+});

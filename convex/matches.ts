@@ -89,21 +89,27 @@ export const listMatches = query({
         ctx.db.get(match.leagueId),
       ]);
 
-      // Busca todos os eventos associados a essa partida
-      const events = await ctx.db
-        .query("matchEvents")
-        .withIndex("by_match", (q) => q.eq("matchId", match._id))
-        .collect();
+    // Busca todos os eventos associados a essa partida
+    const events = await ctx.db
+      .query("matchEvents")
+      .withIndex("by_match", (q) => q.eq("matchId", match._id))
+      .collect();
 
-      // Ordena do primeiro minuto até o último
-      events.sort((a, b) => a.minute - b.minute);
+    // Ordena do primeiro minuto até o último
+    events.sort((a, b) => a.minute - b.minute);
 
-      return {
-        ...match,
-        homeTeam,
-        awayTeam,
-        league,
-        events,
-      };
-    },
-  });
+    const statistics = await ctx.db
+      .query("matchStatistics")
+      .withIndex("by_match", (q) => q.eq("matchId", match._id))
+      .first();
+
+    return {
+      ...match,
+      homeTeam,
+      awayTeam,
+      league,
+      events,
+      statistics: statistics ?? null,
+    };
+  },
+});

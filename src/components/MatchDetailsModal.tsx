@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { X, Clock, AlertCircle, RefreshCw, Trophy } from "lucide-react";
+import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle } from "lucide-react";
 
 interface MatchDetailsModalProps {
   matchId: Id<"matches"> | null;
@@ -10,9 +10,14 @@ interface MatchDetailsModalProps {
 }
 
 export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) {
+  const [activeTab, setActiveTab] = useState<"timeline" | "stats">("timeline");
   const [isSyncingEvents, setIsSyncingEvents] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [isSyncingStats, setIsSyncingStats] = useState(false);
+  const [eventsFeedback, setEventsFeedback] = useState<string | null>(null);
+  const [statsFeedback, setStatsFeedback] = useState<string | null>(null);
+
   const syncMatchEvents = useAction(api.ingestion.syncMatchEvents);
+  const syncMatchStatistics = useAction(api.ingestion.syncMatchStatistics);
 
   const match = useQuery(
     api.matches.getMatchDetails,
@@ -40,19 +45,39 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
     if (!matchId) return;
     try {
       setIsSyncingEvents(true);
-      setSyncFeedback(null);
+      setEventsFeedback(null);
       const result = await syncMatchEvents({ matchId });
       if (result.success) {
-        setSyncFeedback(`${result.eventCount ?? 0} lances`);
+        setEventsFeedback(`${result.eventCount ?? 0} lances`);
       } else {
-        setSyncFeedback("Sem lances novos");
+        setEventsFeedback("Sem novos lances");
       }
     } catch (err) {
       console.error("Erro ao sincronizar eventos:", err);
-      setSyncFeedback("Erro ao sincronizar");
+      setEventsFeedback("Erro ao sincronizar");
     } finally {
       setIsSyncingEvents(false);
-      setTimeout(() => setSyncFeedback(null), 3000);
+      setTimeout(() => setEventsFeedback(null), 3000);
+    }
+  };
+
+  const handleSyncStats = async () => {
+    if (!matchId) return;
+    try {
+      setIsSyncingStats(true);
+      setStatsFeedback(null);
+      const result = await syncMatchStatistics({ matchId });
+      if (result.success) {
+        setStatsFeedback("Atualizado");
+      } else {
+        setStatsFeedback(result.reason === "INSUFFICIENT_DATA" ? "Sem dados na API" : "Falha");
+      }
+    } catch (err) {
+      console.error("Erro ao sincronizar estatísticas:", err);
+      setStatsFeedback("Erro");
+    } finally {
+      setIsSyncingStats(false);
+      setTimeout(() => setStatsFeedback(null), 3000);
     }
   };
 
@@ -89,6 +114,38 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
       default:
         return { label: "• ", color: "text-slate-300" };
     }
+  };
+
+  const renderStatRow = (label: string, homeVal: number, awayVal: number, isPercentage = false) => {
+    const total = homeVal + awayVal;
+    const homePercent = total === 0 ? 50 : Math.round((homeVal / total) * 100);
+    const awayPercent = 100 - homePercent;
+
+    return (
+      <div className="space-y-1.5 text-xs">
+        <div className="flex justify-between font-semibold text-slate-300">
+          <span className="text-emerald-400 font-mono">
+            {homeVal}
+            {isPercentage ? "%" : ""}
+          </span>
+          <span className="text-slate-400 font-normal">{label}</span>
+          <span className="text-teal-300 font-mono">
+            {awayVal}
+            {isPercentage ? "%" : ""}
+          </span>
+        </div>
+        <div className="h-2 w-full bg-[#0d1117] rounded-full overflow-hidden flex border border-[#30363d]">
+          <div
+            className="bg-emerald-500 transition-all duration-500"
+            style={{ width: `${isPercentage ? homeVal : homePercent}%` }}
+          />
+          <div
+            className="bg-teal-400 transition-all duration-500"
+            style={{ width: `${isPercentage ? awayVal : awayPercent}%` }}
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -131,7 +188,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
           </button>
         </div>
 
-        {/* Corpo com Placar */}
+        {/* Placar e Conteúdo */}
         {match === undefined ? (
           <div className="p-12 flex justify-center items-center text-slate-400 gap-2">
             <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -144,6 +201,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
           </div>
         ) : (
           <div className="p-6 overflow-y-auto space-y-6">
+            {/* Placar */}
             <div className="grid grid-cols-7 items-center text-center">
               {/* Mandante */}
               <div className="col-span-3 flex flex-col items-center gap-2">
@@ -202,77 +260,177 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
               </div>
             </div>
 
-            {/* Linha do Tempo de Eventos */}
-            <div className="border-t border-[#30363d] pt-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" /> Linha do Tempo dos Lances
-                </h3>
-
-                <div className="flex items-center gap-2">
-                  {syncFeedback && (
-                    <span className="text-[11px] font-medium text-emerald-400 animate-fade-in">
-                      {syncFeedback}
-                    </span>
-                  )}
-
-                  {match.externalId && (
-                    <button
-                      onClick={handleSyncEvents}
-                      disabled={isSyncingEvents}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-800/60 px-2.5 py-1 rounded transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-                      title="Carregar golos e cartões oficiais desta partida"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isSyncingEvents ? "animate-spin" : ""}`} />
-                      <span>{isSyncingEvents ? "A carregar..." : "Sincronizar Lances"}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {match.events.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-500 bg-[#0d1117]/50 rounded-lg border border-[#21262d]">
-                  Nenhum lance registado até ao momento.
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {match.events.map((event, idx) => {
-                    const isHomeTeam = event.teamId === match.homeTeamId;
-                    const badge = getEventBadge(event.type);
-
-                    return (
-                      <div
-                        key={event._id ?? idx}
-                        className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
-                          isHomeTeam
-                            ? "bg-slate-900/50 border-[#30363d] text-left"
-                            : "bg-slate-900/50 border-[#30363d] flex-row-reverse text-right"
-                        }`}
-                      >
-                        <span className="font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shrink-0">
-                          {event.minute}
-                          {event.extraMinute ? `+${event.extraMinute}` : ""}
-                          '
-                        </span>
-
-                        <div className="flex-1">
-                          <div className="font-semibold text-slate-200">
-                            <span className={badge.color}>{badge.label}</span>
-                            {event.playerName}
-                          </div>
-                          {(event.detail || event.assistPlayerName) && (
-                            <div className="text-[11px] text-slate-400">
-                              {event.detail}
-                              {event.assistPlayerName ? ` (Assistência: ${event.assistPlayerName})` : ""}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            {/* Alternador de Abas */}
+            <div className="flex bg-[#0d1117] p-1 rounded-lg border border-[#30363d] text-xs font-semibold">
+              <button
+                onClick={() => setActiveTab("timeline")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md transition-all cursor-pointer ${
+                  activeTab === "timeline"
+                    ? "bg-[#21262d] text-emerald-400 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Linha do Tempo</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("stats")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md transition-all cursor-pointer ${
+                  activeTab === "stats"
+                    ? "bg-[#21262d] text-emerald-400 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <BarChart2 className="w-3.5 h-3.5" />
+                <span>Estatísticas</span>
+              </button>
             </div>
+
+            {/* Conteúdo: Linha do Tempo */}
+            {activeTab === "timeline" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Lances do Jogo
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {eventsFeedback && (
+                      <span className="text-[11px] font-medium text-emerald-400 animate-fade-in">
+                        {eventsFeedback}
+                      </span>
+                    )}
+
+                    {match.externalId && (
+                      <button
+                        onClick={handleSyncEvents}
+                        disabled={isSyncingEvents}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-800/60 px-2.5 py-1 rounded transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                        title="Carregar golos e cartões oficiais desta partida"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isSyncingEvents ? "animate-spin" : ""}`} />
+                        <span>{isSyncingEvents ? "A carregar..." : "Sincronizar Lances"}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {match.events.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-500 bg-[#0d1117]/50 rounded-lg border border-[#21262d]">
+                    Nenhum lance registado até ao momento.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {match.events.map((event, idx) => {
+                      const isHomeTeam = event.teamId === match.homeTeamId;
+                      const badge = getEventBadge(event.type);
+
+                      return (
+                        <div
+                          key={event._id ?? idx}
+                          className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
+                            isHomeTeam
+                              ? "bg-slate-900/50 border-[#30363d] text-left"
+                              : "bg-slate-900/50 border-[#30363d] flex-row-reverse text-right"
+                          }`}
+                        >
+                          <span className="font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shrink-0">
+                            {event.minute}
+                            {event.extraMinute ? `+${event.extraMinute}` : ""}
+                            '
+                          </span>
+
+                          <div className="flex-1">
+                            <div className="font-semibold text-slate-200">
+                              <span className={badge.color}>{badge.label}</span>
+                              {event.playerName}
+                            </div>
+                            {(event.detail || event.assistPlayerName) && (
+                              <div className="text-[11px] text-slate-400">
+                                {event.detail}
+                                {event.assistPlayerName ? ` (Assistência: ${event.assistPlayerName})` : ""}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Conteúdo: Estatísticas */}
+            {activeTab === "stats" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Dados Comparativos
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {statsFeedback && (
+                      <span className="text-[11px] font-medium text-emerald-400 animate-fade-in">
+                        {statsFeedback}
+                      </span>
+                    )}
+
+                    {match.externalId && (
+                      <button
+                        onClick={handleSyncStats}
+                        disabled={isSyncingStats}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-800/60 px-2.5 py-1 rounded transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                        title="Carregar estatísticas oficiais desta partida"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isSyncingStats ? "animate-spin" : ""}`} />
+                        <span>{isSyncingStats ? "A carregar..." : "Sincronizar Estatísticas"}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!match.statistics ? (
+                  <div className="text-center py-8 text-xs text-slate-500 bg-[#0d1117]/50 rounded-lg border border-[#21262d] flex flex-col items-center gap-2">
+                    <BarChart2 className="w-6 h-6 text-slate-600" />
+                    <span>Estatísticas ainda não sincronizadas para esta partida.</span>
+                    {match.externalId && (
+                      <span className="text-[11px] text-emerald-500/80">
+                        Clique em "Sincronizar Estatísticas" acima para carregar.
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3.5 bg-[#0d1117]/30 p-4 rounded-xl border border-[#21262d]">
+                    {renderStatRow(
+                      "Posse de Bola",
+                      match.statistics.homePossession,
+                      match.statistics.awayPossession,
+                      true
+                    )}
+                    {renderStatRow(
+                      "Remates à Baliza",
+                      match.statistics.homeShotsOnTarget,
+                      match.statistics.awayShotsOnTarget
+                    )}
+                    {renderStatRow(
+                      "Total de Remates",
+                      match.statistics.homeTotalShots,
+                      match.statistics.awayTotalShots
+                    )}
+                    {renderStatRow(
+                      "Cantos",
+                      match.statistics.homeCorners,
+                      match.statistics.awayCorners
+                    )}
+                    {renderStatRow(
+                      "Faltas",
+                      match.statistics.homeFouls,
+                      match.statistics.awayFouls
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
