@@ -6,7 +6,7 @@ import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
-import { StandingsTable } from "./components/StandingsTable";
+import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
 import { playGoalBeep } from "./lib/sound";
 
@@ -481,8 +481,13 @@ export default function App() {
                   <button
                     key={lg._id}
                     onClick={() => {
-                      setSelectedLeagueId(lg._id);
-                      setViewMode("matches");
+                      if (selectedLeagueId === lg._id) {
+                        setSelectedLeagueId(null);
+                        setViewMode("matches");
+                      } else {
+                        setSelectedLeagueId(lg._id);
+                        setViewMode("standings");
+                      }
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
                       isSelected
@@ -514,8 +519,13 @@ export default function App() {
                   <button
                     key={lg._id}
                     onClick={() => {
-                      setSelectedLeagueId(lg._id);
-                      setViewMode("matches");
+                      if (selectedLeagueId === lg._id) {
+                        setSelectedLeagueId(null);
+                        setViewMode("matches");
+                      } else {
+                        setSelectedLeagueId(lg._id);
+                        setViewMode("standings");
+                      }
                     }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer opacity-85 hover:opacity-100 ${
                       isSelected
@@ -537,30 +547,30 @@ export default function App() {
       </header>
 
       {/* Conteúdo Principal */}
-      <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Alternador de Visualização: Jogos vs Tabela de Classificação */}
         {selectedLeagueId && (
           <div className="flex items-center justify-between border-b border-[#30363d] pb-3">
             <div className="flex items-center gap-2 bg-[#161b22] p-1 rounded-lg border border-[#30363d]">
               <button
-                onClick={() => setViewMode("matches")}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === "matches"
-                    ? "bg-emerald-500 text-slate-950 shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                Jogos da Liga
-              </button>
-              <button
                 onClick={() => setViewMode("standings")}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "standings"
-                    ? "bg-emerald-500 text-slate-950 shadow-sm"
+                    ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                Tabela de Classificação
+                Classificação & Rodadas (Sofascore)
+              </button>
+              <button
+                onClick={() => setViewMode("matches")}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "matches"
+                    ? "bg-emerald-500 text-slate-950 font-bold shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Grade Geral de Jogos
               </button>
             </div>
             {selectedLeague && (
@@ -594,10 +604,10 @@ export default function App() {
           </div>
         )}
 
-        {selectedLeagueId && viewMode === "standings" ? (
-          <StandingsTable
+        {selectedLeagueId && selectedLeague && viewMode === "standings" ? (
+          <LeagueView
             leagueId={selectedLeagueId}
-            leagueName={selectedLeague?.name ?? "Campeonato"}
+            league={selectedLeague}
           />
         ) : matches === undefined ? (
           <div className="flex justify-center items-center py-20 text-slate-400 gap-2">

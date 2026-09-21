@@ -123,6 +123,37 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
     }
   }, [standings, handleSync]);
 
+  const renderRankMovement = (rank: number, previousRank?: number) => {
+    if (previousRank === undefined || rank === previousRank) {
+      return (
+        <span
+          className="text-[9px] text-slate-500 font-bold leading-none select-none"
+          title="Manteve a posição"
+        >
+          —
+        </span>
+      );
+    }
+    if (rank < previousRank) {
+      return (
+        <span
+          className="text-[9px] text-emerald-400 font-bold leading-none select-none"
+          title={`Subiu ${previousRank - rank} posição(ões)`}
+        >
+          ▲
+        </span>
+      );
+    }
+    return (
+      <span
+        className="text-[9px] text-rose-400 font-bold leading-none select-none"
+        title={`Caiu ${rank - previousRank} posição(ões)`}
+      >
+        ▼
+      </span>
+    );
+  };
+
   const renderFormPills = (formString?: string) => {
     if (!formString) return <span className="text-slate-600">-</span>;
     // Pega até os últimos 5 jogos
@@ -326,11 +357,14 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
                     <tr className="hover:bg-[#21262d]/40 transition-colors group">
                       {/* Posição com Barra Lateral Colorida Sofascore */}
                       <td
-                        className={`py-2.5 pl-3 pr-2 text-center border-l-[3px] ${zone.borderColor}`}
+                        className={`py-2.5 pl-2.5 pr-1.5 text-center border-l-[3px] ${zone.borderColor}`}
                       >
-                        <span className="text-xs font-semibold text-slate-300">
-                          {row.rank}
-                        </span>
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-xs font-semibold text-slate-300 w-4 text-right">
+                            {row.rank}
+                          </span>
+                          {renderRankMovement(row.rank, row.previousRank)}
+                        </div>
                       </td>
 
                       {/* Escudo + Nome do Time */}

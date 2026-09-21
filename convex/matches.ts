@@ -113,3 +113,54 @@ export const listMatches = query({
     };
   },
 });
+
+// Retorna as partidas de uma rodada específica de um campeonato
+export const listMatchesByRound = query({
+  args: {
+    leagueId: v.id("leagues"),
+    round: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const roundNum = args.round.replace(/\D/g, "");
+    const searchRounds = [
+      args.round,
+      roundNum ? `Rodada ${roundNum}` : args.round,
+      roundNum,
+    ].filter(Boolean);
+
+    const allMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league_and_round", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+
+    const matches = allMatches.filter((m) =>
+      searchRounds.some(
+        (sr) => m.round.trim().toLowerCase() === sr.trim().toLowerCase()
+      )
+    );
+
+    return await Promise.all(
+      matches.map(async (m) => {
+        const [homeTeam, awayTeam, stadium, events] = await Promise.all([
+          ctx.db.get(m.homeTeamId),
+          ctx.db.get(m.awayTeamId),
+          m.stadiumId ? ctx.db.get(m.stadiumId) : null,
+          ctx.db
+            .query("matchEvents")
+            .withIndex("by_match", (q) => q.eq("matchId", m._id))
+            .collect(),
+        ]);
+
+        events.sort((a, b) => a.minute - b.minute);
+
+        return {
+          ...m,
+          homeTeam,
+          awayTeam,
+          stadium,
+          events: events.filter((e) => e.type === "GOAL"),
+        };
+      })
+    );
+  },
+});

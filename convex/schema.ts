@@ -76,6 +76,7 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_league", ["leagueId"])
     .index("by_league_and_status", ["leagueId", "status"])
+    .index("by_league_and_round", ["leagueId", "round"])
     .index("by_startTime", ["startTime"]),
 
   // 5. Lances em Tempo Real
@@ -119,6 +120,7 @@ export default defineSchema({
     leagueId: v.id("leagues"),
     season: v.number(),
     rank: v.number(),
+    previousRank: v.optional(v.number()), // Posição na rodada anterior
     teamId: v.id("teams"),
     points: v.number(),
     goalsDiff: v.number(),
