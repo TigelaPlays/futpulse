@@ -447,50 +447,34 @@ export const saveSyncedStatistics = internalMutation({
   },
 });
 
-// Polling inteligente que só consome a API se houver partidas ao vivo ou prestes a começar
+// Polling inteligente que só consome a API se houver partidas ao vivo dentro do horário de jogos
 export const smartLivePolling = action({
   args: {},
-  handler: async (
-    ctx
-  ): Promise<{
-    skipped: boolean;
-    reason?: string;
-    matchCount?: number;
-    result?: any;
-  }> => {
-    // 1. Verifica no banco do Convex se há jogos em andamento ou prestes a começar
-    const allMatches: any[] = (await ctx.runQuery(api.matches.listMatches, {})) ?? [];
+  handler: async (ctx) => {
+    // Horário de Brasília (UTC-3)
+    const now = new Date();
+    const utcHours = now.getUTCHours();
+    const brHours = (utcHours - 3 + 24) % 24;
 
-    const now = Date.now();
-    const fifteenMinutes = 15 * 60 * 1000;
-    const twoHoursAndHalf = 150 * 60 * 1000; // tolerância para jogos em andamento que ainda constam como agendados
-
-    const activeOrUpcomingMatches = allMatches.filter((m: any) => {
-      const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
-      if (isLive) return true;
-
-      // Jogo agendado que começa nos próximos 15 minutos ou começou recentemente
-      const isStartingOrUnderway =
-        m.status === "SCHEDULED" &&
-        m.startTime <= now + fifteenMinutes &&
-        m.startTime >= now - twoHoursAndHalf;
-
-      return isStartingOrUnderway;
-    });
-
-    // Se não tiver nenhum jogo ativo ou prestes a começar, encerra poupando cota da API
-    if (activeOrUpcomingMatches.length === 0) {
-      console.log("[Smart Polling] Nenhum jogo ativo ou iminente no momento. Requisição externa poupada.");
-      return { skipped: true, reason: "NO_ACTIVE_OR_UPCOMING_MATCHES" };
+    // Se estiver fora da janela de jogos (entre 00:00 e 08:59 BRT), aborta
+    if (brHours < 9) {
+      console.log(`[Smart Polling] Madrugada (${brHours}h BRT). Polling desativado.`);
+      return { skipped: true, reason: "OFF_HOURS" };
     }
 
-    console.log(
-      `[Smart Polling] ${activeOrUpcomingMatches.length} jogo(s) ativo(s) ou iminente(s) detectado(s). Sincronizando com a API...`
-    );
+    // Checa se tem jogos com status ao vivo no banco local
+    const activeMatches: any[] = (await ctx.runQuery(api.matches.listMatches, {
+      statusFilter: "LIVE",
+    })) ?? [];
 
-    // Dispara a sincronização de jogos ao vivo chamando o helper diretamente
+    if (!activeMatches || activeMatches.length === 0) {
+      console.log("[Smart Polling] Nenhum jogo ao vivo ativo no momento.");
+      return { skipped: true, reason: "NO_ACTIVE_MATCHES" };
+    }
+
+    console.log(`[Smart Polling] ${activeMatches.length} jogos ao vivo detectados (${brHours}h BRT). Sincronizando...`);
     const syncResult = await performLiveSync(ctx);
-    return { skipped: false, matchCount: activeOrUpcomingMatches.length, result: syncResult };
+    return { skipped: false, result: syncResult };
   },
 });
 

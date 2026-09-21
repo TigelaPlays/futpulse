@@ -11,10 +11,10 @@ crons.daily(
   {}
 );
 
-// 2. Verificação de jogos ao vivo a cada 2 minutos (só consome a API se houver jogo rolando ou iminente)
+// 2. Polling inteligente a cada 15 minutos
 crons.interval(
   "smart live polling",
-  { minutes: 2 },
+  { minutes: 15 },
   api.ingestion.smartLivePolling,
   {}
 );
