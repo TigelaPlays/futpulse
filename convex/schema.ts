@@ -7,10 +7,11 @@ export default defineSchema({
     name: v.string(),
     country: v.string(),
     logoUrl: v.string(),
+    customLogoStorageId: v.optional(v.id("_storage")), // Imagem no Convex File Storage
     season: v.number(),
     type: v.union(v.literal("league"), v.literal("cup")),
-    externalId: v.number(),
-    priority: v.number(),
+    externalId: v.optional(v.number()),
+    priority: v.optional(v.number()),
   })
     .index("by_externalId", ["externalId"])
     .index("by_priority", ["priority"]),
@@ -21,16 +22,28 @@ export default defineSchema({
     shortName: v.optional(v.string()),
     code: v.optional(v.string()),
     logoUrl: v.string(),
-    externalId: v.number(),
+    customLogoStorageId: v.optional(v.id("_storage")), // Imagem no Convex File Storage
+    externalId: v.optional(v.number()),
   }).index("by_externalId", ["externalId"]),
 
-  // 3. Partidas
+  // 3. Estádios
+  stadiums: defineTable({
+    name: v.string(),
+    city: v.string(),
+    capacity: v.optional(v.number()),
+    imageUrl: v.string(),
+    customImageStorageId: v.optional(v.id("_storage")),
+    teamId: v.optional(v.id("teams")),
+  }).index("by_team", ["teamId"]),
+
+  // 4. Partidas
   matches: defineTable({
-    externalId: v.number(),
+    externalId: v.optional(v.number()),
     leagueId: v.id("leagues"),
     round: v.string(),
     homeTeamId: v.id("teams"),
     awayTeamId: v.id("teams"),
+    stadiumId: v.optional(v.id("stadiums")), // Vínculo com estádio
 
     status: v.union(
       v.literal("SCHEDULED"),
@@ -61,10 +74,11 @@ export default defineSchema({
   })
     .index("by_externalId", ["externalId"])
     .index("by_status", ["status"])
+    .index("by_league", ["leagueId"])
     .index("by_league_and_status", ["leagueId", "status"])
     .index("by_startTime", ["startTime"]),
 
-  // 4. Lances em Tempo Real
+  // 5. Lances em Tempo Real
   matchEvents: defineTable({
     matchId: v.id("matches"),
     externalId: v.optional(v.string()),
@@ -85,7 +99,7 @@ export default defineSchema({
     .index("by_match", ["matchId", "minute"])
     .index("by_externalId", ["externalId"]),
 
-  // 5. Estatísticas Comparativas da Partida
+  // 6. Estatísticas Comparativas da Partida
   matchStatistics: defineTable({
     matchId: v.id("matches"),
     homePossession: v.number(),
@@ -100,7 +114,7 @@ export default defineSchema({
     awayFouls: v.number(),
   }).index("by_match", ["matchId"]),
 
-  // 6. Tabela de Classificação
+  // 7. Tabela de Classificação
   standings: defineTable({
     leagueId: v.id("leagues"),
     season: v.number(),
