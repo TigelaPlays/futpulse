@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
+import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
@@ -14,12 +15,55 @@ export default function App() {
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [goalAlerts, setGoalAlerts] = useState<GoalAlert[]>([]);
+  const previousScoresRef = useRef<Record<string, { home: number; away: number }>>({});
 
   const leagues = useQuery(api.leagues.listLeagues);
   const matches = useQuery(api.matches.listMatches, {
     statusFilter: filter,
     leagueId: selectedLeagueId ?? undefined,
   });
+
+  // Detecta quando o placar muda para disparar o Toast de Gol
+  useEffect(() => {
+    if (!matches) return;
+
+    matches.forEach((match) => {
+      const prev = previousScoresRef.current[match._id];
+
+      if (prev) {
+        const homeScored = match.homeScore > prev.home;
+        const awayScored = match.awayScore > prev.away;
+
+        if (homeScored || awayScored) {
+          const scoringTeam = homeScored ? match.homeTeam : match.awayTeam;
+          const newAlert: GoalAlert = {
+            id: `${match._id}-${Date.now()}-${homeScored ? "H" : "A"}`,
+            matchId: match._id,
+            teamName: scoringTeam?.name ?? "Time",
+            teamLogo: scoringTeam?.logoUrl,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+            homeTeamName: match.homeTeam?.name ?? "Mandante",
+            awayTeamName: match.awayTeam?.name ?? "Visitante",
+          };
+
+          setGoalAlerts((current) => [...current, newAlert]);
+
+          // Some sozinho após 4.5 segundos
+          setTimeout(() => {
+            setGoalAlerts((current) => current.filter((a) => a.id !== newAlert.id));
+          }, 4500);
+        }
+      }
+
+      // Atualiza a memória de placares
+      previousScoresRef.current[match._id] = {
+        home: match.homeScore,
+        away: match.awayScore,
+      };
+    });
+  }, [matches]);
 
   const simulateGoal = useMutation(api.seed.simulateGoal);
   const syncLiveMatches = useAction(api.ingestion.syncLiveMatches);
@@ -391,6 +435,12 @@ export default function App() {
           ))
         )}
       </main>
+
+      {/* Container dos Alertas de Gol Flutuantes */}
+      <GoalToastContainer
+        alerts={goalAlerts}
+        onDismiss={(id) => setGoalAlerts((cur) => cur.filter((a) => a.id !== id))}
+      />
     </div>
   );
 }
