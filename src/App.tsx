@@ -48,11 +48,40 @@ export default function App() {
     });
   };
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Atalho de teclado para a barra de pesquisa (Ctrl+K ou Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const leagues = useQuery(api.leagues.listLeagues);
   const matches = useQuery(api.matches.listMatches, {
     statusFilter: filter,
     leagueId: selectedLeagueId ?? undefined,
   });
+  const allMatchesForCounts = useQuery(api.matches.listMatches, {
+    statusFilter: "ALL",
+    leagueId: selectedLeagueId ?? undefined,
+  });
+
+  const matchCounts = {
+    ALL: allMatchesForCounts?.length ?? 0,
+    LIVE:
+      allMatchesForCounts?.filter((m) =>
+        ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
+      ).length ?? 0,
+    FINISHED: allMatchesForCounts?.filter((m) => m.status === "FINISHED").length ?? 0,
+    SCHEDULED: allMatchesForCounts?.filter((m) => m.status === "SCHEDULED").length ?? 0,
+  };
+
   const selectedLeague = leagues?.find((l) => l._id === selectedLeagueId);
 
   // Detecta quando o placar muda para disparar o Toast de Gol e o Som
@@ -255,7 +284,15 @@ export default function App() {
         <div className="flex-1 grid grid-cols-7 items-center max-w-lg mx-auto w-full">
           {/* Mandante */}
           <div className="col-span-3 flex items-center justify-end gap-2.5 text-right">
-            <span className="font-semibold text-sm truncate">
+            <span
+              className={`text-sm truncate transition-colors ${
+                match.status === "FINISHED" && match.homeScore > match.awayScore
+                  ? "font-bold text-slate-100"
+                  : match.status === "FINISHED"
+                  ? "font-medium text-slate-400"
+                  : "font-semibold text-slate-200"
+              }`}
+            >
               {match.homeTeam?.name}
             </span>
             {match.homeTeam?.logoUrl ? (
@@ -274,11 +311,19 @@ export default function App() {
           {/* Placar Central */}
           <div className="col-span-1 flex justify-center items-center">
             {match.status === "SCHEDULED" ? (
-              <span className="text-xs text-slate-400 font-bold tracking-widest">VS</span>
+              <span className="text-[11px] text-slate-400 font-bold tracking-widest px-2 py-0.5 rounded bg-[#0d1117]/80 border border-[#30363d]/60">
+                VS
+              </span>
             ) : (
-              <div className="bg-[#0d1117] border border-[#30363d] px-3 py-1 rounded-md font-mono font-bold text-base text-emerald-400 flex items-center gap-1.5 shadow-inner">
+              <div
+                className={`px-3 py-0.5 rounded-lg font-mono tabular-nums font-bold text-base flex items-center gap-1.5 shadow-inner border transition-all ${
+                  isLive
+                    ? "bg-[#0b1712] border-emerald-500/50 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/25"
+                    : "bg-[#0d1117] border-[#30363d] text-slate-200"
+                }`}
+              >
                 <span>{match.homeScore}</span>
-                <span className="text-slate-500 font-sans">-</span>
+                <span className="text-slate-500 font-sans text-xs">-</span>
                 <span>{match.awayScore}</span>
               </div>
             )}
@@ -297,7 +342,15 @@ export default function App() {
                 {match.awayTeam?.name?.charAt(0) ?? "V"}
               </div>
             )}
-            <span className="font-semibold text-sm truncate">
+            <span
+              className={`text-sm truncate transition-colors ${
+                match.status === "FINISHED" && match.awayScore > match.homeScore
+                  ? "font-bold text-slate-100"
+                  : match.status === "FINISHED"
+                  ? "font-medium text-slate-400"
+                  : "font-semibold text-slate-200"
+              }`}
+            >
               {match.awayTeam?.name}
             </span>
           </div>
@@ -331,7 +384,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-slate-100 font-sans">
+    <div className="min-h-screen bg-[#080c10] text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950">
       <MatchDetailsModal
         matchId={selectedMatchId}
         onClose={() => setSelectedMatchId(null)}
@@ -342,24 +395,27 @@ export default function App() {
         onClose={() => setIsAssetModalOpen(false)}
       />
 
-      {/* Header Fixo */}
-      <header className="border-b border-[#30363d] bg-[#161b22] sticky top-0 z-40 px-4 py-3 shadow-md">
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      {/* Header Fixo com Glassmorphism Esportivo */}
+      <header className="border-b border-white/[0.07] bg-[#080c10]/85 backdrop-blur-xl sticky top-0 z-40 px-4 py-3 shadow-2xl transition-all">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="bg-emerald-500/20 p-2 rounded-lg text-emerald-400">
-              <Activity className="w-6 h-6 animate-pulse" />
+            <div className="bg-emerald-500/15 p-2 rounded-xl text-emerald-400 border border-emerald-500/25 shadow-[0_0_15px_rgba(16,185,129,0.18)]">
+              <Activity className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-200 to-white bg-clip-text text-transparent flex items-center gap-1.5">
                 FutPulse
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
               </h1>
-              <p className="text-xs text-slate-400">Resultados em Tempo Real</p>
+              <p className="text-[11px] text-slate-400 tracking-wide font-medium">
+                Live Score & Match Center
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {syncFeedback && (
-              <span className="text-xs font-medium text-emerald-400 animate-fade-in hidden sm:inline">
+              <span className="text-xs font-semibold text-emerald-400 animate-fade-in hidden sm:inline px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
                 {syncFeedback}
               </span>
             )}
@@ -370,12 +426,12 @@ export default function App() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 isSyncing
                   ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
-                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 active:scale-95"
+                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 active:scale-95 shadow-sm"
               }`}
               title="Sincronizar jogos ao vivo agora"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-              <span>{isSyncing ? "..." : "Ao Vivo"}</span>
+              <span>{isSyncing ? "..." : "Sincronizar"}</span>
             </button>
 
             <button
@@ -384,18 +440,18 @@ export default function App() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 isSyncing
                   ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
-                  : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-[#30363d] active:scale-95"
+                  : "bg-[#161b22] hover:bg-[#21262d] text-slate-300 border-[#30363d] active:scale-95"
               }`}
               title="Carregar grade do dia inteiro"
             >
-              <CalendarDays className="w-3.5 h-3.5" />
+              <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
               <span className="hidden sm:inline">Grade de Hoje</span>
             </button>
 
             {/* Botão de Upload de Ativos / Escudos */}
             <button
               onClick={() => setIsAssetModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 border-[#30363d] active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer bg-[#161b22] hover:bg-[#21262d] text-slate-300 border-[#30363d] active:scale-95"
               title="Gerenciador de Ativos e Escudos"
             >
               <Upload className="w-3.5 h-3.5 text-emerald-400" />
@@ -407,57 +463,85 @@ export default function App() {
               onClick={() => setSoundEnabled(!soundEnabled)}
               className={`p-1.5 rounded-lg border text-xs transition-all cursor-pointer ${
                 soundEnabled
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                  : "bg-slate-800 text-slate-500 border-[#30363d]"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-sm"
+                  : "bg-[#161b22] text-slate-500 border-[#30363d]"
               }`}
               title={soundEnabled ? "Som ativado" : "Som mutado"}
             >
               {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Filtros de Status */}
-            <div className="flex bg-[#0d1117] p-1 rounded-lg border border-[#30363d] text-xs font-semibold">
+            {/* Filtros de Status com Contadores Vivos */}
+            <div className="flex items-center gap-1 bg-[#0b0f17]/90 p-1 rounded-xl border border-white/[0.08] text-xs font-semibold shadow-inner">
               {(
                 [
-                  { id: "ALL", label: "Todos" },
-                  { id: "LIVE", label: "Ao Vivo" },
-                  { id: "FINISHED", label: "Encerrados" },
-                  { id: "SCHEDULED", label: "Agendados" },
+                  { id: "ALL", label: "Todos", count: matchCounts.ALL },
+                  { id: "LIVE", label: "Ao Vivo", count: matchCounts.LIVE },
+                  { id: "FINISHED", label: "Fim", count: matchCounts.FINISHED },
+                  { id: "SCHEDULED", label: "Grade", count: matchCounts.SCHEDULED },
                 ] as const
-              ).map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setFilter(item.id)}
-                  className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer ${
-                    filter === item.id
-                      ? "bg-emerald-500 text-slate-950 shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+              ).map((item) => {
+                const isActive = filter === item.id;
+                const hasLiveCount = item.id === "LIVE" && item.count > 0;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setFilter(item.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    {hasLiveCount && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                      </span>
+                    )}
+                    <span>{item.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums font-mono ${
+                        isActive
+                          ? "bg-slate-950/20 text-slate-900 font-bold"
+                          : hasLiveCount
+                          ? "bg-emerald-500/20 text-emerald-400 font-bold"
+                          : "bg-white/[0.06] text-slate-400"
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Barra de Pesquisa Rápida */}
-        <div className="max-w-5xl mx-auto mt-2.5">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        {/* Barra de Pesquisa Rápida com Atalho Ctrl+K */}
+        <div className="max-w-7xl mx-auto mt-2.5">
+          <div className="relative group">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por time ou campeonato..."
-              className="w-full bg-[#0d1117] border border-[#30363d] focus:border-emerald-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-colors"
+              className="w-full bg-[#0d1117]/80 backdrop-blur-md border border-[#30363d]/80 focus:border-emerald-500/80 focus:ring-2 focus:ring-emerald-500/20 rounded-xl pl-9 pr-16 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-all shadow-sm"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-400 bg-[#21262d]/60 border border-[#30363d]/60 rounded">
+                Ctrl K
+              </kbd>
+            </div>
           </div>
         </div>
 
         {/* Pílulas de Navegação Rápida por Campeonato */}
         {leagues && leagues.length > 0 && (
-          <div className="max-w-5xl mx-auto mt-3 pt-2.5 border-t border-[#21262d] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             <button
               onClick={() => {
                 setSelectedLeagueId(null);
