@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -9,13 +9,92 @@ interface StandingsTableProps {
   leagueName: string;
 }
 
+interface ZoneInfo {
+  label?: string;
+  borderColor: string;
+}
+
+function getZoneInfo(
+  rank: number,
+  totalTeams: number,
+  leagueName: string,
+  description?: string
+): ZoneInfo {
+  const isSerieB =
+    leagueName.toLowerCase().includes("série b") ||
+    leagueName.toLowerCase().includes("serie b");
+
+  if (isSerieB) {
+    if (rank <= 2) {
+      return {
+        label: rank === 1 ? "Promoção" : undefined,
+        borderColor: "border-l-emerald-600",
+      };
+    }
+    if (rank <= 6) {
+      return {
+        label: rank === 3 ? "Play-off para Promoção" : undefined,
+        borderColor: "border-l-emerald-400",
+      };
+    }
+    if (rank > totalTeams - 4) {
+      return {
+        label: rank === totalTeams - 3 ? "Rebaixamento" : undefined,
+        borderColor: "border-l-rose-600",
+      };
+    }
+    return {
+      borderColor: "border-l-transparent",
+    };
+  }
+
+  // Série A e ligas gerais
+  const desc = description?.toLowerCase() || "";
+  if (desc.includes("libertadores") || rank <= 4) {
+    return {
+      label: rank === 1 ? "Fase de Grupos (Libertadores)" : undefined,
+      borderColor: "border-l-emerald-600",
+    };
+  }
+  if (desc.includes("qualif") || (rank > 4 && rank <= 6)) {
+    return {
+      label: rank === 5 ? "Qualificação (Libertadores)" : undefined,
+      borderColor: "border-l-emerald-400",
+    };
+  }
+  if (desc.includes("sudamericana") || (rank > 6 && rank <= 12)) {
+    return {
+      label: rank === 7 ? "Copa Sul-Americana" : undefined,
+      borderColor: "border-l-sky-500",
+    };
+  }
+  if (
+    desc.includes("relegation") ||
+    desc.includes("rebaixamento") ||
+    rank > totalTeams - 4
+  ) {
+    return {
+      label: rank === totalTeams - 3 ? "Rebaixamento" : undefined,
+      borderColor: "border-l-rose-600",
+    };
+  }
+  return {
+    borderColor: "border-l-transparent",
+  };
+}
+
 export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
   const standings = useQuery(api.leagues.getStandings, { leagueId });
   const syncStandings = useAction(api.ingestion.syncLeagueStandings);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [tableFilter, setTableFilter] = useState<"all" | "home" | "away">("all");
   const autoSyncedRef = useRef(false);
+
+  const isSerieB =
+    leagueName.toLowerCase().includes("série b") ||
+    leagueName.toLowerCase().includes("serie b");
 
   const handleSync = useCallback(async () => {
     try {
@@ -44,57 +123,44 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
     }
   }, [standings, handleSync]);
 
-  const getRankBadgeClass = (rank: number, totalTeams: number, description?: string) => {
-    const desc = description?.toLowerCase() || "";
-    if (desc.includes("champions") || desc.includes("libertadores") || rank <= 4) {
-      return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold";
-    }
-    if (desc.includes("europa") || desc.includes("sudamericana") || (rank > 4 && rank <= 6)) {
-      return "bg-sky-500/15 text-sky-400 border border-sky-500/30 font-bold";
-    }
-    if (desc.includes("relegation") || desc.includes("rebaixamento") || rank > totalTeams - 4) {
-      return "bg-rose-500/15 text-rose-400 border border-rose-500/30 font-bold";
-    }
-    return "bg-slate-800/60 text-slate-400 border border-slate-700/40";
-  };
-
   const renderFormPills = (formString?: string) => {
     if (!formString) return <span className="text-slate-600">-</span>;
     // Pega até os últimos 5 jogos
     const chars = formString.slice(-5).split("");
 
     return (
-      <div className="flex items-center gap-1 justify-center">
+      <div className="inline-flex items-center gap-1 bg-[#21262d]/70 rounded-full px-2 py-0.5">
         {chars.map((char, index) => {
-          if (char === "W" || char === "V") {
+          const upper = char.toUpperCase();
+          if (upper === "W" || upper === "V") {
             return (
               <span
                 key={index}
-                className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold"
+                className="w-4 h-4 rounded bg-[#107c41] text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
                 title="Vitória"
               >
-                V
+                W
               </span>
             );
           }
-          if (char === "D" || char === "E") {
+          if (upper === "D" || upper === "E") {
             return (
               <span
                 key={index}
-                className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-[10px] font-bold"
+                className="w-4 h-4 rounded bg-[#70757a] text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
                 title="Empate"
               >
-                E
+                D
               </span>
             );
           }
           return (
             <span
               key={index}
-              className="w-4 h-4 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-[10px] font-bold"
+              className="w-4 h-4 rounded bg-[#d93025] text-white flex items-center justify-center text-[10px] font-bold shadow-xs"
               title="Derrota"
             >
-              D
+              L
             </span>
           );
         })}
@@ -141,6 +207,42 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
         </div>
       </div>
 
+      {/* Sub-navegação Sofascore: Todos | Casa | Fora */}
+      <div className="px-4 py-2.5 border-b border-[#30363d]/60 bg-[#0d1117]/40 flex items-center justify-center">
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-[#21262d]/70 border border-[#30363d]">
+          <button
+            onClick={() => setTableFilter("all")}
+            className={`px-4 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              tableFilter === "all"
+                ? "bg-[#0d1117] text-white shadow-xs"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setTableFilter("home")}
+            className={`px-4 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              tableFilter === "home"
+                ? "bg-[#0d1117] text-white shadow-xs"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Casa
+          </button>
+          <button
+            onClick={() => setTableFilter("away")}
+            className={`px-4 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              tableFilter === "away"
+                ? "bg-[#0d1117] text-white shadow-xs"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Fora
+          </button>
+        </div>
+      </div>
+
       {/* Tabela */}
       {standings === undefined ? (
         <div className="flex justify-center items-center py-20 text-slate-400 gap-2">
@@ -159,7 +261,7 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-semibold text-xs hover:bg-emerald-400 transition-colors"
+            className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-semibold text-xs hover:bg-emerald-400 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
             {isSyncing ? "Buscando..." : "Buscar Classificação Agora"}
@@ -167,99 +269,134 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
         </div>
       ) : (
         <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs min-w-[580px]">
             <thead>
               <tr className="border-b border-[#30363d] bg-[#0d1117]/60 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                <th className="py-2.5 px-3 text-center w-12">#</th>
-                <th className="py-2.5 px-3 min-w-[180px]">Clube</th>
-                <th className="py-2.5 px-2.5 text-center font-bold text-slate-200">PTS</th>
-                <th className="py-2.5 px-2.5 text-center">J</th>
-                <th className="py-2.5 px-2.5 text-center">V</th>
-                <th className="py-2.5 px-2.5 text-center">E</th>
-                <th className="py-2.5 px-2.5 text-center">D</th>
-                <th className="py-2.5 px-2.5 text-center">SG</th>
-                <th className="py-2.5 px-3 text-center hidden md:table-cell">Últimos</th>
+                <th className="py-2.5 pl-3 pr-2 text-center w-10">#</th>
+                <th className="py-2.5 px-3 min-w-[170px]">Clube</th>
+                <th className="py-2.5 px-2 text-center w-9" title="Partidas Jogadas">
+                  P
+                </th>
+                <th className="py-2.5 px-2 text-center w-9" title="Vitórias">
+                  W
+                </th>
+                <th className="py-2.5 px-2 text-center w-9" title="Empates">
+                  D
+                </th>
+                <th className="py-2.5 px-2 text-center w-9" title="Derrotas">
+                  L
+                </th>
+                <th className="py-2.5 px-2.5 text-center w-12" title="Saldo de Gols">
+                  DIFF
+                </th>
+                <th
+                  className="py-2.5 px-2.5 text-center w-14"
+                  title="Gols Pró : Gols Contra"
+                >
+                  GLS
+                </th>
+                <th className="py-2.5 px-3 text-center hidden md:table-cell min-w-[130px]">
+                  Últimos 5
+                </th>
+                <th className="py-2.5 px-3 text-center w-12 font-bold text-slate-200">
+                  PTS
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#21262d]/60 font-medium">
               {standings.map((row) => {
                 const totalTeams = standings.length;
+                const zone = getZoneInfo(row.rank, totalTeams, leagueName, row.description);
+
                 return (
-                  <tr
-                    key={row._id}
-                    className="hover:bg-[#21262d]/40 transition-colors group"
-                  >
-                    {/* Posição com Badge Indicativo */}
-                    <td className="py-2 px-3 text-center">
-                      <span
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded-md text-xs ${getRankBadgeClass(
-                          row.rank,
-                          totalTeams,
-                          row.description
-                        )}`}
+                  <Fragment key={row._id}>
+                    {/* Header de Zona de Classificação (Promoção, Play-off, Rebaixamento) */}
+                    {zone.label && (
+                      <tr className="bg-[#0d1117]/50 border-t border-[#30363d]/40">
+                        <td
+                          colSpan={10}
+                          className="py-1.5 pl-4 pr-3 text-[11px] font-medium text-slate-400"
+                        >
+                          {zone.label}
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Linha do Time */}
+                    <tr className="hover:bg-[#21262d]/40 transition-colors group">
+                      {/* Posição com Barra Lateral Colorida Sofascore */}
+                      <td
+                        className={`py-2.5 pl-3 pr-2 text-center border-l-[3px] ${zone.borderColor}`}
                       >
-                        {row.rank}
-                      </span>
-                    </td>
-
-                    {/* Escudo + Nome do Time */}
-                    <td className="py-2 px-3">
-                      <div className="flex items-center gap-2.5">
-                        {row.team?.logoUrl ? (
-                          <div className="w-5 h-5 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0 shadow-sm">
-                            <img
-                              src={row.team.logoUrl}
-                              alt={row.team.name}
-                              className="w-full h-full object-contain"
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] text-slate-400 font-bold shrink-0">
-                            {row.team?.name?.charAt(0) || "T"}
-                          </div>
-                        )}
-                        <span className="font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors truncate max-w-[140px] sm:max-w-[200px]">
-                          {row.team?.name ?? "Time"}
+                        <span className="text-xs font-semibold text-slate-300">
+                          {row.rank}
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Pontos */}
-                    <td className="py-2 px-2.5 text-center font-bold text-emerald-400 bg-emerald-500/5">
-                      {row.points}
-                    </td>
+                      {/* Escudo + Nome do Time */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2.5">
+                          {row.team?.logoUrl ? (
+                            <div className="w-5 h-5 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0 shadow-xs">
+                              <img
+                                src={row.team.logoUrl}
+                                alt={row.team.name}
+                                className="w-full h-full object-contain"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] text-slate-400 font-bold shrink-0">
+                              {row.team?.name?.charAt(0) || "T"}
+                            </div>
+                          )}
+                          <span className="font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors truncate max-w-[140px] sm:max-w-[200px]">
+                            {row.team?.name ?? "Time"}
+                          </span>
+                        </div>
+                      </td>
 
-                    {/* Jogos */}
-                    <td className="py-2 px-2.5 text-center text-slate-300">{row.played}</td>
+                      {/* Partidas (P) */}
+                      <td className="py-2.5 px-2 text-center text-slate-300">
+                        {row.played}
+                      </td>
 
-                    {/* Vitórias */}
-                    <td className="py-2 px-2.5 text-center text-slate-300">{row.win}</td>
+                      {/* Vitórias (W) */}
+                      <td className="py-2.5 px-2 text-center text-slate-300">
+                        {row.win}
+                      </td>
 
-                    {/* Empates */}
-                    <td className="py-2 px-2.5 text-center text-slate-400">{row.draw}</td>
+                      {/* Empates (D) */}
+                      <td className="py-2.5 px-2 text-center text-slate-400">
+                        {row.draw}
+                      </td>
 
-                    {/* Derrotas */}
-                    <td className="py-2 px-2.5 text-center text-slate-400">{row.lose}</td>
+                      {/* Derrotas (L) */}
+                      <td className="py-2.5 px-2 text-center text-slate-400">
+                        {row.lose}
+                      </td>
 
-                    {/* Saldo de Gols */}
-                    <td
-                      className={`py-2 px-2.5 text-center font-semibold ${
-                        row.goalsDiff > 0
-                          ? "text-emerald-400"
-                          : row.goalsDiff < 0
-                          ? "text-rose-400"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}
-                    </td>
+                      {/* Saldo de Gols (DIFF) */}
+                      <td className="py-2.5 px-2.5 text-center font-semibold text-slate-300">
+                        {row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}
+                      </td>
 
-                    {/* Forma Recente */}
-                    <td className="py-2 px-3 text-center hidden md:table-cell">
-                      {renderFormPills(row.form)}
-                    </td>
-                  </tr>
+                      {/* Gols Pró:Contra (GLS) */}
+                      <td className="py-2.5 px-2.5 text-center text-slate-400 tracking-tight">
+                        {row.goalsFor ?? 0}:{row.goalsAgainst ?? 0}
+                      </td>
+
+                      {/* Últimos 5 Jogos */}
+                      <td className="py-2.5 px-3 text-center hidden md:table-cell">
+                        {renderFormPills(row.form)}
+                      </td>
+
+                      {/* Pontos (PTS) - Coluna Destacada à Direita */}
+                      <td className="py-2.5 px-3 text-center font-bold text-slate-100 text-sm">
+                        {row.points}
+                      </td>
+                    </tr>
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -270,18 +407,41 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
       {/* Legenda de Zonas */}
       {standings && standings.length > 0 && (
         <div className="p-3 bg-[#0d1117]/80 border-t border-[#30363d] flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-500" />
-            <span>Fase de Grupos / Libertadores</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-sky-500/30 border border-sky-500" />
-            <span>Classificação Continental / Pré</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/30 border border-rose-500" />
-            <span>Zona de Rebaixamento</span>
-          </div>
+          {isSerieB ? (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600" />
+                <span>Promoção (Série A)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-400" />
+                <span>Play-off para Promoção</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-rose-600" />
+                <span>Rebaixamento (Série C)</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600" />
+                <span>Fase de Grupos (Libertadores)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-400" />
+                <span>Qualificação / Pré-Libertadores</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-sky-500" />
+                <span>Copa Sul-Americana</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-xs bg-rose-600" />
+                <span>Zona de Rebaixamento</span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
