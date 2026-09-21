@@ -17,8 +17,8 @@ interface LeagueViewProps {
 }
 
 export function LeagueView({ leagueId, league }: LeagueViewProps) {
-  // Padrão Rodada 29 (onde estão os dados reais do print Sofascore)
-  const [currentRound, setCurrentRound] = useState<number>(29);
+  // Padrão Rodada 1 (onde estão os jogos reais cadastrados)
+  const [currentRound, setCurrentRound] = useState<number>(1);
   const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
 
   const minRound = 1;

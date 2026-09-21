@@ -170,23 +170,34 @@ export function RoundMatchesList({ leagueId, round }: RoundMatchesListProps) {
                   </div>
                 </div>
 
-                {/* Eventos de Gol (se houver) */}
+                {/* Eventos da Partida (Gols e Cartões Vermelhos) */}
                 {m.events && m.events.length > 0 && (
                   <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1">
                     {m.events.map((ev, idx) => {
-                      const isHomeGoal = ev.teamId === m.homeTeamId;
+                      const isHomeEvent = ev.teamId === m.homeTeamId;
+                      const isRedCard = ev.type === "RED_CARD";
+                      const isPenalty = ev.detail?.toLowerCase().includes("pen");
                       return (
                         <div
                           key={idx}
                           className="flex items-center gap-1.5 text-[10px] text-slate-500"
                         >
-                          <span className="text-[10px]">⚽</span>
+                          <span className="text-[10px] shrink-0">
+                            {isRedCard ? "🟥" : "⚽"}
+                          </span>
                           <span className="font-semibold text-slate-800 truncate">
                             {ev.playerName}
+                            {isPenalty && (
+                              <span className="text-slate-400 font-normal"> (P)</span>
+                            )}
                           </span>
-                          <span className="text-slate-400 font-medium">({ev.minute}')</span>
+                          <span className="text-slate-400 font-medium shrink-0">
+                            ({ev.minute}
+                            {ev.extraMinute ? `+${ev.extraMinute}` : ""}
+                            ')
+                          </span>
                           <span className="text-[9px] text-slate-500 ml-auto truncate max-w-[90px]">
-                            {isHomeGoal ? m.homeTeam?.name : m.awayTeam?.name}
+                            {isHomeEvent ? m.homeTeam?.name : m.awayTeam?.name}
                           </span>
                         </div>
                       );

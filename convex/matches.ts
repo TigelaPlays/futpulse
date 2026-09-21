@@ -158,7 +158,9 @@ export const listMatchesByRound = query({
           homeTeam,
           awayTeam,
           stadium,
-          events: events.filter((e) => e.type === "GOAL"),
+          events: events.filter(
+            (e) => e.type === "GOAL" || e.type === "RED_CARD"
+          ),
         };
       })
     );
