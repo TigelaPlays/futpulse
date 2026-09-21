@@ -44,3 +44,4 @@ O script:
 1. Lê automaticamente todos os arquivos colocados nessas pastas (`.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`).
 2. Faz o upload de cada arquivo para o **Convex File Storage**.
 3. Associa a URL gerada pela CDN ao time, liga ou estádio correspondente pelo nome.
+
