@@ -1,58 +1,63 @@
-import { action, internalMutation } from "./_generated/server";
+import { action, internalMutation, type ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 
 // IDs das ligas monitoradas (incluindo Série B - 72)
 const TRACKED_LEAGUE_IDS = [71, 72, 2, 39, 13, 73, 140, 135, 78, 11, 45];
 
+// Helper compartilhado para sincronização de jogos ao vivo
+export async function performLiveSync(ctx: ActionCtx) {
+  const apiKey = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env?.API_FOOTBALL_KEY;
+  if (!apiKey) {
+    console.warn("API_FOOTBALL_KEY não configurada no ambiente do Convex.");
+    return { success: false, reason: "API_FOOTBALL_KEY_MISSING" };
+  }
+
+  try {
+    // 1 única chamada busca TODOS os jogos ao vivo no mundo
+    const response = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
+      headers: {
+        "x-apisports-key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro na API externa: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const fixtures = data.response || [];
+
+    // Filtra apenas os jogos das nossas ligas
+    const relevantFixtures = fixtures.filter((item: any) =>
+      TRACKED_LEAGUE_IDS.includes(item.league?.id)
+    );
+
+    console.log(
+      `Jogos ao vivo no mundo: ${fixtures.length} | Jogos nas nossas ligas: ${relevantFixtures.length}`
+    );
+
+    // Dispara a mutação interna para persistir no banco
+    await ctx.runMutation(internal.ingestion.saveSyncedFixtures, {
+      fixtures: relevantFixtures,
+    });
+
+    return {
+      success: true,
+      totalLiveWorld: fixtures.length,
+      syncedCount: relevantFixtures.length,
+    };
+  } catch (error: any) {
+    console.error("Falha ao sincronizar partidas ao vivo:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 // 1. Action: busca dados externos via HTTP Fetch
 export const syncLiveMatches = action({
   args: {},
   handler: async (ctx) => {
-    const apiKey = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env?.API_FOOTBALL_KEY;
-    if (!apiKey) {
-      console.warn("API_FOOTBALL_KEY não configurada no ambiente do Convex.");
-      return { success: false, reason: "API_FOOTBALL_KEY_MISSING" };
-    }
-
-    try {
-      // 1 única chamada busca TODOS os jogos ao vivo no mundo
-      const response = await fetch("https://v3.football.api-sports.io/fixtures?live=all", {
-        headers: {
-          "x-apisports-key": apiKey,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro na API externa: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const fixtures = data.response || [];
-
-      // Filtra apenas os jogos das nossas 10 ligas
-      const relevantFixtures = fixtures.filter((item: any) =>
-        TRACKED_LEAGUE_IDS.includes(item.league?.id)
-      );
-
-      console.log(
-        `Jogos ao vivo no mundo: ${fixtures.length} | Jogos nas nossas ligas: ${relevantFixtures.length}`
-      );
-
-      // Dispara a mutação interna para persistir no banco
-      await ctx.runMutation(internal.ingestion.saveSyncedFixtures, {
-        fixtures: relevantFixtures,
-      });
-
-      return {
-        success: true,
-        totalLiveWorld: fixtures.length,
-        syncedCount: relevantFixtures.length,
-      };
-    } catch (error: any) {
-      console.error("Falha ao sincronizar partidas ao vivo:", error);
-      return { success: false, error: error.message };
-    }
+    return await performLiveSync(ctx);
   },
 });
 
@@ -439,5 +444,52 @@ export const saveSyncedStatistics = internalMutation({
     } else {
       await ctx.db.insert("matchStatistics", { matchId, ...stats });
     }
+  },
+});
+
+// Polling inteligente que só consome a API se houver partidas ao vivo ou prestes a começar
+export const smartLivePolling = action({
+  args: {},
+  handler: async (
+    ctx
+  ): Promise<{
+    skipped: boolean;
+    reason?: string;
+    matchCount?: number;
+    result?: any;
+  }> => {
+    // 1. Verifica no banco do Convex se há jogos em andamento ou prestes a começar
+    const allMatches: any[] = (await ctx.runQuery(api.matches.listMatches, {})) ?? [];
+
+    const now = Date.now();
+    const fifteenMinutes = 15 * 60 * 1000;
+    const twoHoursAndHalf = 150 * 60 * 1000; // tolerância para jogos em andamento que ainda constam como agendados
+
+    const activeOrUpcomingMatches = allMatches.filter((m: any) => {
+      const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
+      if (isLive) return true;
+
+      // Jogo agendado que começa nos próximos 15 minutos ou começou recentemente
+      const isStartingOrUnderway =
+        m.status === "SCHEDULED" &&
+        m.startTime <= now + fifteenMinutes &&
+        m.startTime >= now - twoHoursAndHalf;
+
+      return isStartingOrUnderway;
+    });
+
+    // Se não tiver nenhum jogo ativo ou prestes a começar, encerra poupando cota da API
+    if (activeOrUpcomingMatches.length === 0) {
+      console.log("[Smart Polling] Nenhum jogo ativo ou iminente no momento. Requisição externa poupada.");
+      return { skipped: true, reason: "NO_ACTIVE_OR_UPCOMING_MATCHES" };
+    }
+
+    console.log(
+      `[Smart Polling] ${activeOrUpcomingMatches.length} jogo(s) ativo(s) ou iminente(s) detectado(s). Sincronizando com a API...`
+    );
+
+    // Dispara a sincronização de jogos ao vivo chamando o helper diretamente
+    const syncResult = await performLiveSync(ctx);
+    return { skipped: false, matchCount: activeOrUpcomingMatches.length, result: syncResult };
   },
 });

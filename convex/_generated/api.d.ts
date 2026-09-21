@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as ingestion from "../ingestion.js";
 import type * as leagues from "../leagues.js";
 import type * as matches from "../matches.js";
@@ -20,6 +21,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   ingestion: typeof ingestion;
   leagues: typeof leagues;
   matches: typeof matches;

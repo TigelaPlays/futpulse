@@ -33,3 +33,4 @@ export function playGoalBeep() {
     console.warn("Navegador bloqueou áudio autônomo:", err);
   }
 }
+
