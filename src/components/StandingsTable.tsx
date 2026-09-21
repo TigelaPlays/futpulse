@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Trophy, RefreshCw, AlertCircle } from "lucide-react";
@@ -84,12 +84,16 @@ function getZoneInfo(
 }
 
 export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
-  const standings = useQuery(api.leagues.getStandings, { leagueId });
+  const [tableFilter, setTableFilter] = useState<"all" | "home" | "away">("all");
+  const standings = useQuery(api.leagues.getStandings, {
+    leagueId,
+    filter: tableFilter,
+  });
+  const recalculateStandings = useMutation(api.leagues.recalculateAndSaveStandings);
   const syncStandings = useAction(api.ingestion.syncLeagueStandings);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
-  const [tableFilter, setTableFilter] = useState<"all" | "home" | "away">("all");
   const autoSyncedRef = useRef(false);
 
   const isSerieB =
@@ -100,20 +104,25 @@ export function StandingsTable({ leagueId, leagueName }: StandingsTableProps) {
     try {
       setIsSyncing(true);
       setSyncFeedback(null);
-      const result = await syncStandings({ leagueId });
-      if (result.success) {
-        setSyncFeedback("Classificação atualizada!");
+      const res = await recalculateStandings({ leagueId });
+      if (res.success) {
+        setSyncFeedback("Classificação recalculada!");
       } else {
-        setSyncFeedback("Não foi possível atualizar.");
+        const result = await syncStandings({ leagueId });
+        if (result.success) {
+          setSyncFeedback("Classificação atualizada!");
+        } else {
+          setSyncFeedback("Não foi possível atualizar.");
+        }
       }
     } catch (err) {
       console.error("Erro ao sincronizar tabela:", err);
-      setSyncFeedback("Erro de conexão com a API.");
+      setSyncFeedback("Erro ao atualizar classificação.");
     } finally {
       setIsSyncing(false);
       setTimeout(() => setSyncFeedback(null), 3500);
     }
-  }, [leagueId, syncStandings]);
+  }, [leagueId, recalculateStandings, syncStandings]);
 
   // Se a tabela estiver vazia ao abrir a aba, dispara a busca sob demanda
   useEffect(() => {
