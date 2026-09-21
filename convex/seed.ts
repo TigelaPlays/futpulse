@@ -263,9 +263,13 @@ export const populateSerieBStandings = mutation({
     ];
 
     for (const item of realStandings) {
+      const externalId =
+        item.id ||
+        parseInt(item.logo.split("/").pop()?.replace(/\D/g, "") || "0", 10);
+
       let team = await ctx.db
         .query("teams")
-        .withIndex("by_externalId", (q) => q.eq("externalId", item.id))
+        .withIndex("by_externalId", (q) => q.eq("externalId", externalId))
         .first();
 
       if (!team) {
@@ -279,7 +283,7 @@ export const populateSerieBStandings = mutation({
         const teamId = await ctx.db.insert("teams", {
           name: item.name,
           logoUrl: item.logo,
-          externalId: item.id,
+          externalId: externalId,
         });
         team = await ctx.db.get(teamId);
       } else if (!team.logoUrl) {
