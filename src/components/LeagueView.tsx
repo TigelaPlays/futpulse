@@ -17,8 +17,8 @@ interface LeagueViewProps {
 }
 
 export function LeagueView({ leagueId, league }: LeagueViewProps) {
-  // Padrão Rodada 1 (onde estão os jogos reais cadastrados)
-  const [currentRound, setCurrentRound] = useState<number>(1);
+  // Padrão na rodada mais recente cadastrada (Rodada 5)
+  const [currentRound, setCurrentRound] = useState<number>(5);
   const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
 
   const minRound = 1;
