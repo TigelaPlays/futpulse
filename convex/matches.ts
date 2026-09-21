@@ -12,27 +12,35 @@ export const listMatches = query({
         v.literal("SCHEDULED")
       )
     ),
+    leagueId: v.optional(v.id("leagues")), // Filtro opcional por campeonato
   },
   handler: async (ctx, args) => {
     const rawMatches = await ctx.db.query("matches").collect();
 
-    // Filtra pelo status se solicitado
-    const filteredMatches = rawMatches.filter((m) => {
-      if (!args.statusFilter || args.statusFilter === "ALL") return true;
+    // Filtra por liga se selecionada
+    let matches = args.leagueId
+      ? rawMatches.filter((m) => m.leagueId === args.leagueId)
+      : rawMatches;
 
-      const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
-        m.status
-      );
+    // Filtra por status
+    if (args.statusFilter && args.statusFilter !== "ALL") {
+      matches = matches.filter((m) => {
+        if (args.statusFilter === "LIVE") {
+          return ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
+        }
+        if (args.statusFilter === "FINISHED") {
+          return m.status === "FINISHED";
+        }
+        if (args.statusFilter === "SCHEDULED") {
+          return m.status === "SCHEDULED";
+        }
+        return true;
+      });
+    }
 
-      if (args.statusFilter === "LIVE") return isLive;
-      if (args.statusFilter === "FINISHED") return m.status === "FINISHED";
-      if (args.statusFilter === "SCHEDULED") return m.status === "SCHEDULED";
-      return true;
-    });
-
-    // Enriquece cada partida com time mandante, visitante e liga
-    const enriched = await Promise.all(
-      filteredMatches.map(async (match) => {
+    // Hidrata com times e liga
+    const hydratedMatches = await Promise.all(
+      matches.map(async (match) => {
         const [homeTeam, awayTeam, league] = await Promise.all([
           ctx.db.get(match.homeTeamId),
           ctx.db.get(match.awayTeamId),
@@ -48,18 +56,18 @@ export const listMatches = query({
       })
     );
 
-    // Ordenação: Jogos AO VIVO primeiro, depois por horário de início
-    return enriched.sort((a, b) => {
-      const isLiveA = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
-        a.status
-      );
-      const isLiveB = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
-        b.status
-      );
-
+    // Ordenação: primeiro os ao vivo, depois por prioridade de liga e horário
+    return hydratedMatches.sort((a, b) => {
+      const isLiveA = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(a.status);
+      const isLiveB = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(b.status);
       if (isLiveA && !isLiveB) return -1;
       if (!isLiveA && isLiveB) return 1;
-      return a.startTime - b.startTime;
+
+      const prioA = a.league?.priority ?? 99;
+      const prioB = b.league?.priority ?? 99;
+      if (prioA !== prioB) return prioA - prioB;
+
+      return b.startTime - a.startTime;
     });
   },
 });

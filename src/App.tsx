@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, Calendar } from "lucide-react";
+import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 
@@ -10,16 +10,22 @@ type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
 export default function App() {
   const [filter, setFilter] = useState<FilterType>("ALL");
+  const [selectedLeagueId, setSelectedLeagueId] = useState<Id<"leagues"> | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
-  const matches = useQuery(api.matches.listMatches, { statusFilter: filter });
+  const leagues = useQuery(api.leagues.listLeagues);
+  const matches = useQuery(api.matches.listMatches, {
+    statusFilter: filter,
+    leagueId: selectedLeagueId ?? undefined,
+  });
+
   const simulateGoal = useMutation(api.seed.simulateGoal);
   const syncLiveMatches = useAction(api.ingestion.syncLiveMatches);
   const syncDailyFixtures = useAction(api.ingestion.syncDailyFixtures);
 
-  // Agrupa os jogos por campeonato
+  // Agrupa jogos por campeonato
   const groupedMatches = matches?.reduce((acc, match) => {
     const leagueName = match.league?.name ?? "Outros";
     if (!acc[leagueName]) {
@@ -32,14 +38,14 @@ export default function App() {
     return acc;
   }, {} as Record<string, { league: any; matches: NonNullable<typeof matches> }>);
 
-  // Disparo manual da sincronização com a API-Football (Jogos ao vivo)
+  // Sincronização de jogos ao vivo
   const handleManualSync = async () => {
     try {
       setIsSyncing(true);
       setSyncFeedback(null);
       const result = await syncLiveMatches();
       if (result.success) {
-        setSyncFeedback(`${result.syncedCount ?? 0} jogos sincronizados`);
+        setSyncFeedback(`${result.syncedCount ?? 0} ao vivo sincronizados`);
       } else {
         setSyncFeedback("Falha na sincronização");
       }
@@ -52,7 +58,7 @@ export default function App() {
     }
   };
 
-  // Sincronização de todos os jogos do dia (Grade de Hoje)
+  // Sincronização de jogos do dia
   const handleSyncDaily = async () => {
     try {
       setIsSyncing(true);
@@ -72,14 +78,14 @@ export default function App() {
     }
   };
 
-  // Disparo simulado sem prompt
+  // Simulação de gol local
   const handleSimulateGoal = async (
     e: React.MouseEvent,
     matchId: Id<"matches">,
     isHome: boolean,
     teamName: string
   ) => {
-    e.stopPropagation(); // Impede abrir o modal ao clicar no botão de simulação
+    e.stopPropagation();
     try {
       await simulateGoal({
         matchId,
@@ -93,16 +99,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-slate-100 font-sans">
-      {/* Modal de Detalhes da Partida */}
       <MatchDetailsModal
         matchId={selectedMatchId}
         onClose={() => setSelectedMatchId(null)}
       />
 
-      {/* Header */}
-      <header className="border-b border-[#30363d] bg-[#161b22] sticky top-0 z-40 px-4 py-3">
+      {/* Header Fixo */}
+      <header className="border-b border-[#30363d] bg-[#161b22] sticky top-0 z-40 px-4 py-3 shadow-md">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="bg-emerald-500/20 p-2 rounded-lg text-emerald-400">
               <Activity className="w-6 h-6 animate-pulse" />
             </div>
@@ -114,14 +119,13 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {syncFeedback && (
-              <span className="text-xs font-medium text-emerald-400 animate-fade-in">
+              <span className="text-xs font-medium text-emerald-400 animate-fade-in hidden sm:inline">
                 {syncFeedback}
               </span>
             )}
 
-            {/* Botão Sincronizar Ao Vivo */}
             <button
               onClick={handleManualSync}
               disabled={isSyncing}
@@ -130,13 +134,12 @@ export default function App() {
                   ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
                   : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 active:scale-95"
               }`}
-              title="Buscar dados atualizados na API"
+              title="Sincronizar jogos ao vivo agora"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-              <span>{isSyncing ? "Sincronizando..." : "Ao Vivo"}</span>
+              <span>{isSyncing ? "..." : "Ao Vivo"}</span>
             </button>
 
-            {/* Botão Sincronizar Grade de Hoje */}
             <button
               onClick={handleSyncDaily}
               disabled={isSyncing}
@@ -145,13 +148,13 @@ export default function App() {
                   ? "bg-[#21262d] text-slate-500 border-[#30363d] cursor-not-allowed"
                   : "bg-slate-800 hover:bg-slate-700 text-slate-300 border-[#30363d] active:scale-95"
               }`}
-              title="Carregar todos os jogos agendados e encerrados de hoje"
+              title="Carregar grade do dia inteiro"
             >
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>Grade de Hoje</span>
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Grade de Hoje</span>
             </button>
 
-            {/* Filtros */}
+            {/* Filtros de Status */}
             <div className="flex bg-[#0d1117] p-1 rounded-lg border border-[#30363d] text-xs font-semibold">
               {(
                 [
@@ -164,7 +167,7 @@ export default function App() {
                 <button
                   key={item.id}
                   onClick={() => setFilter(item.id)}
-                  className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer ${
                     filter === item.id
                       ? "bg-emerald-500 text-slate-950 shadow-sm"
                       : "text-slate-400 hover:text-slate-200"
@@ -176,9 +179,47 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* Pílulas de Navegação Rápida por Campeonato */}
+        {leagues && leagues.length > 0 && (
+          <div className="max-w-5xl mx-auto mt-3 pt-2.5 border-t border-[#21262d] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <button
+              onClick={() => setSelectedLeagueId(null)}
+              className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
+                selectedLeagueId === null
+                  ? "bg-emerald-500 text-slate-950 font-semibold"
+                  : "bg-[#21262d] text-slate-400 hover:text-slate-200 border border-[#30363d]"
+              }`}
+            >
+              Todas as Ligas
+            </button>
+
+            {leagues.map((lg) => {
+              const isSelected = selectedLeagueId === lg._id;
+              return (
+                <button
+                  key={lg._id}
+                  onClick={() => setSelectedLeagueId(lg._id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-emerald-500 text-slate-950 font-bold"
+                      : "bg-[#21262d] text-slate-300 hover:text-white border border-[#30363d]"
+                  }`}
+                >
+                  {lg.logoUrl && (
+                    <div className="w-4 h-4 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0">
+                      <img src={lg.logoUrl} alt="" className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                  <span>{lg.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
 
-      {/* Main Content */}
+      {/* Conteúdo Principal */}
       <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
         {matches === undefined ? (
           <div className="flex justify-center items-center py-20 text-slate-400 gap-2">
@@ -221,7 +262,7 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Lista de Partidas com clique para abrir o Modal */}
+              {/* Lista de Partidas */}
               <div className="divide-y divide-[#21262d]">
                 {group.matches.map((match: any) => {
                   const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
@@ -234,8 +275,8 @@ export default function App() {
                       onClick={() => setSelectedMatchId(match._id)}
                       className="p-4 hover:bg-[#1f242c]/70 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
                     >
-                      {/* Status / Minuto */}
-                      <div className="flex items-center md:w-28 gap-2">
+                      {/* Minuto / Relógio Dinâmico */}
+                      <div className="flex items-center md:w-32 gap-2">
                         {isLive ? (
                           <LiveMatchClock
                             initialMinute={match.minute}
@@ -252,7 +293,7 @@ export default function App() {
                             Encerrado
                           </span>
                         ) : (
-                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
                             <Clock className="w-3.5 h-3.5" />
                             <span>
                               {new Date(match.startTime).toLocaleTimeString([], {
@@ -262,7 +303,9 @@ export default function App() {
                             </span>
                           </div>
                         )}
-                        <span className="text-xs text-slate-400 hidden sm:inline">• {match.round}</span>
+                        <span className="text-xs text-slate-500 hidden sm:inline truncate">
+                          • {match.round}
+                        </span>
                       </div>
 
                       {/* Confronto e Placar */}

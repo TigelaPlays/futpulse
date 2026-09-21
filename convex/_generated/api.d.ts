@@ -9,6 +9,7 @@
  */
 
 import type * as ingestion from "../ingestion.js";
+import type * as leagues from "../leagues.js";
 import type * as matches from "../matches.js";
 import type * as seed from "../seed.js";
 
@@ -20,6 +21,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ingestion: typeof ingestion;
+  leagues: typeof leagues;
   matches: typeof matches;
   seed: typeof seed;
 }>;
