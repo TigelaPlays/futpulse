@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays } from "lucide-react";
+import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
+import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
@@ -16,6 +17,8 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [goalAlerts, setGoalAlerts] = useState<GoalAlert[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const previousScoresRef = useRef<Record<string, { home: number; away: number }>>({});
 
   const leagues = useQuery(api.leagues.listLeagues);
@@ -24,7 +27,7 @@ export default function App() {
     leagueId: selectedLeagueId ?? undefined,
   });
 
-  // Detecta quando o placar muda para disparar o Toast de Gol
+  // Detecta quando o placar muda para disparar o Toast de Gol e o Som
   useEffect(() => {
     if (!matches) return;
 
@@ -48,6 +51,11 @@ export default function App() {
             awayTeamName: match.awayTeam?.name ?? "Visitante",
           };
 
+          // Toca o som de notificação se ativado
+          if (soundEnabled) {
+            playGoalBeep();
+          }
+
           setGoalAlerts((current) => [...current, newAlert]);
 
           // Some sozinho após 4.5 segundos
@@ -63,14 +71,24 @@ export default function App() {
         away: match.awayScore,
       };
     });
-  }, [matches]);
+  }, [matches, soundEnabled]);
 
   const simulateGoal = useMutation(api.seed.simulateGoal);
   const syncLiveMatches = useAction(api.ingestion.syncLiveMatches);
   const syncDailyFixtures = useAction(api.ingestion.syncDailyFixtures);
 
-  // Agrupa jogos por campeonato
-  const groupedMatches = matches?.reduce((acc, match) => {
+  // Filtra pelo termo da barra de pesquisa
+  const filteredMatches = matches?.filter((m) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const home = m.homeTeam?.name?.toLowerCase() || "";
+    const away = m.awayTeam?.name?.toLowerCase() || "";
+    const league = m.league?.name?.toLowerCase() || "";
+    return home.includes(query) || away.includes(query) || league.includes(query);
+  });
+
+  // Agrupa jogos filtrados por campeonato
+  const groupedMatches = filteredMatches?.reduce((acc, match) => {
     const leagueName = match.league?.name ?? "Outros";
     if (!acc[leagueName]) {
       acc[leagueName] = {
@@ -198,6 +216,19 @@ export default function App() {
               <span className="hidden sm:inline">Grade de Hoje</span>
             </button>
 
+            {/* Botão de Som */}
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`p-1.5 rounded-lg border text-xs transition-all cursor-pointer ${
+                soundEnabled
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                  : "bg-slate-800 text-slate-500 border-[#30363d]"
+              }`}
+              title={soundEnabled ? "Som ativado" : "Som mutado"}
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+
             {/* Filtros de Status */}
             <div className="flex bg-[#0d1117] p-1 rounded-lg border border-[#30363d] text-xs font-semibold">
               {(
@@ -221,6 +252,20 @@ export default function App() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Barra de Pesquisa Rápida */}
+        <div className="max-w-5xl mx-auto mt-2.5">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por time ou campeonato..."
+              className="w-full bg-[#0d1117] border border-[#30363d] focus:border-emerald-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-colors"
+            />
           </div>
         </div>
 

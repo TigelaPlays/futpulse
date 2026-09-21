@@ -66,3 +66,4 @@ export function GoalToastContainer({ alerts, onDismiss }: GoalToastProps) {
     </div>
   );
 }
+
