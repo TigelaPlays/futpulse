@@ -501,19 +501,29 @@ export const syncLeagueStandings = action({
   },
   handler: async (ctx, args) => {
     const apiKey = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env?.API_FOOTBALL_KEY;
+
     if (!apiKey) {
+      console.warn("API_FOOTBALL_KEY em falta");
       return { success: false, reason: "API_FOOTBALL_KEY_MISSING" };
     }
 
-    const leagueList: any[] = (await ctx.runQuery(api.leagues.listLeagues, {})) ?? [];
-    const leagueDoc = leagueList.find((l: any) => l._id === args.leagueId);
+    const leagues: any[] = (await ctx.runQuery(api.leagues.listLeagues, {})) ?? [];
+    const leagueDoc = leagues.find((l: any) => l._id === args.leagueId);
+
     if (!leagueDoc || !leagueDoc.externalId) {
+      console.warn("Liga não encontrada ou sem externalId:", args.leagueId);
       return { success: false, reason: "LEAGUE_NOT_FOUND" };
     }
 
+    // Usa a temporada registada ou o ano corrente caso seja indefinido/inválido
+    const currentYear = new Date().getFullYear();
+    let season = leagueDoc.season || currentYear;
+
+    console.log(`[Standings] A consultar liga ${leagueDoc.externalId} (${leagueDoc.name}), época ${season}...`);
+
     try {
-      const response = await fetch(
-        `https://v3.football.api-sports.io/standings?league=${leagueDoc.externalId}&season=${leagueDoc.season}`,
+      let response = await fetch(
+        `https://v3.football.api-sports.io/standings?league=${leagueDoc.externalId}&season=${season}`,
         {
           headers: {
             "x-apisports-key": apiKey,
@@ -525,13 +535,62 @@ export const syncLeagueStandings = action({
         throw new Error(`Erro na API externa: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      const leagueData = data.response?.[0]?.league;
-      const rawStandings = leagueData?.standings?.[0] || [];
+      let data = await response.json();
+      const hasErrors = data.errors && (Array.isArray(data.errors) ? data.errors.length > 0 : Object.keys(data.errors).length > 0);
+      console.log(
+        "[Standings] Resposta recebida da API:",
+        hasErrors ? JSON.stringify(data.errors) : (data.response?.[0]?.league?.name ?? JSON.stringify(data.errors))
+      );
+
+      let rawStandings = data.response?.[0]?.league?.standings?.[0] || [];
+
+      // Suporte para múltiplos grupos ou copas (Champions League, Libertadores, etc.)
+      if (rawStandings.length === 0 && Array.isArray(data.response?.[0]?.league?.standings)) {
+        rawStandings = data.response[0].league.standings.flat();
+      }
+
+      // Se a época pesquisada retornar vazia, tenta a época anterior (comum em calendários europeus e transições)
+      if (rawStandings.length === 0 && (!data.response || data.response.length === 0)) {
+        const fallbackSeason = season - 1;
+        console.log(`[Standings] Nenhum dado para época ${season}. Tentando época anterior (${fallbackSeason})...`);
+        const fallbackRes = await fetch(
+          `https://v3.football.api-sports.io/standings?league=${leagueDoc.externalId}&season=${fallbackSeason}`,
+          {
+            headers: {
+              "x-apisports-key": apiKey,
+            },
+          }
+        );
+
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          let fallbackStandings = fallbackData.response?.[0]?.league?.standings?.[0] || [];
+          if (fallbackStandings.length === 0 && Array.isArray(fallbackData.response?.[0]?.league?.standings)) {
+            fallbackStandings = fallbackData.response[0].league.standings.flat();
+          }
+
+          if (fallbackStandings.length > 0) {
+            console.log(`[Standings] Sucesso com a época ${fallbackSeason}! Total de times: ${fallbackStandings.length}`);
+            data = fallbackData;
+            rawStandings = fallbackStandings;
+            season = fallbackSeason;
+          }
+        }
+      }
+
+      if (rawStandings.length === 0) {
+        console.warn("[Standings] Nenhum registo encontrado na resposta para esta época/liga.", {
+          season,
+          externalId: leagueDoc.externalId,
+          errors: data.errors,
+          responseLength: data.response?.length,
+        });
+        return { success: false, reason: "EMPTY_STANDINGS", data };
+      }
 
       await ctx.runMutation(internal.ingestion.saveSyncedStandings, {
         leagueId: args.leagueId,
-        season: leagueDoc.season,
+        season: season,
         standings: rawStandings,
       });
 
@@ -553,11 +612,12 @@ export const saveSyncedStandings = internalMutation({
     standings: v.any(),
   },
   handler: async (ctx, args) => {
+    // Mantém a temporada da liga sincronizada
+    await ctx.db.patch(args.leagueId, { season: args.season });
+
     const existing = await ctx.db
       .query("standings")
-      .withIndex("by_league_season", (q) =>
-        q.eq("leagueId", args.leagueId).eq("season", args.season)
-      )
+      .withIndex("by_league_rank", (q) => q.eq("leagueId", args.leagueId))
       .collect();
 
     for (const row of existing) {
