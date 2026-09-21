@@ -226,7 +226,7 @@ export const populateSerieBStandings = mutation({
 
     if (!serieB) return;
 
-    // Limpa registros anteriores para não duplicar
+    // 1. Limpa registros anteriores para não duplicar
     const existing = await ctx.db
       .query("standings")
       .withIndex("by_league_season", (q) =>
@@ -238,7 +238,30 @@ export const populateSerieBStandings = mutation({
       await ctx.db.delete(r._id);
     }
 
-    // Dados oficiais extraídos do Sofascore
+    // 2. Reparos preventivos no banco:
+    // Garante que o time 134 não fique como Goiás (134 é Athletico-PR)
+    const team134 = await ctx.db
+      .query("teams")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 134))
+      .first();
+    if (team134 && team134.name.toLowerCase().includes("goi")) {
+      await ctx.db.patch(team134._id, {
+        name: "Athletico-PR",
+      });
+    }
+
+    // Garante que o time 140 não fique como Criciuma (140 é Botafogo-SP)
+    const team140 = await ctx.db
+      .query("teams")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 140))
+      .first();
+    if (team140 && team140.name.toLowerCase().includes("cric")) {
+      await ctx.db.patch(team140._id, {
+        name: "Botafogo-SP",
+      });
+    }
+
+    // 3. Dados oficiais extraídos do Sofascore
     const realStandings = [
       { id: 155, rank: 1, name: "Vila Nova", j: 29, v: 15, e: 6, d: 8, sg: 10, gf: 41, ga: 31, form: "WLWDW", pts: 51, logo: "https://media.api-sports.io/football/teams/155.png" },
       { id: 154, rank: 2, name: "Fortaleza", j: 29, v: 14, e: 9, d: 6, sg: 9, gf: 33, ga: 24, form: "DWWDW", pts: 51, logo: "https://media.api-sports.io/football/teams/154.png" },
@@ -249,7 +272,7 @@ export const populateSerieBStandings = mutation({
       { id: 132, rank: 7, name: "CRB", j: 29, v: 13, e: 6, d: 10, sg: 1, gf: 42, ga: 41, form: "WWLWL", pts: 45, logo: "https://media.api-sports.io/football/teams/132.png" },
       { id: 151, rank: 8, name: "Operário-PR", j: 28, v: 12, e: 8, d: 8, sg: 3, gf: 39, ga: 36, form: "DDWWD", pts: 44, logo: "https://media.api-sports.io/football/teams/151.png" },
       { id: 138, rank: 9, name: "Sport Recife", j: 29, v: 11, e: 11, d: 7, sg: 10, gf: 39, ga: 29, form: "LLWLW", pts: 44, logo: "https://media.api-sports.io/football/teams/138.png" },
-      { id: 134, rank: 10, name: "Goiás", j: 29, v: 12, e: 6, d: 11, sg: -5, gf: 30, ga: 35, form: "WLLWW", pts: 42, logo: "https://media.api-sports.io/football/teams/134.png" },
+      { id: 144, rank: 10, name: "Goiás", j: 29, v: 12, e: 6, d: 11, sg: -5, gf: 30, ga: 35, form: "WLLWW", pts: 42, logo: "https://media.api-sports.io/football/teams/144.png" },
       { id: 10255, rank: 11, name: "São Bernardo", j: 29, v: 11, e: 8, d: 10, sg: 9, gf: 40, ga: 31, form: "LWLWW", pts: 41, logo: "https://media.api-sports.io/football/teams/10255.png" },
       { id: 10265, rank: 12, name: "Athletic", j: 29, v: 10, e: 11, d: 8, sg: 3, gf: 34, ga: 31, form: "LWLWD", pts: 41, logo: "https://media.api-sports.io/football/teams/10265.png" },
       { id: 136, rank: 13, name: "Cuiabá", j: 28, v: 9, e: 13, d: 6, sg: 5, gf: 27, ga: 22, form: "DWLWD", pts: 40, logo: "https://media.api-sports.io/football/teams/136.png" },
@@ -262,32 +285,62 @@ export const populateSerieBStandings = mutation({
       { id: 147, rank: 20, name: "Ponte Preta", j: 29, v: 3, e: 4, d: 22, sg: -45, gf: 17, ga: 62, form: "LLLLW", pts: 13, logo: "https://media.api-sports.io/football/teams/147.png" },
     ];
 
-    for (const item of realStandings) {
-      const externalId =
-        item.id ||
-        parseInt(item.logo.split("/").pop()?.replace(/\D/g, "") || "0", 10);
+    const TEAM_ALIASES: Record<string, string> = {
+      "america mineiro": "america mg",
+      "america-mg": "america mg",
+      "athletic club": "athletic",
+      "atletico goianiense": "atletico go",
+      "atletico-go": "atletico go",
+      "botafogo sp": "botafogo sp",
+      "botafogo-sp": "botafogo sp",
+      "operario pr": "operario pr",
+      "operario-pr": "operario pr",
+      "operario ferroviario": "operario pr",
+      "goias": "goias",
+      "criciuma": "criciuma",
+    };
 
-      let team = await ctx.db
-        .query("teams")
-        .withIndex("by_externalId", (q) => q.eq("externalId", externalId))
-        .first();
+    const normalizeTeamName = (str: string) => {
+      const cleanStr = str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[-_]/g, " ")
+        .trim();
+      return TEAM_ALIASES[cleanStr] || cleanStr;
+    };
+
+    const allTeams = await ctx.db.query("teams").collect();
+
+    for (const item of realStandings) {
+      const targetNorm = normalizeTeamName(item.name);
+      let team: (typeof allTeams)[number] | null =
+        allTeams.find((t) => normalizeTeamName(t.name) === targetNorm) ?? null;
 
       if (!team) {
-        team = await ctx.db
-          .query("teams")
-          .filter((q) => q.eq(q.field("name"), item.name))
-          .first();
+        team =
+          allTeams.find(
+            (t) =>
+              t.externalId === item.id &&
+              !t.name.toLowerCase().includes("paranaense") &&
+              !t.name.toLowerCase().includes("flamengo")
+          ) ?? null;
       }
 
-      if (!team) {
+      if (team) {
+        await ctx.db.patch(team._id, {
+          name: item.name,
+          externalId: item.id,
+          // Se não tiver escudo customizado ou se tiver escudo vazio, atualiza
+          ...(!team.customLogoStorageId && !team.logoUrl ? { logoUrl: item.logo } : {}),
+        });
+      } else {
         const teamId = await ctx.db.insert("teams", {
           name: item.name,
           logoUrl: item.logo,
-          externalId: externalId,
+          externalId: item.id,
         });
         team = await ctx.db.get(teamId);
-      } else if (!team.logoUrl) {
-        await ctx.db.patch(team._id, { logoUrl: item.logo });
       }
 
       if (team) {

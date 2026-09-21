@@ -6,6 +6,30 @@ export const generateUploadUrl = mutation(async (ctx) => {
   return await ctx.storage.generateUploadUrl();
 });
 
+const TEAM_ALIASES: Record<string, string> = {
+  "america mineiro": "america mg",
+  "america-mg": "america mg",
+  "athletic club": "athletic",
+  "atletico goianiense": "atletico go",
+  "atletico-go": "atletico go",
+  "botafogo sp": "botafogo sp",
+  "botafogo-sp": "botafogo sp",
+  "operario pr": "operario pr",
+  "operario-pr": "operario pr",
+  "operario ferroviario": "operario pr",
+  "goias": "goias",
+};
+
+const normalizeTeamName = (str: string) => {
+  const cleanStr = str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-_]/g, " ")
+    .trim();
+  return TEAM_ALIASES[cleanStr] || cleanStr;
+};
+
 // Vincula a imagem subida ao Time
 export const linkTeamLogo = mutation({
   args: {
@@ -16,12 +40,9 @@ export const linkTeamLogo = mutation({
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) throw new Error("Falha ao gerar URL da imagem");
 
-    const clean = (str: string) =>
-      str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_]/g, " ").trim();
-
-    const target = clean(args.teamName);
+    const targetNorm = normalizeTeamName(args.teamName);
     const allTeams = await ctx.db.query("teams").collect();
-    const team = allTeams.find((t) => clean(t.name) === target);
+    const team = allTeams.find((t) => normalizeTeamName(t.name) === targetNorm);
 
     if (team) {
       await ctx.db.patch(team._id, {
