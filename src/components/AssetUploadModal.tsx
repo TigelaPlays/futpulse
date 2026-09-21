@@ -1,0 +1,286 @@
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { X, Upload, CheckCircle2, AlertCircle, Image as ImageIcon } from "lucide-react";
+
+interface AssetUploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
+  const [category, setCategory] = useState<"teams" | "leagues" | "stadiums">("teams");
+  const [targetName, setTargetName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const targets = useQuery(api.assets.listUploadTargets);
+  const generateUploadUrl = useMutation(api.assets.generateUploadUrl);
+  const linkTeamLogo = useMutation(api.assets.linkTeamLogo);
+  const linkLeagueLogo = useMutation(api.assets.linkLeagueLogo);
+  const linkStadiumImage = useMutation(api.assets.linkStadiumImage);
+
+  if (!isOpen) return null;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setFeedback(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !targetName.trim()) {
+      setFeedback({ type: "error", message: "Selecione uma imagem e o nome do destino." });
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setFeedback(null);
+
+      // 1. Gera URL de upload segura do Convex File Storage
+      const uploadUrl = await generateUploadUrl();
+
+      // 2. Faz o envio do arquivo
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": selectedFile.type },
+        body: selectedFile,
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha no upload para o servidor");
+      }
+
+      const { storageId } = await response.json();
+
+      // 3. Vincula a imagem no banco
+      if (category === "teams") {
+        await linkTeamLogo({ teamName: targetName.trim(), storageId });
+      } else if (category === "leagues") {
+        await linkLeagueLogo({ leagueName: targetName.trim(), storageId });
+      } else if (category === "stadiums") {
+        await linkStadiumImage({ stadiumName: targetName.trim(), storageId });
+      }
+
+      setFeedback({
+        type: "success",
+        message: `Imagem vinculada com sucesso na CDN do Convex para "${targetName.trim()}"!`,
+      });
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err: any) {
+      console.error("Erro no upload:", err);
+      setFeedback({
+        type: "error",
+        message: err.message || "Erro ao realizar upload do arquivo.",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const currentList =
+    category === "teams"
+      ? targets?.teams
+      : category === "leagues"
+      ? targets?.leagues
+      : targets?.stadiums;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div
+        className="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cabeçalho */}
+        <div className="p-4 border-b border-[#30363d] flex items-center justify-between bg-[#1c2128]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <Upload className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-100">
+                Gerenciador de Ativos & Escudos (Convex CDN)
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Armazenamento nativo do Convex com CDN global ultra rápida
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Formulário */}
+        <div className="p-5 space-y-4 text-xs">
+          {/* Categoria */}
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1.5">
+              Tipo de Ativo
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  { id: "teams", label: "Escudo de Time" },
+                  { id: "leagues", label: "Logo de Liga" },
+                  { id: "stadiums", label: "Foto de Estádio" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setCategory(tab.id);
+                    setTargetName("");
+                  }}
+                  className={`py-2 px-3 rounded-lg border font-semibold transition-all cursor-pointer text-center ${
+                    category === tab.id
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-sm"
+                      : "bg-[#0d1117] text-slate-400 border-[#30363d] hover:text-slate-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Nome / Seleção do Destino */}
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1.5">
+              Nome do {category === "teams" ? "Time" : category === "leagues" ? "Campeonato" : "Estádio"}
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={targetName}
+                onChange={(e) => setTargetName(e.target.value)}
+                placeholder={`Digite ou selecione (ex: ${category === "teams" ? "Vila Nova" : category === "leagues" ? "Brasileirão Série B" : "Maracanã"})...`}
+                className="w-full bg-[#0d1117] border border-[#30363d] focus:border-emerald-500 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none"
+              />
+
+              {/* Sugestões rápidas */}
+              {currentList && currentList.length > 0 && !targetName && (
+                <div className="mt-2 max-h-28 overflow-y-auto no-scrollbar border border-[#21262d] rounded-lg bg-[#0d1117] p-1 space-y-1">
+                  <p className="text-[10px] text-slate-500 px-2 py-0.5">Sugestões salvas no banco:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {currentList.slice(0, 12).map((item: { id: string; name: string }) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setTargetName(item.name)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-[#21262d] text-slate-300 hover:text-white hover:bg-emerald-600 transition-colors"
+                      >
+                        {item.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Área de Seleção de Arquivo */}
+          <div>
+            <label className="block text-slate-300 font-semibold mb-1.5">
+              Arquivo de Imagem (PNG, JPG, WEBP, SVG)
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              onChange={handleFileChange}
+              className="hidden"
+              id="asset-file-input"
+            />
+            <label
+              htmlFor="asset-file-input"
+              className="border-2 border-dashed border-[#30363d] hover:border-emerald-500/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer bg-[#0d1117]/50 hover:bg-[#0d1117] transition-all"
+            >
+              {previewUrl ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-white/90 p-1 flex items-center justify-center shadow-md">
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-slate-200 truncate max-w-[220px]">
+                      {selectedFile?.name}
+                    </p>
+                    <p className="text-[10px] text-emerald-400">
+                      {(selectedFile?.size ? selectedFile.size / 1024 : 0).toFixed(1)} KB • Clique para trocar
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <ImageIcon className="w-8 h-8 text-slate-500" />
+                  <span className="text-slate-400 font-medium">
+                    Clique para selecionar um arquivo do seu computador
+                  </span>
+                </>
+              )}
+            </label>
+          </div>
+
+          {/* Feedback */}
+          {feedback && (
+            <div
+              className={`p-3 rounded-lg border flex items-center gap-2 animate-fade-in ${
+                feedback.type === "success"
+                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                  : "bg-rose-500/10 text-rose-300 border-rose-500/30"
+              }`}
+            >
+              {feedback.type === "success" ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              )}
+              <span>{feedback.message}</span>
+            </div>
+          )}
+
+          {/* Botão de Envio */}
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#30363d]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-[#30363d] text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              Fechar
+            </button>
+            <button
+              type="button"
+              onClick={handleUpload}
+              disabled={isUploading || !selectedFile || !targetName.trim()}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-slate-950 transition-all cursor-pointer ${
+                isUploading || !selectedFile || !targetName.trim()
+                  ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                  : "bg-emerald-500 hover:bg-emerald-400 shadow-md active:scale-95"
+              }`}
+            >
+              <Upload className={`w-4 h-4 ${isUploading ? "animate-bounce" : ""}`} />
+              <span>{isUploading ? "Enviando para o Convex..." : "Salvar no Convex CDN"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

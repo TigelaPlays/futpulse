@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // Gera a URL temporária para o cliente ou script subir a imagem
@@ -16,17 +16,19 @@ export const linkTeamLogo = mutation({
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) throw new Error("Falha ao gerar URL da imagem");
 
-    const team = await ctx.db
-      .query("teams")
-      .filter((q) => q.eq(q.field("name"), args.teamName))
-      .first();
+    const clean = (str: string) =>
+      str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_]/g, " ").trim();
+
+    const target = clean(args.teamName);
+    const allTeams = await ctx.db.query("teams").collect();
+    const team = allTeams.find((t) => clean(t.name) === target);
 
     if (team) {
       await ctx.db.patch(team._id, {
         logoUrl: url,
         customLogoStorageId: args.storageId,
       });
-      return { success: true, teamId: team._id, url };
+      return { success: true, teamId: team._id, url, name: team.name };
     }
 
     // Se o time não existir ainda, cria
@@ -35,7 +37,7 @@ export const linkTeamLogo = mutation({
       logoUrl: url,
       customLogoStorageId: args.storageId,
     });
-    return { success: true, teamId: newTeamId, url };
+    return { success: true, teamId: newTeamId, url, name: args.teamName };
   },
 });
 
@@ -49,17 +51,19 @@ export const linkLeagueLogo = mutation({
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) throw new Error("Falha ao gerar URL da imagem");
 
-    const league = await ctx.db
-      .query("leagues")
-      .filter((q) => q.eq(q.field("name"), args.leagueName))
-      .first();
+    const clean = (str: string) =>
+      str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_]/g, " ").trim();
+
+    const target = clean(args.leagueName);
+    const allLeagues = await ctx.db.query("leagues").collect();
+    const league = allLeagues.find((l) => clean(l.name) === target);
 
     if (league) {
       await ctx.db.patch(league._id, {
         logoUrl: url,
         customLogoStorageId: args.storageId,
       });
-      return { success: true, leagueId: league._id, url };
+      return { success: true, leagueId: league._id, url, name: league.name };
     }
 
     return { success: false, reason: "LEAGUE_NOT_FOUND" };
@@ -87,7 +91,7 @@ export const linkStadiumImage = mutation({
         imageUrl: url,
         customImageStorageId: args.storageId,
       });
-      return { success: true, stadiumId: stadium._id, url };
+      return { success: true, stadiumId: stadium._id, url, name: stadium.name };
     }
 
     const newStadiumId = await ctx.db.insert("stadiums", {
@@ -96,7 +100,46 @@ export const linkStadiumImage = mutation({
       imageUrl: url,
       customImageStorageId: args.storageId,
     });
-    return { success: true, stadiumId: newStadiumId, url };
+    return { success: true, stadiumId: newStadiumId, url, name: args.stadiumName };
+  },
+});
+
+// Lista todos os times e ligas para mapeamento de uploads
+export const listUploadTargets = query({
+  args: {},
+  handler: async (ctx) => {
+    const [teams, leagues, stadiums] = await Promise.all([
+      ctx.db.query("teams").collect(),
+      ctx.db.query("leagues").collect(),
+      ctx.db.query("stadiums").collect(),
+    ]);
+
+    return {
+      teams: teams
+        .map((t) => ({
+          id: t._id,
+          name: t.name,
+          logoUrl: t.logoUrl,
+          hasCustomLogo: !!t.customLogoStorageId,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+      leagues: leagues
+        .map((l) => ({
+          id: l._id,
+          name: l.name,
+          logoUrl: l.logoUrl,
+          hasCustomLogo: !!l.customLogoStorageId,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+      stadiums: stadiums
+        .map((s) => ({
+          id: s._id,
+          name: s.name,
+          imageUrl: s.imageUrl,
+          hasCustomImage: !!s.customImageStorageId,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    };
   },
 });
 

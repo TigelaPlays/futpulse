@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star } from "lucide-react";
+import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { StandingsTable } from "./components/StandingsTable";
+import { AssetUploadModal } from "./components/AssetUploadModal";
 import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
@@ -16,6 +17,7 @@ export default function App() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<Id<"leagues"> | null>(null);
   const [viewMode, setViewMode] = useState<"matches" | "standings">("matches");
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [goalAlerts, setGoalAlerts] = useState<GoalAlert[]>([]);
@@ -335,6 +337,11 @@ export default function App() {
         onClose={() => setSelectedMatchId(null)}
       />
 
+      <AssetUploadModal
+        isOpen={isAssetModalOpen}
+        onClose={() => setIsAssetModalOpen(false)}
+      />
+
       {/* Header Fixo */}
       <header className="border-b border-[#30363d] bg-[#161b22] sticky top-0 z-40 px-4 py-3 shadow-md">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
@@ -383,6 +390,16 @@ export default function App() {
             >
               <CalendarDays className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Grade de Hoje</span>
+            </button>
+
+            {/* Botão de Upload de Ativos / Escudos */}
+            <button
+              onClick={() => setIsAssetModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 border-[#30363d] active:scale-95"
+              title="Gerenciador de Ativos e Escudos"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Escudos</span>
             </button>
 
             {/* Botão de Som */}
