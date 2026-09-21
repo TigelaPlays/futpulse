@@ -1507,3 +1507,543 @@ export const seedSerieBRounds2to5Real = mutation({
     };
   },
 });
+
+export const seedSerieBRounds6to8Real = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Busca a liga Série B
+    let serieB = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 72))
+      .first();
+
+    if (!serieB) {
+      const allLeagues = await ctx.db.query("leagues").collect();
+      serieB = allLeagues.find((l) => l.name.toLowerCase().includes("série b")) ?? null;
+    }
+
+    if (!serieB) {
+      throw new Error("Liga Brasileirão Série B não encontrada!");
+    }
+
+    // 2. Normalização de times
+    const clean = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[-_]/g, " ")
+        .trim();
+
+    const TEAM_ALIASES: Record<string, string> = {
+      "america mineiro": "america mg",
+      "america-mg": "america mg",
+      "athletic club": "athletic",
+      "atletico goianiense": "atletico go",
+      "atletico-go": "atletico go",
+      "botafogo sp": "botafogo sp",
+      "botafogo-sp": "botafogo sp",
+      "operario pr": "operario pr",
+      "operario-pr": "operario pr",
+      "operario ferroviario": "operario pr",
+      "goias": "goias",
+      "criciuma": "criciuma",
+    };
+
+    const normalizeTeamName = (str: string) => {
+      const cleanStr = clean(str);
+      return TEAM_ALIASES[cleanStr] || cleanStr;
+    };
+
+    const allTeams = await ctx.db.query("teams").collect();
+
+    const getTeam = (name: string) => {
+      const targetNorm = normalizeTeamName(name);
+      const team = allTeams.find((t) => normalizeTeamName(t.name) === targetNorm);
+      if (!team) {
+        throw new Error(`Time "${name}" não encontrado no banco!`);
+      }
+      return team;
+    };
+
+    // 3. Remove partidas antigas das rodadas 6, 7 e 8 para evitar duplicações
+    const existingMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", serieB._id))
+      .collect();
+
+    const targetRounds = ["Rodada 6", "Rodada 7", "Rodada 8"];
+    for (const m of existingMatches) {
+      if (targetRounds.includes(m.round)) {
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const ev of events) await ctx.db.delete(ev._id);
+        await ctx.db.delete(m._id);
+      }
+    }
+
+    // 4. Definição completa das 30 partidas das Rodadas 6 a 8
+    const roundsData = [
+      {
+        roundName: "Rodada 6",
+        matches: [
+          {
+            homeTeam: "Cuiabá",
+            awayTeam: "Botafogo-SP",
+            homeScore: 1,
+            awayScore: 1,
+            startTime: new Date("2026-04-22T19:00:00-03:00").getTime(),
+            events: [
+              { minute: 31, team: "home", player: "Pitta", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 68, team: "away", player: "Everton Morelli", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Ponte Preta",
+            awayTeam: "América-MG",
+            homeScore: 1,
+            awayScore: 0,
+            startTime: new Date("2026-04-24T19:00:00-03:00").getTime(),
+            events: [
+              { minute: 56, team: "home", player: "Luis Phelipe", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Sport Recife",
+            awayTeam: "Novorizontino",
+            homeScore: 1,
+            awayScore: 0,
+            startTime: new Date("2026-04-25T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 74, team: "home", player: "Pedro Perotti", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Juventude",
+            awayTeam: "Londrina",
+            homeScore: 1,
+            awayScore: 0,
+            startTime: new Date("2026-04-25T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 43, team: "home", player: "Jean Carlos", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "São Bernardo",
+            awayTeam: "Goiás",
+            homeScore: 1,
+            awayScore: 0,
+            startTime: new Date("2026-04-26T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 62, team: "home", player: "Kayke", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Ceará",
+            awayTeam: "Vila Nova",
+            homeScore: 3,
+            awayScore: 3,
+            startTime: new Date("2026-04-26T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 11, team: "away", player: "Rafa Silva", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 22, team: "home", player: "Lucas Lima", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 39, team: "away", player: "Rafa Silva", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 54, team: "home", player: "Matheus Araújo", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 72, team: "away", player: "João Vieira", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 81, team: "home", player: "Matheus Araújo", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Operário-PR",
+            awayTeam: "Fortaleza",
+            homeScore: 0,
+            awayScore: 0,
+            startTime: new Date("2026-04-26T18:00:00-03:00").getTime(),
+            events: [],
+          },
+          {
+            homeTeam: "Atlético-GO",
+            awayTeam: "Avaí",
+            homeScore: 2,
+            awayScore: 1,
+            startTime: new Date("2026-04-26T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 19, team: "away", player: "Walace", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 48, team: "home", player: "Gustavo Coutinho", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 74, team: "home", player: "Guilherme Marques", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Criciúma",
+            awayTeam: "CRB",
+            homeScore: 3,
+            awayScore: 1,
+            startTime: new Date("2026-04-26T19:00:00-03:00").getTime(),
+            events: [
+              { minute: 28, team: "home", player: "Bruno Alves", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 44, team: "away", player: "Mikael", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 59, team: "home", player: "Nicolas", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 83, team: "home", player: "Waguininho", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Athletic",
+            awayTeam: "Náutico",
+            homeScore: 0,
+            awayScore: 1,
+            startTime: new Date("2026-04-27T20:00:00-03:00").getTime(),
+            events: [
+              { minute: 67, team: "away", player: "Vinícius", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+        ],
+      },
+      {
+        roundName: "Rodada 7",
+        matches: [
+          {
+            homeTeam: "Botafogo-SP",
+            awayTeam: "Náutico",
+            homeScore: 1,
+            awayScore: 1,
+            startTime: new Date("2026-05-02T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 37, team: "home", player: "Hygor", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 71, team: "away", player: "Dodô", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Cuiabá",
+            awayTeam: "Criciúma",
+            homeScore: 1,
+            awayScore: 1,
+            startTime: new Date("2026-05-02T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 24, team: "home", player: "Pitta", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 63, team: "away", player: "Waguininho", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Fortaleza",
+            awayTeam: "Goiás",
+            homeScore: 4,
+            awayScore: 1,
+            startTime: new Date("2026-05-02T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 14, team: "away", player: "Gegê", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 35, team: "home", player: "Vitinho", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 52, team: "home", player: "Juan Miritello", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 60, team: "away", player: "Goiás", type: "RED_CARD" as const, detail: "Direct Red" },
+              { minute: 68, team: "home", player: "Vitinho", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 82, team: "home", player: "Juan Miritello", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Operário-PR",
+            awayTeam: "Londrina",
+            homeScore: 3,
+            awayScore: 0,
+            startTime: new Date("2026-05-03T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 18, team: "home", player: "Pablo", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 49, team: "home", player: "Rodrigo Rodrigues", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 76, team: "home", player: "Felipe Augusto", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "São Bernardo",
+            awayTeam: "Ponte Preta",
+            homeScore: 3,
+            awayScore: 0,
+            startTime: new Date("2026-05-03T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 22, team: "home", player: "Pará", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 58, team: "home", player: "Kayke", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 84, team: "home", player: "Alan Santos", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Sport Recife",
+            awayTeam: "Ceará",
+            homeScore: 2,
+            awayScore: 0,
+            startTime: new Date("2026-05-03T18:00:00-03:00").getTime(),
+            events: [
+              { minute: 31, team: "home", player: "Chrystian Barletta", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 67, team: "home", player: "Pedro Perotti", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Atlético-GO",
+            awayTeam: "Juventude",
+            homeScore: 0,
+            awayScore: 0,
+            startTime: new Date("2026-05-03T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 73, team: "home", player: "Atlético-GO", type: "RED_CARD" as const, detail: "Direct Red" },
+            ],
+          },
+          {
+            homeTeam: "América-MG",
+            awayTeam: "CRB",
+            homeScore: 1,
+            awayScore: 2,
+            startTime: new Date("2026-05-03T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 29, team: "away", player: "Mikael", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 41, team: "home", player: "Gonzalo Mastriani", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 75, team: "away", player: "João Neto", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Avaí",
+            awayTeam: "Novorizontino",
+            homeScore: 3,
+            awayScore: 3,
+            startTime: new Date("2026-05-03T19:00:00-03:00").getTime(),
+            events: [
+              { minute: 17, team: "home", player: "Luiz Henrique", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 32, team: "away", player: "Robson", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 45, team: "away", player: "Rômulo", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 56, team: "home", player: "Rafael Bilú", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 64, team: "home", player: "Avaí", type: "RED_CARD" as const, detail: "Direct Red" },
+              { minute: 79, team: "away", player: "Leo Naldi", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 85, team: "away", player: "Novorizontino", type: "RED_CARD" as const, detail: "Direct Red" },
+              { minute: 88, team: "home", player: "Paulo Vitor", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Vila Nova",
+            awayTeam: "Athletic",
+            homeScore: 1,
+            awayScore: 1,
+            startTime: new Date("2026-05-04T20:00:00-03:00").getTime(),
+            events: [
+              { minute: 34, team: "home", player: "Dellatorre", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 69, team: "away", player: "Ian Luccas", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 78, team: "away", player: "Athletic", type: "RED_CARD" as const, detail: "Direct Red" },
+            ],
+          },
+        ],
+      },
+      {
+        roundName: "Rodada 8",
+        matches: [
+          {
+            homeTeam: "Goiás",
+            awayTeam: "Vila Nova",
+            homeScore: 1,
+            awayScore: 0,
+            startTime: new Date("2026-05-09T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 48, team: "home", player: "Goiás", type: "RED_CARD" as const, detail: "Direct Red" },
+              { minute: 79, team: "home", player: "Anselmo Ramon", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Athletic",
+            awayTeam: "Cuiabá",
+            homeScore: 0,
+            awayScore: 0,
+            startTime: new Date("2026-05-09T16:00:00-03:00").getTime(),
+            events: [],
+          },
+          {
+            homeTeam: "Ponte Preta",
+            awayTeam: "Sport Recife",
+            homeScore: 1,
+            awayScore: 3,
+            startTime: new Date("2026-05-09T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 19, team: "away", player: "Pedro Perotti", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 42, team: "home", player: "Bryan Borges", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 61, team: "away", player: "Chrystian Barletta", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 70, team: "away", player: "Sport Recife", type: "RED_CARD" as const, detail: "Direct Red" },
+              { minute: 83, team: "away", player: "Zé Roberto", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Ceará",
+            awayTeam: "Atlético-GO",
+            homeScore: 0,
+            awayScore: 1,
+            startTime: new Date("2026-05-09T18:30:00-03:00").getTime(),
+            events: [
+              { minute: 54, team: "away", player: "Shaylon", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 76, team: "away", player: "Atlético-GO", type: "RED_CARD" as const, detail: "Direct Red" },
+            ],
+          },
+          {
+            homeTeam: "CRB",
+            awayTeam: "Operário-PR",
+            homeScore: 3,
+            awayScore: 0,
+            startTime: new Date("2026-05-09T20:30:00-03:00").getTime(),
+            events: [
+              { minute: 12, team: "away", player: "Mikael", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 44, team: "home", player: "Anselmo Ramon", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 73, team: "home", player: "João Neto", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Juventude",
+            awayTeam: "Criciúma",
+            homeScore: 0,
+            awayScore: 0,
+            startTime: new Date("2026-05-09T20:30:00-03:00").getTime(),
+            events: [],
+          },
+          {
+            homeTeam: "Náutico",
+            awayTeam: "América-MG",
+            homeScore: 4,
+            awayScore: 0,
+            startTime: new Date("2026-05-10T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 16, team: "home", player: "Vinícius", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 38, team: "home", player: "Wenderson", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 55, team: "home", player: "Vinícius", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 62, team: "away", player: "América-MG", type: "RED_CARD" as const, detail: "Direct Red" },
+              { minute: 78, team: "home", player: "Dodô", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Avaí",
+            awayTeam: "Fortaleza",
+            homeScore: 0,
+            awayScore: 0,
+            startTime: new Date("2026-05-10T16:00:00-03:00").getTime(),
+            events: [
+              { minute: 81, team: "away", player: "Fortaleza", type: "RED_CARD" as const, detail: "Direct Red" },
+            ],
+          },
+          {
+            homeTeam: "Novorizontino",
+            awayTeam: "Botafogo-SP",
+            homeScore: 1,
+            awayScore: 0,
+            startTime: new Date("2026-05-10T18:00:00-03:00").getTime(),
+            events: [
+              { minute: 47, team: "home", player: "Carlão", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+          {
+            homeTeam: "Londrina",
+            awayTeam: "São Bernardo",
+            homeScore: 1,
+            awayScore: 3,
+            startTime: new Date("2026-05-12T20:00:00-03:00").getTime(),
+            events: [
+              { minute: 15, team: "away", player: "Pará", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 31, team: "home", player: "Lucas Marques", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 52, team: "away", player: "Kayke", type: "GOAL" as const, detail: "Normal Goal" },
+              { minute: 79, team: "away", player: "Alan Santos", type: "GOAL" as const, detail: "Normal Goal" },
+            ],
+          },
+        ],
+      },
+    ];
+
+    let totalMatchesInserted = 0;
+    let totalEventsInserted = 0;
+
+    for (const round of roundsData) {
+      for (const m of round.matches) {
+        const homeTeamDoc = getTeam(m.homeTeam);
+        const awayTeamDoc = getTeam(m.awayTeam);
+
+        const matchId = await ctx.db.insert("matches", {
+          leagueId: serieB._id,
+          round: round.roundName,
+          homeTeamId: homeTeamDoc._id,
+          awayTeamId: awayTeamDoc._id,
+          status: "FINISHED",
+          statusShort: "FT",
+          minute: 90,
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          startTime: m.startTime,
+        });
+        totalMatchesInserted++;
+
+        for (const ev of m.events) {
+          await ctx.db.insert("matchEvents", {
+            matchId,
+            minute: ev.minute,
+            teamId: ev.team === "home" ? homeTeamDoc._id : awayTeamDoc._id,
+            playerName: ev.player,
+            type: ev.type,
+            detail: ev.detail,
+          });
+          totalEventsInserted++;
+        }
+      }
+    }
+
+    // 5. Recalcula e atualiza a tabela de classificação oficial
+    const allMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", serieB._id))
+      .collect();
+
+    const finishedMatches = allMatches.filter((m) => m.status === "FINISHED");
+    const teamIdSet = new Set<Id<"teams">>();
+    for (const m of allMatches) {
+      teamIdSet.add(m.homeTeamId);
+      teamIdSet.add(m.awayTeamId);
+    }
+
+    const teamDocMap = new Map<string, Doc<"teams">>();
+    await Promise.all(
+      Array.from(teamIdSet).map(async (tid) => {
+        const team = await ctx.db.get(tid);
+        if (team) teamDocMap.set(tid, team);
+      })
+    );
+
+    const standingsList = computeStandingsData(
+      finishedMatches,
+      Array.from(teamIdSet),
+      teamDocMap,
+      "all",
+      serieB.name
+    );
+
+    const oldStandings = await ctx.db
+      .query("standings")
+      .withIndex("by_league_rank", (q) => q.eq("leagueId", serieB._id))
+      .collect();
+
+    for (const r of oldStandings) await ctx.db.delete(r._id);
+
+    for (const row of standingsList) {
+      await ctx.db.insert("standings", {
+        leagueId: serieB._id,
+        season: serieB.season,
+        rank: row.rank,
+        previousRank: row.previousRank,
+        teamId: row.teamId,
+        points: row.points,
+        goalsDiff: row.goalsDiff,
+        form: row.form,
+        played: row.played,
+        win: row.win,
+        draw: row.draw,
+        lose: row.lose,
+        goalsFor: row.goalsFor,
+        goalsAgainst: row.goalsAgainst,
+        description: row.description,
+      });
+    }
+
+    return {
+      success: true,
+      league: serieB.name,
+      matchesInserted: totalMatchesInserted,
+      eventsInserted: totalEventsInserted,
+      standingsUpdated: standingsList.length,
+    };
+  },
+});
