@@ -14,9 +14,14 @@ interface LeagueViewProps {
     season?: number;
     priority?: number;
   };
+  onNavigateToMatches?: () => void;
 }
 
-export function LeagueView({ leagueId, league }: LeagueViewProps) {
+export function LeagueView({
+  leagueId,
+  league,
+  onNavigateToMatches,
+}: LeagueViewProps) {
   // Padrão na rodada mais recente cadastrada (Rodada 8)
   const [currentRound, setCurrentRound] = useState<number>(8);
   const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
@@ -151,6 +156,7 @@ export function LeagueView({ leagueId, league }: LeagueViewProps) {
           <RoundMatchesList
             leagueId={leagueId}
             round={`Rodada ${currentRound}`}
+            onNavigateToMatches={onNavigateToMatches}
           />
         </div>
       </div>

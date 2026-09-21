@@ -2047,3 +2047,90 @@ export const seedSerieBRounds6to8Real = mutation({
     };
   },
 });
+
+// Popula o ranking de artilheiros oficial do Brasileirão Série B conforme a fonte do GE
+export const seedTopScorers = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Localiza a liga Série B
+    let serieB = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 72))
+      .first();
+
+    if (!serieB) {
+      const allLeagues = await ctx.db.query("leagues").collect();
+      serieB = allLeagues.find((l) => l.name.toLowerCase().includes("série b")) ?? null;
+    }
+
+    if (!serieB) {
+      throw new Error("Campeonato Brasileirão Série B não encontrado.");
+    }
+
+    // 2. Limpa artilharia anterior da liga
+    const existingScorers = await ctx.db
+      .query("topScorers")
+      .withIndex("by_league", (q) => q.eq("leagueId", serieB._id))
+      .collect();
+    for (const sc of existingScorers) {
+      await ctx.db.delete(sc._id);
+    }
+
+    // 3. Busca todos os times para associação de escudo e id
+    const allTeams = await ctx.db.query("teams").collect();
+    const clean = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[-_]/g, " ")
+        .trim();
+
+    const findTeam = (name: string) => {
+      const target = clean(name);
+      return (
+        allTeams.find((t) => clean(t.name) === target) ||
+        allTeams.find((t) => clean(t.name).includes(target) || target.includes(clean(t.name))) ||
+        null
+      );
+    };
+
+    // 4. Dados Oficiais de Artilharia (Fonte GE - Brasileirão Série B 2026)
+    const officialScorers = [
+      { rank: 1, playerName: "Mikael", teamName: "CRB", teamCode: "CRB", goals: 16, assists: 3, matches: 26 },
+      { rank: 2, playerName: "Robson Fernandes", teamName: "Novorizontino", teamCode: "NOV", goals: 15, assists: 4, matches: 27 },
+      { rank: 3, playerName: "Gustavo Coutinho", teamName: "Atlético-GO", teamCode: "ACG", goals: 13, assists: 2, matches: 24 },
+      { rank: 4, playerName: "Gabriel Boschilia", teamName: "Operário-PR", teamCode: "OPE", goals: 12, assists: 5, matches: 25 },
+      { rank: 5, playerName: "Bruno Santos", teamName: "Londrina", teamCode: "LON", goals: 11, assists: 1, matches: 23 },
+      { rank: 6, playerName: "Perotti", teamName: "Sport", teamCode: "SPO", goals: 11, assists: 2, matches: 25 },
+      { rank: 7, playerName: "Chrystian Barletta", teamName: "Sport", teamCode: "SPO", goals: 11, assists: 4, matches: 26 },
+      { rank: 8, playerName: "Caio Dantas", teamName: "Operário-PR", teamCode: "OPE", goals: 10, assists: 1, matches: 22 },
+      { rank: 9, playerName: "Shaylon", teamName: "Atlético-GO", teamCode: "ACG", goals: 9, assists: 6, matches: 25 },
+      { rank: 10, playerName: "Lucas Lima", teamName: "Sport", teamCode: "SPO", goals: 9, assists: 7, matches: 27 },
+    ];
+
+    let inserted = 0;
+    for (const sc of officialScorers) {
+      const team = findTeam(sc.teamName);
+      await ctx.db.insert("topScorers", {
+        leagueId: serieB._id,
+        rank: sc.rank,
+        playerName: sc.playerName,
+        teamId: team?._id,
+        teamName: team?.name ?? sc.teamName,
+        teamCode: team?.code ?? sc.teamCode,
+        teamLogoUrl: team?.logoUrl,
+        goals: sc.goals,
+        assists: sc.assists,
+        matches: sc.matches,
+      });
+      inserted++;
+    }
+
+    return {
+      success: true,
+      league: serieB.name,
+      scorersInserted: inserted,
+    };
+  },
+});

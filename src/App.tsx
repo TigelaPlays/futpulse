@@ -8,6 +8,7 @@ import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
+import { TopScorersWidget } from "./components/TopScorersWidget";
 import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
@@ -229,6 +230,10 @@ export default function App() {
     const homeWon = isFinished && match.homeScore > match.awayScore;
     const awayWon = isFinished && match.awayScore > match.homeScore;
 
+    const homeEvents = match.events?.filter((e: any) => e.teamId === match.homeTeamId) || [];
+    const awayEvents = match.events?.filter((e: any) => e.teamId === match.awayTeamId) || [];
+    const hasEvents = homeEvents.length > 0 || awayEvents.length > 0;
+
     return (
       <div
         key={isFavoriteBlock ? `fav-${match._id}` : match._id}
@@ -390,6 +395,73 @@ export default function App() {
           </div>
         </div>
 
+        {/* Eventos da Partida (Gols e Cartões) no Desktop: Lado a Lado preservando os times */}
+        {hasEvents && (
+          <div className="hidden md:grid grid-cols-[140px_1fr_140px] items-start gap-3 mt-2 pt-2 border-t border-slate-100 text-xs">
+            <div />
+            <div className="w-full max-w-xl mx-auto px-2 grid grid-cols-2 gap-6">
+              {/* Lado do Mandante (Alinhado à direita) */}
+              <div className="space-y-1 text-right">
+                {homeEvents.map((ev: any, idx: number) => {
+                  const isGoal = ev.type === "GOAL";
+                  const isRed = ev.type === "RED_CARD";
+                  const isPenalty = ev.detail?.toLowerCase().includes("pen");
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-end gap-1.5 text-[11px] text-slate-600"
+                    >
+                      <span className="font-medium text-slate-800 truncate">
+                        {ev.playerName}
+                        {isPenalty && (
+                          <span className="text-slate-400 text-[10px]"> (P)</span>
+                        )}
+                      </span>
+                      <span className="text-slate-400 text-[10px] font-mono">
+                        {ev.minute}
+                        {ev.extraMinute ? `+${ev.extraMinute}` : ""}′
+                      </span>
+                      <span className="text-xs shrink-0 select-none">
+                        {isGoal ? "⚽" : isRed ? "🟥" : "🟨"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Lado do Visitante (Alinhado à esquerda) */}
+              <div className="space-y-1 text-left">
+                {awayEvents.map((ev: any, idx: number) => {
+                  const isGoal = ev.type === "GOAL";
+                  const isRed = ev.type === "RED_CARD";
+                  const isPenalty = ev.detail?.toLowerCase().includes("pen");
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-start gap-1.5 text-[11px] text-slate-600"
+                    >
+                      <span className="text-xs shrink-0 select-none">
+                        {isGoal ? "⚽" : isRed ? "🟥" : "🟨"}
+                      </span>
+                      <span className="text-slate-400 text-[10px] font-mono">
+                        {ev.minute}
+                        {ev.extraMinute ? `+${ev.extraMinute}` : ""}′
+                      </span>
+                      <span className="font-medium text-slate-800 truncate">
+                        {ev.playerName}
+                        {isPenalty && (
+                          <span className="text-slate-400 text-[10px]"> (P)</span>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div />
+          </div>
+        )}
+
         {/* Layout Mobile (< md): Cartão Simétrico Responsivo */}
         <div className="md:hidden space-y-2">
           {/* Topo: Status + Favorito + Rodada */}
@@ -507,6 +579,63 @@ export default function App() {
               </span>
             </div>
           </div>
+
+          {/* Eventos da Partida Mobile: Lado a Lado preservando os times */}
+          {hasEvents && (
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 text-[10px]">
+              {/* Mandante */}
+              <div className="space-y-1 text-right">
+                {homeEvents.map((ev: any, idx: number) => {
+                  const isGoal = ev.type === "GOAL";
+                  const isRed = ev.type === "RED_CARD";
+                  const isPenalty = ev.detail?.toLowerCase().includes("pen");
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-end gap-1 text-slate-600 truncate"
+                    >
+                      <span className="font-medium text-slate-800 truncate">
+                        {ev.playerName}
+                        {isPenalty && " (P)"}
+                      </span>
+                      <span className="text-slate-400 text-[9px] font-mono">
+                        {ev.minute}′
+                      </span>
+                      <span className="text-[11px] select-none">
+                        {isGoal ? "⚽" : isRed ? "🟥" : "🟨"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Visitante */}
+              <div className="space-y-1 text-left">
+                {awayEvents.map((ev: any, idx: number) => {
+                  const isGoal = ev.type === "GOAL";
+                  const isRed = ev.type === "RED_CARD";
+                  const isPenalty = ev.detail?.toLowerCase().includes("pen");
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-start gap-1 text-slate-600 truncate"
+                    >
+                      <span className="text-[11px] select-none">
+                        {isGoal ? "⚽" : isRed ? "🟥" : "🟨"}
+                      </span>
+                      <span className="text-slate-400 text-[9px] font-mono">
+                        {ev.minute}′
+                      </span>
+                      <span className="font-medium text-slate-800 truncate">
+                        {ev.playerName}
+                        {isPenalty && " (P)"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Botões de Simulação Mobile */}
           {isLive && (
@@ -843,17 +972,28 @@ export default function App() {
           <LeagueView
             leagueId={selectedLeagueId}
             league={selectedLeague}
+            onNavigateToMatches={() => {
+              setViewMode("matches");
+              setSelectedLeagueId(selectedLeagueId);
+            }}
           />
-        ) : matches === undefined ? (
-          <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
-            <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            <span>Sincronizando partidas...</span>
-          </div>
-        ) : matches.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-slate-200 rounded-xl text-slate-500 shadow-xs">
-            Nenhuma partida encontrada neste filtro.
-          </div>
         ) : (
+          <>
+            {/* Bloco de Artilharia Oficial (Fonte GE) na Grade Geral de Jogos */}
+            {viewMode === "matches" && (
+              <TopScorersWidget leagueId={selectedLeagueId} />
+            )}
+
+            {matches === undefined ? (
+              <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
+                <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                <span>Sincronizando partidas...</span>
+              </div>
+            ) : matches.length === 0 ? (
+              <div className="text-center py-16 bg-white border border-slate-200 rounded-xl text-slate-500 shadow-xs">
+                Nenhuma partida encontrada neste filtro.
+              </div>
+            ) : (
           Object.entries(groupedMatches || {}).map(([leagueName, group]) => (
             <div
               key={leagueName}
@@ -892,7 +1032,9 @@ export default function App() {
             </div>
           ))
         )}
-      </main>
+      </>
+    )}
+  </main>
 
       {/* Container dos Alertas de Gol Flutuantes */}
       <GoalToastContainer

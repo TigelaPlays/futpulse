@@ -135,4 +135,21 @@ export default defineSchema({
   })
     .index("by_league_season", ["leagueId", "season"])
     .index("by_league_rank", ["leagueId", "rank"]),
+
+  // 8. Artilharia / Top Scorers (Fonte Oficial GE)
+  topScorers: defineTable({
+    leagueId: v.id("leagues"),
+    rank: v.number(),
+    playerName: v.string(),
+    teamId: v.optional(v.id("teams")),
+    teamName: v.string(),
+    teamCode: v.optional(v.string()),
+    teamLogoUrl: v.optional(v.string()),
+    goals: v.number(),
+    assists: v.optional(v.number()),
+    matches: v.optional(v.number()),
+    penalties: v.optional(v.number()),
+  })
+    .index("by_league", ["leagueId"])
+    .index("by_league_rank", ["leagueId", "rank"]),
 });

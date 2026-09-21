@@ -38,20 +38,31 @@ export const listMatches = query({
       });
     }
 
-    // Hidrata com times e liga
+    // Hidrata com times, liga, estádio e eventos
     const hydratedMatches = await Promise.all(
       matches.map(async (match) => {
-        const [homeTeam, awayTeam, league] = await Promise.all([
+        const [homeTeam, awayTeam, league, stadium, events] = await Promise.all([
           ctx.db.get(match.homeTeamId),
           ctx.db.get(match.awayTeamId),
           ctx.db.get(match.leagueId),
+          match.stadiumId ? ctx.db.get(match.stadiumId) : null,
+          ctx.db
+            .query("matchEvents")
+            .withIndex("by_match", (q) => q.eq("matchId", match._id))
+            .collect(),
         ]);
+
+        events.sort((a, b) => a.minute - b.minute);
 
         return {
           ...match,
           homeTeam,
           awayTeam,
           league,
+          stadium,
+          events: events.filter((e) =>
+            ["GOAL", "RED_CARD", "YELLOW_CARD"].includes(e.type)
+          ),
         };
       })
     );
@@ -69,6 +80,42 @@ export const listMatches = query({
 
       return b.startTime - a.startTime;
     });
+  },
+});
+
+// Retorna o ranking de artilheiros oficial do campeonato (Fonte GE)
+export const getTopScorers = query({
+  args: {
+    leagueId: v.optional(v.id("leagues")),
+  },
+  handler: async (ctx, args) => {
+    let leagueId = args.leagueId;
+
+    if (!leagueId) {
+      // Busca a liga Série B por padrão
+      const serieB = await ctx.db
+        .query("leagues")
+        .withIndex("by_externalId", (q) => q.eq("externalId", 72))
+        .first();
+      if (serieB) {
+        leagueId = serieB._id;
+      } else {
+        const allLeagues = await ctx.db.query("leagues").collect();
+        const found = allLeagues.find((l) => l.name.toLowerCase().includes("série b"));
+        if (found) leagueId = found._id;
+        else if (allLeagues.length > 0) leagueId = allLeagues[0]._id;
+      }
+    }
+
+    if (!leagueId) return [];
+
+    const scorers = await ctx.db
+      .query("topScorers")
+      .withIndex("by_league", (q) => q.eq("leagueId", leagueId!))
+      .collect();
+
+    scorers.sort((a, b) => a.rank - b.rank);
+    return scorers;
   },
 });
 
