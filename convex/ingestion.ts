@@ -2,8 +2,12 @@ import { action, internalMutation, type ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 
-// IDs das ligas monitoradas (incluindo Série B - 72)
-const TRACKED_LEAGUE_IDS = [71, 72, 2, 39, 13, 73, 140, 135, 78, 11, 45];
+// IDs das ligas monitoradas (Brasil, América do Sul, Europa, MLS, Arábia Saudita)
+const TRACKED_LEAGUE_IDS = [
+  71, 72, 73, 13, 11, // Brasil e América do Sul
+  2, 39, 140, 135, 78, 61, 94, 3, 45, // Europa
+  253, 307, // MLS, Saudi Pro League
+];
 
 // Helper compartilhado para sincronização de jogos ao vivo
 export async function performLiveSync(ctx: ActionCtx) {

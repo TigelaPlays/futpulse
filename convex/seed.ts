@@ -312,3 +312,51 @@ export const populateSerieBStandings = mutation({
     return { success: true, total: realStandings.length };
   },
 });
+
+export const seedGlobalLeagues = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const globalLeagues = [
+      // --- DESTAQUES BRASIL & AMÉRICA DO SUL (Prioridade Máxima) ---
+      { name: "Brasileirão Série A", country: "Brasil", externalId: 71, season: 2026, type: "league" as const, priority: 1, logoUrl: "https://media.api-sports.io/football/leagues/71.png" },
+      { name: "Brasileirão Série B", country: "Brasil", externalId: 72, season: 2026, type: "league" as const, priority: 2, logoUrl: "https://media.api-sports.io/football/leagues/72.png" },
+      { name: "Copa do Brasil", country: "Brasil", externalId: 73, season: 2026, type: "cup" as const, priority: 3, logoUrl: "https://media.api-sports.io/football/leagues/73.png" },
+      { name: "Copa Libertadores", country: "América do Sul", externalId: 13, season: 2026, type: "cup" as const, priority: 4, logoUrl: "https://media.api-sports.io/football/leagues/13.png" },
+      { name: "Copa Sul-Americana", country: "América do Sul", externalId: 11, season: 2026, type: "cup" as const, priority: 5, logoUrl: "https://media.api-sports.io/football/leagues/11.png" },
+
+      // --- DESTAQUES EUROPA ---
+      { name: "UEFA Champions League", country: "Europa", externalId: 2, season: 2026, type: "cup" as const, priority: 6, logoUrl: "https://media.api-sports.io/football/leagues/2.png" },
+      { name: "Premier League", country: "Inglaterra", externalId: 39, season: 2026, type: "league" as const, priority: 7, logoUrl: "https://media.api-sports.io/football/leagues/39.png" },
+      { name: "La Liga", country: "Espanha", externalId: 140, season: 2026, type: "league" as const, priority: 8, logoUrl: "https://media.api-sports.io/football/leagues/140.png" },
+      { name: "Serie A", country: "Itália", externalId: 135, season: 2026, type: "league" as const, priority: 9, logoUrl: "https://media.api-sports.io/football/leagues/135.png" },
+      { name: "Bundesliga", country: "Alemanha", externalId: 78, season: 2026, type: "league" as const, priority: 10, logoUrl: "https://media.api-sports.io/football/leagues/78.png" },
+
+      // --- OUTRAS LIGAS POPULARES ---
+      { name: "Ligue 1", country: "França", externalId: 61, season: 2026, type: "league" as const, priority: 20, logoUrl: "https://media.api-sports.io/football/leagues/61.png" },
+      { name: "Liga Portugal", country: "Portugal", externalId: 94, season: 2026, type: "league" as const, priority: 21, logoUrl: "https://media.api-sports.io/football/leagues/94.png" },
+      { name: "UEFA Europa League", country: "Europa", externalId: 3, season: 2026, type: "cup" as const, priority: 22, logoUrl: "https://media.api-sports.io/football/leagues/3.png" },
+      { name: "MLS", country: "Estados Unidos", externalId: 253, season: 2026, type: "league" as const, priority: 25, logoUrl: "https://media.api-sports.io/football/leagues/253.png" },
+      { name: "Saudi Pro League", country: "Arábia Saudita", externalId: 307, season: 2026, type: "league" as const, priority: 26, logoUrl: "https://media.api-sports.io/football/leagues/307.png" },
+    ];
+
+    for (const lg of globalLeagues) {
+      const existing = await ctx.db
+        .query("leagues")
+        .withIndex("by_externalId", (q) => q.eq("externalId", lg.externalId))
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          priority: lg.priority,
+          logoUrl: lg.logoUrl,
+          name: lg.name,
+          country: lg.country,
+        });
+      } else {
+        await ctx.db.insert("leagues", lg);
+      }
+    }
+
+    return { success: true, total: globalLeagues.length };
+  },
+});

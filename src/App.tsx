@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX } from "lucide-react";
+import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
@@ -21,7 +21,30 @@ export default function App() {
   const [goalAlerts, setGoalAlerts] = useState<GoalAlert[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [favoriteMatchIds, setFavoriteMatchIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("futpulse_favorites");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const previousScoresRef = useRef<Record<string, { home: number; away: number }>>({});
+
+  const toggleFavorite = (e: React.MouseEvent, matchId: string) => {
+    e.stopPropagation();
+    setFavoriteMatchIds((prev) => {
+      const next = prev.includes(matchId)
+        ? prev.filter((id) => id !== matchId)
+        : [...prev, matchId];
+      try {
+        localStorage.setItem("futpulse_favorites", JSON.stringify(next));
+      } catch (err) {
+        console.error("Erro ao salvar favoritos:", err);
+      }
+      return next;
+    });
+  };
 
   const leagues = useQuery(api.leagues.listLeagues);
   const matches = useQuery(api.matches.listMatches, {
@@ -103,6 +126,11 @@ export default function App() {
     return acc;
   }, {} as Record<string, { league: any; matches: NonNullable<typeof matches> }>);
 
+  // Partidas Favoritas filtradas pela busca
+  const favoriteMatches = (filteredMatches || []).filter((m) =>
+    favoriteMatchIds.includes(m._id)
+  );
+
   // Sincronização de jogos ao vivo
   const handleManualSync = async () => {
     try {
@@ -160,6 +188,144 @@ export default function App() {
     } catch (err) {
       console.error("Falha ao computar gol:", err);
     }
+  };
+
+  const renderMatchRow = (match: any, isFavoriteBlock = false) => {
+    const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
+      match.status
+    );
+
+    return (
+      <div
+        key={isFavoriteBlock ? `fav-${match._id}` : match._id}
+        onClick={() => setSelectedMatchId(match._id)}
+        className="p-4 hover:bg-[#1f242c]/70 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
+      >
+        {/* Minuto / Relógio Dinâmico + Favorito */}
+        <div className="flex items-center md:w-36 gap-2">
+          {/* Botão de Favorito */}
+          <button
+            onClick={(e) => toggleFavorite(e, match._id)}
+            className="p-1 text-slate-500 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
+            title={favoriteMatchIds.includes(match._id) ? "Remover dos favoritos" : "Favoritar partida"}
+          >
+            <Star
+              className={`w-4 h-4 ${
+                favoriteMatchIds.includes(match._id)
+                  ? "fill-amber-400 text-amber-400"
+                  : "text-slate-600 hover:text-slate-400"
+              }`}
+            />
+          </button>
+
+          {isLive ? (
+            <LiveMatchClock
+              initialMinute={match.minute}
+              status={match.status}
+              statusShort={match.statusShort}
+              updatedAt={match.elapsedSecondsUpdatedAt ?? match._creationTime}
+            />
+          ) : match.status === "POSTPONED" ? (
+            <span className="text-xs font-semibold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2 py-1 rounded-md">
+              Adiado
+            </span>
+          ) : match.status === "FINISHED" ? (
+            <span className="text-xs font-semibold text-slate-400 bg-slate-800/80 px-2 py-1 rounded-md">
+              Encerrado
+            </span>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <Clock className="w-3.5 h-3.5" />
+              <span>
+                {new Date(match.startTime).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
+          <span className="text-xs text-slate-500 hidden sm:inline truncate">
+            • {isFavoriteBlock ? (match.league?.name || match.round) : match.round}
+          </span>
+        </div>
+
+        {/* Confronto e Placar */}
+        <div className="flex-1 grid grid-cols-7 items-center max-w-lg mx-auto w-full">
+          {/* Mandante */}
+          <div className="col-span-3 flex items-center justify-end gap-2.5 text-right">
+            <span className="font-semibold text-sm truncate">
+              {match.homeTeam?.name}
+            </span>
+            {match.homeTeam?.logoUrl ? (
+              <img
+                src={match.homeTeam.logoUrl}
+                alt={match.homeTeam?.name ?? "Mandante"}
+                className="w-6 h-6 object-contain shrink-0"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#30363d] flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
+                {match.homeTeam?.name?.charAt(0) ?? "M"}
+              </div>
+            )}
+          </div>
+
+          {/* Placar Central */}
+          <div className="col-span-1 flex justify-center items-center">
+            {match.status === "SCHEDULED" ? (
+              <span className="text-xs text-slate-400 font-bold tracking-widest">VS</span>
+            ) : (
+              <div className="bg-[#0d1117] border border-[#30363d] px-3 py-1 rounded-md font-mono font-bold text-base text-emerald-400 flex items-center gap-1.5 shadow-inner">
+                <span>{match.homeScore}</span>
+                <span className="text-slate-500 font-sans">-</span>
+                <span>{match.awayScore}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Visitante */}
+          <div className="col-span-3 flex items-center justify-start gap-2.5 text-left">
+            {match.awayTeam?.logoUrl ? (
+              <img
+                src={match.awayTeam.logoUrl}
+                alt={match.awayTeam?.name ?? "Visitante"}
+                className="w-6 h-6 object-contain shrink-0"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#30363d] flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
+                {match.awayTeam?.name?.charAt(0) ?? "V"}
+              </div>
+            )}
+            <span className="font-semibold text-sm truncate">
+              {match.awayTeam?.name}
+            </span>
+          </div>
+        </div>
+
+        {/* Botões de Simulação */}
+        {isLive && (
+          <div className="flex items-center gap-1.5 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-[#21262d]">
+            <button
+              onClick={(e) =>
+                handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
+              }
+              className="text-[11px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded border border-[#30363d] text-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+              title={`Adicionar gol para ${match.homeTeam?.name}`}
+            >
+              <Flame className="w-3 h-3" /> +1 {match.homeTeam?.code || "M"}
+            </button>
+            <button
+              onClick={(e) =>
+                handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
+              }
+              className="text-[11px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded border border-[#30363d] text-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+              title={`Adicionar gol para ${match.awayTeam?.name}`}
+            >
+              <Flame className="w-3 h-3" /> +1 {match.awayTeam?.code || "V"}
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -282,34 +448,73 @@ export default function App() {
               }}
               className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
                 selectedLeagueId === null
-                  ? "bg-emerald-500 text-slate-950 font-semibold"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
                   : "bg-[#21262d] text-slate-400 hover:text-slate-200 border border-[#30363d]"
               }`}
             >
               Todas as Ligas
             </button>
 
-            {leagues.map((lg) => {
-              const isSelected = selectedLeagueId === lg._id;
-              return (
-                <button
-                  key={lg._id}
-                  onClick={() => setSelectedLeagueId(lg._id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-emerald-500 text-slate-950 font-bold"
-                      : "bg-[#21262d] text-slate-300 hover:text-white border border-[#30363d]"
-                  }`}
-                >
-                  {lg.logoUrl && (
-                    <div className="w-4 h-4 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0">
-                      <img src={lg.logoUrl} alt="" className="w-full h-full object-contain" />
-                    </div>
-                  )}
-                  <span>{lg.name}</span>
-                </button>
-              );
-            })}
+            {/* Ligas Principais (Prioridade <= 10) */}
+            {leagues
+              .filter((lg) => (lg.priority ?? 99) <= 10)
+              .map((lg) => {
+                const isSelected = selectedLeagueId === lg._id;
+                return (
+                  <button
+                    key={lg._id}
+                    onClick={() => {
+                      setSelectedLeagueId(lg._id);
+                      setViewMode("matches");
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-emerald-500 text-slate-950 font-bold shadow-md scale-105"
+                        : "bg-[#21262d] text-slate-300 hover:text-white border border-[#30363d]"
+                    }`}
+                  >
+                    {lg.logoUrl && (
+                      <div className="w-4 h-4 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0">
+                        <img src={lg.logoUrl} alt="" className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                    <span>{lg.name}</span>
+                  </button>
+                );
+              })}
+
+            {/* Separador se houver outras ligas */}
+            {leagues.some((lg) => (lg.priority ?? 99) > 10) && (
+              <span className="text-slate-600 text-xs px-1">|</span>
+            )}
+
+            {/* Ligas Secundárias */}
+            {leagues
+              .filter((lg) => (lg.priority ?? 99) > 10)
+              .map((lg) => {
+                const isSelected = selectedLeagueId === lg._id;
+                return (
+                  <button
+                    key={lg._id}
+                    onClick={() => {
+                      setSelectedLeagueId(lg._id);
+                      setViewMode("matches");
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer opacity-85 hover:opacity-100 ${
+                      isSelected
+                        ? "bg-teal-500 text-slate-950 font-bold shadow-md"
+                        : "bg-[#1c2128] text-slate-400 hover:text-slate-200 border border-[#2d333b]"
+                    }`}
+                  >
+                    {lg.logoUrl && (
+                      <div className="w-3.5 h-3.5 rounded-full bg-white/90 p-0.5 flex items-center justify-center shrink-0">
+                        <img src={lg.logoUrl} alt="" className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                    <span>{lg.name}</span>
+                  </button>
+                );
+              })}
           </div>
         )}
       </header>
@@ -346,6 +551,29 @@ export default function App() {
                 {selectedLeague.name}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Bloco de Partidas Favoritas (se houver alguma favoritada e estiver no modo jogos) */}
+        {viewMode === "matches" && favoriteMatches.length > 0 && (
+          <div className="bg-[#161b22] border border-amber-500/30 rounded-xl overflow-hidden shadow-lg animate-fade-in">
+            {/* Cabeçalho de Favoritos */}
+            <div className="bg-gradient-to-r from-amber-500/10 to-[#1c2128] px-4 py-3 border-b border-amber-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                <span className="font-bold text-sm tracking-wide text-slate-200">
+                  Partidas Favoritas
+                </span>
+                <span className="text-xs text-amber-400/80 font-medium">
+                  • {favoriteMatches.length} {favoriteMatches.length === 1 ? "jogo fixado" : "jogos fixados"}
+                </span>
+              </div>
+            </div>
+
+            {/* Lista de Partidas Favoritas */}
+            <div className="divide-y divide-[#21262d]">
+              {favoriteMatches.map((match: any) => renderMatchRow(match, true))}
+            </div>
           </div>
         )}
 
@@ -397,128 +625,7 @@ export default function App() {
 
               {/* Lista de Partidas */}
               <div className="divide-y divide-[#21262d]">
-                {group.matches.map((match: any) => {
-                  const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
-                    match.status
-                  );
-
-                  return (
-                    <div
-                      key={match._id}
-                      onClick={() => setSelectedMatchId(match._id)}
-                      className="p-4 hover:bg-[#1f242c]/70 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
-                    >
-                      {/* Minuto / Relógio Dinâmico */}
-                      <div className="flex items-center md:w-32 gap-2">
-                        {isLive ? (
-                          <LiveMatchClock
-                            initialMinute={match.minute}
-                            status={match.status}
-                            statusShort={match.statusShort}
-                            updatedAt={match.elapsedSecondsUpdatedAt ?? match._creationTime}
-                          />
-                        ) : match.status === "POSTPONED" ? (
-                          <span className="text-xs font-semibold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2 py-1 rounded-md">
-                            Adiado
-                          </span>
-                        ) : match.status === "FINISHED" ? (
-                          <span className="text-xs font-semibold text-slate-400 bg-slate-800/80 px-2 py-1 rounded-md">
-                            Encerrado
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>
-                              {new Date(match.startTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                        )}
-                        <span className="text-xs text-slate-500 hidden sm:inline truncate">
-                          • {match.round}
-                        </span>
-                      </div>
-
-                      {/* Confronto e Placar */}
-                      <div className="flex-1 grid grid-cols-7 items-center max-w-lg mx-auto w-full">
-                        {/* Mandante */}
-                        <div className="col-span-3 flex items-center justify-end gap-2.5 text-right">
-                          <span className="font-semibold text-sm truncate">
-                            {match.homeTeam?.name}
-                          </span>
-                          {match.homeTeam?.logoUrl ? (
-                            <img
-                              src={match.homeTeam.logoUrl}
-                              alt={match.homeTeam?.name ?? "Mandante"}
-                              className="w-6 h-6 object-contain shrink-0"
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#30363d] flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
-                              {match.homeTeam?.name?.charAt(0) ?? "M"}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Placar Central */}
-                        <div className="col-span-1 flex justify-center items-center">
-                          {match.status === "SCHEDULED" ? (
-                            <span className="text-xs text-slate-400 font-bold tracking-widest">VS</span>
-                          ) : (
-                            <div className="bg-[#0d1117] border border-[#30363d] px-3 py-1 rounded-md font-mono font-bold text-base text-emerald-400 flex items-center gap-1.5 shadow-inner">
-                              <span>{match.homeScore}</span>
-                              <span className="text-slate-500 font-sans">-</span>
-                              <span>{match.awayScore}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Visitante */}
-                        <div className="col-span-3 flex items-center justify-start gap-2.5 text-left">
-                          {match.awayTeam?.logoUrl ? (
-                            <img
-                              src={match.awayTeam.logoUrl}
-                              alt={match.awayTeam?.name ?? "Visitante"}
-                              className="w-6 h-6 object-contain shrink-0"
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-slate-800 border border-[#30363d] flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
-                              {match.awayTeam?.name?.charAt(0) ?? "V"}
-                            </div>
-                          )}
-                          <span className="font-semibold text-sm truncate">
-                            {match.awayTeam?.name}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Botões de Simulação */}
-                      {isLive && (
-                        <div className="flex items-center gap-1.5 justify-end pt-2 md:pt-0 border-t md:border-t-0 border-[#21262d]">
-                          <button
-                            onClick={(e) =>
-                              handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
-                            }
-                            className="text-[11px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded border border-[#30363d] text-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
-                            title={`Adicionar gol para ${match.homeTeam?.name}`}
-                          >
-                            <Flame className="w-3 h-3" /> +1 {match.homeTeam?.code || "M"}
-                          </button>
-                          <button
-                            onClick={(e) =>
-                              handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
-                            }
-                            className="text-[11px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded border border-[#30363d] text-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
-                            title={`Adicionar gol para ${match.awayTeam?.name}`}
-                          >
-                            <Flame className="w-3 h-3" /> +1 {match.awayTeam?.code || "V"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {group.matches.map((match: any) => renderMatchRow(match, false))}
               </div>
             </div>
           ))
