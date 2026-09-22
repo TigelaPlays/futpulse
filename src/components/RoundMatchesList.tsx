@@ -117,13 +117,22 @@ function getStadiumLabel(match: any): string {
 function formatMatchHeader(match: any): { stadium: string; dateStr: string; weekday: string; timeStr: string } {
   const stadium = getStadiumLabel(match);
   const dateObj = new Date(match.startTime);
-  
+  const now = new Date();
+
+  const isToday =
+    dateObj.getDate() === now.getDate() &&
+    dateObj.getMonth() === now.getMonth() &&
+    dateObj.getFullYear() === now.getFullYear();
+
+  const isYesterday =
+    new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString() === dateObj.toDateString();
+
   const day = String(dateObj.getDate()).padStart(2, "0");
   const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-  const dateStr = `${day}/${month}`;
-  
-  const weekday = WEEKDAYS[dateObj.getDay()];
-  
+  const dateStr = isToday ? "Hoje" : `${day}/${month}`;
+
+  const weekday = isToday ? "" : isYesterday ? "Ontem" : WEEKDAYS[dateObj.getDay()];
+
   let timeStr = "";
   if (match.status === "FINISHED") {
     timeStr = "FIM";
@@ -204,8 +213,12 @@ export function RoundMatchesList({
                   </div>
                   <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-600">
                     <span className="font-semibold text-slate-700">{dateStr}</span>
-                    <span className="text-slate-300 select-none">•</span>
-                    <span>{weekday}</span>
+                    {weekday && (
+                      <>
+                        <span className="text-slate-300 select-none">•</span>
+                        <span>{weekday}</span>
+                      </>
+                    )}
                     <span className="text-slate-300 select-none">•</span>
                     <span
                       className={
@@ -247,10 +260,8 @@ export function RoundMatchesList({
                   {/* Placar Central */}
                   <div className="shrink-0 flex items-center justify-center gap-1 px-1 min-w-[56px]">
                     {m.status === "SCHEDULED" ? (
-                      <div className="flex items-center gap-1.5 font-bold text-slate-300 text-base">
-                        <span>—</span>
-                        <span className="text-slate-200 font-normal text-sm">×</span>
-                        <span>—</span>
+                      <div className="flex items-center justify-center font-bold text-slate-300 text-sm">
+                        <span>×</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 font-black text-lg tabular-nums text-slate-950 font-sans">
@@ -283,13 +294,13 @@ export function RoundMatchesList({
                   </div>
                 </div>
 
-                {/* Linha 3: SAIBA COMO FOI */}
+                {/* Linha 3: SAIBA COMO FOI / FIQUE POR DENTRO */}
                 <div className="text-center pt-0.5">
                   <button
                     onClick={onNavigateToMatches}
                     className="text-[#00a651] hover:text-emerald-700 font-extrabold text-[10.5px] uppercase tracking-wider transition-colors cursor-pointer hover:underline inline-block"
                   >
-                    SAIBA COMO FOI
+                    {m.status === "FINISHED" ? "SAIBA COMO FOI" : "FIQUE POR DENTRO"}
                   </button>
                 </div>
               </div>

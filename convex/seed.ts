@@ -2942,4 +2942,142 @@ export const seedSerieBRounds24to28 = mutation({
   },
 });
 
+// ─── Rodada 29 — Brasileirão Série B 2026 (Fonte: ge.globo.com) ─────────────
+export const seedSerieBRound29 = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let serieB = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 72))
+      .first();
+
+    if (!serieB) {
+      const allLeagues = await ctx.db.query("leagues").collect();
+      serieB = allLeagues.find((l) => l.name.toLowerCase().includes("série b")) ?? null;
+    }
+
+    if (!serieB) throw new Error("Liga Série B não encontrada.");
+
+    const clean = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[-_]/g, " ")
+        .trim();
+
+    const ALIASES: Record<string, string> = {
+      "america mineiro": "america mg",
+      "america-mg": "america mg",
+      "athletic club": "athletic",
+      "atletico goianiense": "atletico go",
+      "atletico-go": "atletico go",
+      "botafogo sp": "botafogo sp",
+      "botafogo-sp": "botafogo sp",
+      "operario pr": "operario pr",
+      "operario-pr": "operario pr",
+      "operario ferroviario": "operario pr",
+      "sport recife": "sport",
+    };
+
+    const normalize = (s: string) => { const c = clean(s); return ALIASES[c] ?? c; };
+
+    const allTeams = await ctx.db.query("teams").collect();
+
+    const getOrCreate = async (name: string) => {
+      const norm = normalize(name);
+      let team = allTeams.find((t) => normalize(t.name) === norm);
+      if (!team) {
+        const id = await ctx.db.insert("teams", { name, logoUrl: "" });
+        team = (await ctx.db.get(id))!;
+        allTeams.push(team);
+      }
+      return team;
+    };
+
+    const allStadiums = await ctx.db.query("stadiums").collect();
+    const getOrCreateStadium = async (name: string) => {
+      let stadium = allStadiums.find((s) => s.name.toLowerCase() === name.toLowerCase());
+      if (!stadium) {
+        const id = await ctx.db.insert("stadiums", { name, city: "Brasil", imageUrl: "" });
+        stadium = (await ctx.db.get(id))!;
+        allStadiums.push(stadium);
+      }
+      return stadium;
+    };
+
+    type MatchInput = {
+      stadium: string;
+      home: string;
+      away: string;
+      hs: number;
+      as: number;
+      date: string; // ISO
+      status: "FINISHED" | "SCHEDULED";
+      statusShort: string;
+    };
+
+    const matches: MatchInput[] = [
+      { stadium: "OBA",                       home: "Vila Nova",     away: "América-MG",    hs: 1, as: 0, date: "2026-09-18T19:30:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Castelão (CE)",             home: "Ceará",         away: "Novorizontino", hs: 2, as: 1, date: "2026-09-18T20:30:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Primeiro de Maio",          home: "São Bernardo",  away: "Atlético-GO",   hs: 1, as: 0, date: "2026-09-18T21:00:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Ilha do Retiro",            home: "Sport",         away: "Juventude",     hs: 2, as: 1, date: "2026-09-19T16:30:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Arena Sicredi",             home: "Athletic Club", away: "Botafogo-SP",   hs: 1, as: 1, date: "2026-09-19T18:30:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Moisés Lucarelli",          home: "Ponte Preta",   away: "CRB",           hs: 1, as: 0, date: "2026-09-20T11:00:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Hailé Pinheiro (Serrinha)", home: "Goiás",         away: "Avaí",          hs: 2, as: 1, date: "2026-09-20T16:00:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "VGD",                       home: "Londrina",      away: "Fortaleza",     hs: 1, as: 2, date: "2026-09-20T18:30:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Arena Pantanal",            home: "Cuiabá",        away: "Náutico",       hs: 3, as: 0, date: "2026-09-21T21:30:00-03:00", status: "FINISHED",  statusShort: "FT" },
+      { stadium: "Heriberto Hülse",           home: "Criciúma",      away: "Operário-PR",   hs: 0, as: 0, date: "2026-09-22T19:30:00-03:00", status: "SCHEDULED", statusShort: "19:30" },
+    ];
+
+    const existing = await ctx.db
+      .query("matches")
+      .withIndex("by_league_and_round", (q) => q.eq("leagueId", serieB!._id))
+      .collect();
+
+    const toDelete = existing.filter(
+      (m) =>
+        m.round.toLowerCase() === "rodada 29" ||
+        m.round.replace(/\D/g, "") === "29"
+    );
+
+    for (const m of toDelete) {
+      const events = await ctx.db
+        .query("matchEvents")
+        .withIndex("by_match", (q) => q.eq("matchId", m._id))
+        .collect();
+      for (const e of events) await ctx.db.delete(e._id);
+      await ctx.db.delete(m._id);
+    }
+
+    let totalInserted = 0;
+    for (const m of matches) {
+      const homeTeam = await getOrCreate(m.home);
+      const awayTeam = await getOrCreate(m.away);
+      const stadiumDoc = await getOrCreateStadium(m.stadium);
+
+      await ctx.db.insert("matches", {
+        leagueId: serieB!._id,
+        round: "Rodada 29",
+        homeTeamId: homeTeam._id,
+        awayTeamId: awayTeam._id,
+        stadiumId: stadiumDoc._id,
+        status: m.status,
+        statusShort: m.statusShort,
+        homeScore: m.hs,
+        awayScore: m.as,
+        startTime: new Date(m.date).getTime(),
+      });
+
+      totalInserted++;
+    }
+
+    return {
+      success: true,
+      round: "Rodada 29",
+      totalMatches: totalInserted,
+    };
+  },
+});
+
 
