@@ -536,7 +536,7 @@ export default function App() {
             {/* Mandante */}
             <div className="flex items-center justify-end gap-1.5 min-w-0 text-right">
               <span
-                className={`text-xs truncate ${
+                className={`text-xs truncate max-w-[95px] sm:max-w-[140px] ${
                   homeWon
                     ? "font-bold text-slate-950"
                     : isFinished
@@ -594,7 +594,7 @@ export default function App() {
                 </div>
               )}
               <span
-                className={`text-xs truncate ${
+                className={`text-xs truncate max-w-[95px] sm:max-w-[140px] ${
                   awayWon
                     ? "font-bold text-slate-950"
                     : isFinished
@@ -853,7 +853,7 @@ export default function App() {
 
         {/* Pílulas de Navegação Rápida por Campeonato */}
         {leagues && leagues.length > 0 && (
-          <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-slate-200/80 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-slate-200/80 flex items-center gap-2 overflow-x-auto scrollbar-none touch-pan-x pb-1">
             <button
               onClick={() => setSelectedLeagueId(null)}
               className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
@@ -938,15 +938,15 @@ export default function App() {
         ) : (
           <div className="space-y-5">
             {/* Seletor Sofascore de Datas para a Grade Geral */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-xs">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none touch-pan-x py-0.5 max-w-full">
                 <button
                   onClick={() => setSelectedDateOffset((prev) => (prev ?? 0) - 1)}
-                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                  className="p-1 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer shrink-0"
                   title="Dia anterior"
                   aria-label="Dia anterior"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
 
                 {[-1, 0, 1].map((offset) => {
@@ -955,7 +955,7 @@ export default function App() {
                     <button
                       key={offset}
                       onClick={() => setSelectedDateOffset(offset)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                         isSelected
                           ? "bg-emerald-600 text-white font-bold shadow-xs scale-102"
                           : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
@@ -968,19 +968,19 @@ export default function App() {
 
                 <button
                   onClick={() => setSelectedDateOffset((prev) => (prev ?? 0) + 1)}
-                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                  className="p-1 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer shrink-0"
                   title="Próximo dia"
                   aria-label="Próximo dia"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
 
               {/* Botão de Rodada Ativa */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setSelectedDateOffset(null)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                     selectedDateOffset === null
                       ? "bg-slate-900 text-white font-bold shadow-xs"
                       : "bg-slate-100 hover:bg-slate-200/80 text-slate-600 border border-slate-200"

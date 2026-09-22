@@ -271,19 +271,19 @@ export function StandingsTable({
         </div>
       ) : (
         <div className="overflow-x-auto no-scrollbar flex-1 flex flex-col">
-          <table className="w-full text-left border-collapse min-w-[580px] flex-1">
+          <table className="w-full text-left border-collapse min-w-0 sm:min-w-[580px] flex-1">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-400 font-bold uppercase text-[10.5px] tracking-wider font-mono">
-                <th className="py-2.5 pl-3 pr-2 text-center w-11">#</th>
-                <th className="py-2.5 px-3 min-w-[170px] text-slate-500 font-semibold font-sans normal-case text-xs">Clube</th>
-                <th className="py-2.5 px-2 text-center w-9" title="Partidas Jogadas">J</th>
-                <th className="py-2.5 px-2 text-center w-9" title="Vitórias">V</th>
-                <th className="py-2.5 px-2 text-center w-9" title="Empates">E</th>
-                <th className="py-2.5 px-2 text-center w-9" title="Derrotas">D</th>
-                <th className="py-2.5 px-2.5 text-center w-12" title="Saldo de Gols">SG</th>
-                <th className="py-2.5 px-2.5 text-center w-14" title="Gols Pró : Gols Contra">GOLS</th>
+                <th className="py-2.5 pl-2 sm:pl-3 pr-1 sm:pr-2 text-center w-8 sm:w-11">#</th>
+                <th className="py-2.5 px-2 sm:px-3 text-slate-500 font-semibold font-sans normal-case text-xs">Clube</th>
+                <th className="py-2.5 px-1.5 sm:px-2 text-center w-7 sm:w-9" title="Partidas Jogadas">J</th>
+                <th className="py-2.5 px-1.5 sm:px-2 text-center w-7 sm:w-9" title="Vitórias">V</th>
+                <th className="py-2.5 px-2 text-center w-9 hidden sm:table-cell" title="Empates">E</th>
+                <th className="py-2.5 px-2 text-center w-9 hidden sm:table-cell" title="Derrotas">D</th>
+                <th className="py-2.5 px-1.5 sm:px-2.5 text-center w-8 sm:w-12" title="Saldo de Gols">SG</th>
+                <th className="py-2.5 px-2.5 text-center w-14 hidden sm:table-cell" title="Gols Pró : Gols Contra">GOLS</th>
                 <th className="py-2.5 px-3 text-center hidden md:table-cell min-w-[145px] font-sans normal-case text-xs text-slate-500 font-semibold">Últimos 5</th>
-                <th className="py-2.5 px-3 text-center w-14 font-black text-slate-950 text-xs">PTS</th>
+                <th className="py-2.5 px-2 sm:px-3 text-center w-10 sm:w-14 font-black text-slate-950 text-xs">PTS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-xs">
@@ -309,10 +309,10 @@ export function StandingsTable({
                     <tr className="hover:bg-slate-50/90 transition-colors group bg-white">
                       {/* Posição com Barra Lateral Colorida */}
                       <td
-                        className={`py-3 sm:py-3.5 pl-2.5 pr-1.5 text-center border-l-[4px] ${zone.borderColor}`}
+                        className={`py-2.5 sm:py-3.5 pl-2 sm:pl-2.5 pr-1 sm:pr-1.5 text-center border-l-[3px] sm:border-l-[4px] ${zone.borderColor}`}
                       >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="text-xs font-bold text-slate-600 w-4 text-right tabular-nums">
+                        <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+                          <span className="text-xs font-bold text-slate-600 w-3.5 sm:w-4 text-right tabular-nums">
                             {row.rank}
                           </span>
                           {renderRankMovement(row.rank, row.previousRank)}
@@ -320,10 +320,10 @@ export function StandingsTable({
                       </td>
 
                       {/* Escudo Oficial + Nome */}
-                      <td className="py-3 sm:py-3.5 px-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-3">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                           {row.team?.logoUrl ? (
-                            <div className="w-6 h-6 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 shadow-2xs border border-slate-200/90">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 shadow-2xs border border-slate-200/90">
                               <img
                                 src={row.team.logoUrl}
                                 alt={row.team.name}
@@ -332,31 +332,31 @@ export function StandingsTable({
                               />
                             </div>
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] text-slate-600 font-bold shrink-0">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] text-slate-600 font-bold shrink-0">
                               {row.team?.name?.charAt(0) || "T"}
                             </div>
                           )}
-                          <span className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors text-[13px] tracking-tight truncate max-w-[140px] sm:max-w-[210px]">
+                          <span className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors text-xs sm:text-[13px] tracking-tight truncate max-w-[105px] sm:max-w-[210px]">
                             {row.team?.name ?? "Time"}
                           </span>
                         </div>
                       </td>
 
                       {/* Estatísticas com Tabular Nums */}
-                      <td className="py-3 sm:py-3.5 px-2 text-center text-slate-700 font-semibold tabular-nums">
+                      <td className="py-2.5 sm:py-3.5 px-1.5 sm:px-2 text-center text-slate-700 font-semibold tabular-nums text-xs">
                         {row.played}
                       </td>
-                      <td className="py-3 sm:py-3.5 px-2 text-center text-slate-800 font-semibold tabular-nums">
+                      <td className="py-2.5 sm:py-3.5 px-1.5 sm:px-2 text-center text-slate-800 font-semibold tabular-nums text-xs">
                         {row.win}
                       </td>
-                      <td className="py-3 sm:py-3.5 px-2 text-center text-slate-500 font-normal tabular-nums">
+                      <td className="py-2.5 sm:py-3.5 px-2 text-center text-slate-500 font-normal tabular-nums hidden sm:table-cell">
                         {row.draw}
                       </td>
-                      <td className="py-3 sm:py-3.5 px-2 text-center text-slate-400 font-normal tabular-nums">
+                      <td className="py-2.5 sm:py-3.5 px-2 text-center text-slate-400 font-normal tabular-nums hidden sm:table-cell">
                         {row.lose}
                       </td>
                       <td
-                        className={`py-3 sm:py-3.5 px-2.5 text-center font-bold tabular-nums ${
+                        className={`py-2.5 sm:py-3.5 px-1.5 sm:px-2.5 text-center font-bold tabular-nums text-xs ${
                           row.goalsDiff > 0
                             ? "text-emerald-700"
                             : row.goalsDiff < 0
@@ -366,14 +366,14 @@ export function StandingsTable({
                       >
                         {row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}
                       </td>
-                      <td className="py-3 sm:py-3.5 px-2.5 text-center text-slate-500 tracking-tight font-mono text-[11px] tabular-nums">
+                      <td className="py-2.5 sm:py-3.5 px-2.5 text-center text-slate-500 tracking-tight font-mono text-[11px] tabular-nums hidden sm:table-cell">
                         {row.goalsFor ?? 0}:{row.goalsAgainst ?? 0}
                       </td>
-                      <td className="py-3 sm:py-3.5 px-3 text-center hidden md:table-cell">
+                      <td className="py-2.5 sm:py-3.5 px-3 text-center hidden md:table-cell">
                         {renderFormPills(row.form)}
                       </td>
                       {/* Pontos em Destaque */}
-                      <td className="py-3 sm:py-3.5 px-3 text-center font-black text-slate-950 text-sm tabular-nums bg-slate-50/60 group-hover:bg-emerald-50/60 group-hover:text-emerald-950 transition-all border-l border-slate-100/80">
+                      <td className="py-2.5 sm:py-3.5 px-2 sm:px-3 text-center font-black text-slate-950 text-xs sm:text-sm tabular-nums bg-slate-50/60 group-hover:bg-emerald-50/60 group-hover:text-emerald-950 transition-all border-l border-slate-100/80">
                         {row.points}
                       </td>
                     </tr>

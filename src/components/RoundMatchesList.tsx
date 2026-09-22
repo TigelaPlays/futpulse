@@ -149,7 +149,7 @@ function formatMatchHeader(match: any): { stadium: string; dateStr: string; week
 export function RoundMatchesList({
   leagueId,
   round,
-  onNavigateToMatches,
+  onNavigateToMatches: _onNavigateToMatches,
   onSelectMatch,
 }: RoundMatchesListProps) {
   const matches = useQuery(api.matches.listMatchesByRound, {
@@ -237,15 +237,15 @@ export function RoundMatchesList({
                   </div>
                 </div>
 
-                {/* Confronto: [CODE] [Escudo]  1 × 0  [Escudo] [CODE] */}
-                <div className="flex items-center justify-center gap-3 py-0.5">
+                {/* Confronto: [Time/CODE] [Escudo]  1 × 0  [Escudo] [Time/CODE] */}
+                <div className="flex items-center justify-center gap-2 sm:gap-3 py-0.5">
                   {/* Mandante */}
-                  <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
-                    <span className="text-xs font-bold text-slate-500 tracking-wider">
-                      {homeCode}
+                  <div className="flex items-center justify-end gap-1.5 sm:gap-2 flex-1 min-w-0">
+                    <span className="text-xs font-bold text-slate-700 tracking-tight truncate max-w-[85px] sm:max-w-[120px] text-right">
+                      {m.homeTeam?.name ?? homeCode}
                     </span>
                     {m.homeTeam?.logoUrl ? (
-                      <div className="w-7 h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
                         <img
                           src={m.homeTeam.logoUrl}
                           alt={m.homeTeam?.name ?? homeCode}
@@ -254,31 +254,31 @@ export function RoundMatchesList({
                         />
                       </div>
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
                         {homeCode.slice(0, 1)}
                       </div>
                     )}
                   </div>
 
                   {/* Placar Central */}
-                  <div className="shrink-0 flex items-center justify-center gap-1 px-1 min-w-[56px]">
+                  <div className="shrink-0 flex items-center justify-center gap-1 px-1 min-w-[50px] sm:min-w-[56px]">
                     {m.status === "SCHEDULED" ? (
                       <div className="flex items-center justify-center font-bold text-slate-300 text-sm">
                         <span>×</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 font-black text-lg tabular-nums text-slate-950 font-sans">
+                      <div className="flex items-center gap-1 font-black text-base sm:text-lg tabular-nums text-slate-950 font-sans">
                         <span>{m.homeScore}</span>
-                        <span className="text-slate-300 font-normal text-base select-none">×</span>
+                        <span className="text-slate-300 font-normal text-sm select-none">×</span>
                         <span>{m.awayScore}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Visitante */}
-                  <div className="flex items-center justify-start gap-2 flex-1 min-w-0">
+                  <div className="flex items-center justify-start gap-1.5 sm:gap-2 flex-1 min-w-0">
                     {m.awayTeam?.logoUrl ? (
-                      <div className="w-7 h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
                         <img
                           src={m.awayTeam.logoUrl}
                           alt={m.awayTeam?.name ?? awayCode}
@@ -287,31 +287,21 @@ export function RoundMatchesList({
                         />
                       </div>
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
                         {awayCode.slice(0, 1)}
                       </div>
                     )}
-                    <span className="text-xs font-bold text-slate-500 tracking-wider">
-                      {awayCode}
+                    <span className="text-xs font-bold text-slate-700 tracking-tight truncate max-w-[85px] sm:max-w-[120px] text-left">
+                      {m.awayTeam?.name ?? awayCode}
                     </span>
                   </div>
                 </div>
 
                 {/* Linha 3: SAIBA COMO FOI / FIQUE POR DENTRO */}
-                <div className="text-center pt-0.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onSelectMatch) {
-                        onSelectMatch(m._id);
-                      } else {
-                        onNavigateToMatches?.();
-                      }
-                    }}
-                    className="text-[#00a651] hover:text-emerald-700 font-extrabold text-[10.5px] uppercase tracking-wider transition-colors cursor-pointer hover:underline inline-block group-hover:underline"
-                  >
+                <div className="w-full text-center pt-0.5">
+                  <span className="text-[#00a651] group-hover:text-emerald-700 font-extrabold text-[10px] sm:text-[10.5px] uppercase tracking-wider transition-colors inline-block group-hover:underline">
                     {m.status === "FINISHED" ? "SAIBA COMO FOI" : "FIQUE POR DENTRO"}
-                  </button>
+                  </span>
                 </div>
               </div>
             );

@@ -308,7 +308,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
         ) : (
           <>
             {/* Header Hero com Foto Panorâmica do Estádio */}
-            <div className="relative overflow-hidden bg-[#161b22] text-white shrink-0">
+            <div className="relative overflow-hidden bg-[#161b22] text-white shrink-0 min-h-[180px] sm:min-h-[200px]">
               {/* Foto Panorâmica de Fundo do Estádio (se disponível) */}
               {match.stadium?.imageUrl && (
                 <img
@@ -328,10 +328,10 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
               />
 
               {/* Conteúdo do Header Hero */}
-              <div className="relative z-10 px-5 pt-3.5 pb-4 space-y-3.5">
+              <div className="relative z-10 px-4 pt-3 pb-3.5 sm:px-5 sm:pt-4 sm:pb-4 space-y-2.5 sm:space-y-3.5">
                 {/* Linha Superior: Liga / Rodada e Botão Fechar */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     {match.league?.logoUrl ? (
                       <div className="w-5 h-5 rounded-full bg-white/10 backdrop-blur-xs p-0.5 flex items-center justify-center border border-white/20 shrink-0">
                         <img
@@ -341,9 +341,9 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                         />
                       </div>
                     ) : (
-                      <Trophy className="w-4 h-4 text-emerald-400" />
+                      <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
                     )}
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200 truncate">
                       {match.league?.name ?? "Detalhes da Partida"}
                       {match.round ? ` • ${match.round}` : ""}
                     </span>
@@ -352,39 +352,39 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                   <button
                     onClick={onClose}
                     aria-label="Fechar"
-                    className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    className="min-w-[44px] min-h-[44px] -mr-2 -my-2 flex items-center justify-center text-slate-300 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* Placar Central, Escudos e Nomes dos Clubes com Perfeita Simetria */}
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center text-center py-2 px-1">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center text-center py-1 sm:py-2 px-1">
                   {/* Mandante */}
                   <div className="flex flex-col items-center justify-center gap-1.5 min-w-0">
                     {match.homeTeam?.logoUrl ? (
                       <img
                         src={match.homeTeam.logoUrl}
                         alt={match.homeTeam?.name ?? "Mandante"}
-                        className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
                       />
                     ) : (
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-base sm:text-lg text-white">
                         {match.homeTeam?.name?.charAt(0) ?? "M"}
                       </div>
                     )}
-                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[130px] text-center">
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[105px] sm:max-w-[130px] text-center">
                       {match.homeTeam?.name ?? "Mandante"}
                     </span>
                   </div>
 
                   {/* Placar Central */}
-                  <div className="flex flex-col items-center justify-center px-2 sm:px-4 shrink-0">
-                    <div className="bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1.5 rounded-xl font-mono font-bold text-2xl sm:text-3xl text-white shadow-lg tracking-wider whitespace-nowrap">
+                  <div className="flex flex-col items-center justify-center px-1.5 sm:px-4 shrink-0">
+                    <div className="bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl font-mono font-bold text-xl sm:text-3xl text-white shadow-lg tracking-wider whitespace-nowrap">
                       {match.status === "SCHEDULED" ? "VS" : `${match.homeScore} - ${match.awayScore}`}
                     </div>
                     <span
-                      className={`text-[10px] sm:text-[11px] mt-2 font-bold uppercase tracking-wider px-3 py-0.5 rounded-full whitespace-nowrap shadow-xs ${
+                      className={`text-[9px] sm:text-[11px] mt-1.5 sm:mt-2 font-bold uppercase tracking-wider px-2 sm:px-3 py-0.5 rounded-full whitespace-nowrap shadow-xs ${
                         isLive
                           ? "bg-rose-500/25 text-rose-300 border border-rose-500/40 animate-pulse"
                           : match.status === "FINISHED"
@@ -412,14 +412,14 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                       <img
                         src={match.awayTeam.logoUrl}
                         alt={match.awayTeam?.name ?? "Visitante"}
-                        className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
                       />
                     ) : (
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-base sm:text-lg text-white">
                         {match.awayTeam?.name?.charAt(0) ?? "V"}
                       </div>
                     )}
-                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[130px] text-center">
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[105px] sm:max-w-[130px] text-center">
                       {match.awayTeam?.name ?? "Visitante"}
                     </span>
                   </div>
@@ -459,7 +459,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
             </div>
 
             {/* Corpo do Modal: Abas e Conteúdo */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh] sm:max-h-[65vh] space-y-4 sm:space-y-5">
               {/* Alternador de Abas */}
             <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
               <button
@@ -572,7 +572,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                                             {meta.badge}
                                           </span>
                                         )}
-                                        <span className="truncate">{event.playerName}</span>
+                                        <span className="truncate max-w-[105px] sm:max-w-[160px]">{event.playerName}</span>
                                       </div>
                                       {event.assistPlayerName && (
                                         <div className="text-[10px] text-slate-500">
@@ -596,7 +596,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                                     </span>
                                     <div className="flex flex-col items-start min-w-0">
                                       <div className="font-semibold text-slate-900 truncate flex items-center gap-1.5 justify-start">
-                                        <span className="truncate">{event.playerName}</span>
+                                        <span className="truncate max-w-[105px] sm:max-w-[160px]">{event.playerName}</span>
                                         {meta.badge !== "Gol" && (
                                           <span
                                             className={`text-[9px] px-1 py-0.5 rounded border font-bold uppercase tracking-wider ${meta.badgeBg}`}
