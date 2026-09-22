@@ -108,8 +108,25 @@ export const saveSyncedFixtures = internalMutation({
     fixtures: v.any(),
   },
   handler: async (ctx, args) => {
+    // Termos que identificam fases preliminares amadoras (FA Cup, etc.)
+    // Apenas fases profissionais (1st Round Proper em diante) são persistidas
+    const AMATEUR_ROUND_TERMS = [
+      "qualifying",
+      "preliminary",
+      "qualifier",
+      "extra preliminary",
+      "pre-qualifying",
+    ];
+    const isAmateurRound = (round: string) => {
+      const r = round.toLowerCase();
+      return AMATEUR_ROUND_TERMS.some((t) => r.includes(t));
+    };
+
     for (const item of args.fixtures) {
       const { fixture, league, teams, goals } = item;
+
+      // Ignora fases preliminares amadoras durante a ingestão
+      if (league.round && isAmateurRound(league.round)) continue;
 
       // 1. Garante a existência da Liga no banco
       let dbLeague = await ctx.db

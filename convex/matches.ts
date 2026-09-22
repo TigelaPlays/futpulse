@@ -19,16 +19,39 @@ export const listMatches = query({
   handler: async (ctx, args) => {
     const rawMatches = await ctx.db.query("matches").collect();
 
+    // Termos que identificam fases preliminares amadoras (FA Cup, etc.)
+    // Apenas fases profissionais (1st Round Proper em diante) devem aparecer na grade
+    const AMATEUR_ROUND_TERMS = [
+      "qualifying",
+      "preliminary",
+      "qualifier",
+      "extra preliminary",
+      "pre-qualifying",
+    ];
+    const isAmateurRound = (round: string) => {
+      const r = round.toLowerCase();
+      return AMATEUR_ROUND_TERMS.some((t) => r.includes(t));
+    };
+
     // Filtra por liga se selecionada
     let matches = args.leagueId
       ? rawMatches.filter((m) => m.leagueId === args.leagueId)
       : rawMatches;
+
+    // Remove fases preliminares amadoras de todas as visualizações
+    // (exceto quando a liga está selecionada explicitamente pelo utilizador)
+    if (!args.leagueId) {
+      matches = matches.filter((m) => !isAmateurRound(m.round));
+    }
 
     // Filtro por intervalo de datas (ex: dia de hoje, ontem, etc.)
     if (args.startTimestamp !== undefined && args.endTimestamp !== undefined) {
       matches = matches.filter(
         (m) => m.startTime >= args.startTimestamp! && m.startTime <= args.endTimestamp!
       );
+      // Na grade diária, exibe apenas jogos sincronizados via API (com externalId)
+      // para não vazar partidas de seed manual de outras datas
+      matches = matches.filter((m) => m.externalId !== undefined && m.externalId !== null);
     } else if (!args.leagueId) {
       // Se estiver em "Todas as Ligas" sem filtro de data explícito,
       // exibe apenas as partidas da rodada mais recente/ativa de cada liga para não poluir

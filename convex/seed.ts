@@ -4115,3 +4115,102 @@ export const cleanMaidstoneEvents = mutation({
     };
   },
 });
+
+// Corrige prioridades das ligas e remove partidas FA Cup de fases qualificatórias amadoras
+export const fixLeaguePrioritiesAndCleanFACup = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Mapa de prioridades oficiais por externalId (API-Football)
+    const LEAGUE_PRIORITIES: Record<number, number> = {
+      71: 1,   // Brasileirão Série A
+      72: 2,   // Brasileirão Série B
+      73: 3,   // Copa do Brasil
+      13: 4,   // Copa Libertadores
+      2: 5,    // UEFA Champions League
+      11: 6,   // Copa Sul-Americana
+      39: 7,   // Premier League
+      140: 8,  // La Liga
+      135: 9,  // Serie A (ITA)
+      78: 10,  // Bundesliga
+      61: 20,  // Ligue 1
+      94: 21,  // Liga Portugal
+      3: 22,   // UEFA Europa League
+      253: 25, // MLS
+      307: 26, // Saudi Pro League
+      45: 50,  // FA Cup (Copa amadora — aparece só via liga selecionada)
+    };
+
+    const allLeagues = await ctx.db.query("leagues").collect();
+    let leaguesFixed = 0;
+
+    for (const league of allLeagues) {
+      if (league.externalId && LEAGUE_PRIORITIES[league.externalId] !== undefined) {
+        const targetPriority = LEAGUE_PRIORITIES[league.externalId];
+        if (league.priority !== targetPriority) {
+          await ctx.db.patch(league._id, { priority: targetPriority });
+          leaguesFixed++;
+        }
+      }
+    }
+
+    // 2. Remove partidas FA Cup de fases qualificatórias amadoras
+    const faCup = allLeagues.find((l) => l.externalId === 45);
+    let matchesRemoved = 0;
+    let eventsRemoved = 0;
+    let statsRemoved = 0;
+
+    if (faCup) {
+      const faCupMatches = await ctx.db
+        .query("matches")
+        .withIndex("by_league", (q) => q.eq("leagueId", faCup._id))
+        .collect();
+
+      const AMATEUR_ROUND_TERMS = [
+        "qualifying",
+        "preliminary",
+        "qualifier",
+        "extra preliminary",
+        "pre-qualifying",
+      ];
+      const isAmateurRound = (round: string) => {
+        const r = round.toLowerCase();
+        return AMATEUR_ROUND_TERMS.some((t) => r.includes(t));
+      };
+
+      const amateurMatches = faCupMatches.filter((m) => isAmateurRound(m.round));
+
+      for (const m of amateurMatches) {
+        // Remove eventos associados
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const ev of events) {
+          await ctx.db.delete(ev._id);
+          eventsRemoved++;
+        }
+
+        // Remove estatísticas associadas
+        const stats = await ctx.db
+          .query("matchStatistics")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const st of stats) {
+          await ctx.db.delete(st._id);
+          statsRemoved++;
+        }
+
+        await ctx.db.delete(m._id);
+        matchesRemoved++;
+      }
+    }
+
+    return {
+      success: true,
+      leaguesFixed,
+      faCupQualifyingMatchesRemoved: matchesRemoved,
+      eventsRemoved,
+      statsRemoved,
+    };
+  },
+});
