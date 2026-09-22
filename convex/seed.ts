@@ -604,6 +604,18 @@ export const clearAllMatches = mutation({
   },
 });
 
+export const cleanLegacyMatches = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const allMatches = await ctx.db.query("matches").collect();
+    const legacy = allMatches.filter((m) => !m.round.toLowerCase().startsWith("rodada"));
+    for (const m of legacy) {
+      await ctx.db.delete(m._id);
+    }
+    return { deleted: legacy.length };
+  },
+});
+
 export const seedSerieBRound1Real = mutation({
   args: {},
   handler: async (ctx) => {

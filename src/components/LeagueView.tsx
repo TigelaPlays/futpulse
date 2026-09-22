@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { StandingsTable } from "./StandingsTable";
 import { RoundMatchesList } from "./RoundMatchesList";
@@ -22,20 +24,48 @@ export function LeagueView({
   league,
   onNavigateToMatches,
 }: LeagueViewProps) {
-  // Padrão na rodada mais recente cadastrada (Rodada 8)
-  const [currentRound, setCurrentRound] = useState<number>(8);
+  // Busca dinamicamente a última rodada com jogos finalizados da liga
+  const latestFinishedRound = useQuery(api.leagues.getLatestFinishedRound, {
+    leagueId,
+  });
+
+  const [selectedRound, setSelectedRound] = useState<number | null>(null);
+  const [prevLeagueId, setPrevLeagueId] = useState(leagueId);
+
+  // Se trocar de campeonato, reseta a escolha manual para abrir na última rodada da nova liga
+  if (prevLeagueId !== leagueId) {
+    setPrevLeagueId(leagueId);
+    setSelectedRound(null);
+  }
+
+  // A rodada ativa é a selecionada pelo usuário ou, por padrão, a última finalizada
+  const currentRound = selectedRound ?? latestFinishedRound;
+
   const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
 
   const minRound = 1;
   const maxRound = 38;
 
   const handlePrevRound = () => {
-    setCurrentRound((prev) => Math.max(minRound, prev - 1));
+    if (currentRound !== undefined) {
+      setSelectedRound(Math.max(minRound, currentRound - 1));
+    }
   };
 
   const handleNextRound = () => {
-    setCurrentRound((prev) => Math.min(maxRound, prev + 1));
+    if (currentRound !== undefined) {
+      setSelectedRound(Math.min(maxRound, currentRound + 1));
+    }
   };
+
+  if (currentRound === undefined) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-16 flex flex-col items-center justify-center gap-3 text-slate-500 shadow-xs animate-fade-in">
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-medium">Carregando rodada mais recente...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">

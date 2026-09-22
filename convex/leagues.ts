@@ -482,3 +482,29 @@ export const getStandingsByRound = query({
     );
   },
 });
+
+// Retorna o número da última rodada com partidas finalizadas para uma liga
+export const getLatestFinishedRound = query({
+  args: {
+    leagueId: v.id("leagues"),
+  },
+  handler: async (ctx, args) => {
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+
+    const finishedMatches = matches.filter((m) => m.status === "FINISHED");
+    if (finishedMatches.length === 0) return 1;
+
+    let maxRound = 1;
+    for (const m of finishedMatches) {
+      const num = parseInt(m.round.replace(/\D/g, ""), 10);
+      if (!isNaN(num) && num > maxRound) {
+        maxRound = num;
+      }
+    }
+
+    return maxRound;
+  },
+});
