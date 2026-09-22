@@ -3485,28 +3485,118 @@ export const seedCupCompetitions = mutation({
     // Rodada 1: Finalizadas (FT)
     const round1Matches = [
       // 08/09/2026
-      { home: "AEK", away: "LASK", hs: 1, as: 0, date: "2026-09-08T13:45:00-03:00", events: [{ minute: 34, team: "home", type: "GOAL" as const, player: "Levi García" }] },
-      { home: "Club Brugge", away: "Aston Villa", hs: 2, as: 3, date: "2026-09-08T13:45:00-03:00", events: [{ minute: 12, team: "home", type: "GOAL" as const, player: "Hans Vanaken" }, { minute: 28, team: "away", type: "GOAL" as const, player: "Ollie Watkins" }, { minute: 55, team: "away", type: "GOAL" as const, player: "John McGinn" }, { minute: 67, team: "home", type: "GOAL" as const, player: "Ferran Jutglà" }, { minute: 82, team: "away", type: "GOAL" as const, player: "Morgan Rogers" }] },
-      { home: "Dortmund", away: "Villarreal", hs: 3, as: 2, date: "2026-09-08T16:00:00-03:00", events: [{ minute: 18, team: "home", type: "GOAL" as const, player: "Serhou Guirassy" }, { minute: 31, team: "away", type: "GOAL" as const, player: "Gerard Moreno" }, { minute: 49, team: "home", type: "GOAL" as const, player: "Julian Brandt" }, { minute: 73, team: "away", type: "GOAL" as const, player: "Álex Baena" }, { minute: 88, team: "home", type: "GOAL" as const, player: "Karim Adeyemi" }] },
-      { home: "Porto", away: "Man City", hs: 0, as: 2, date: "2026-09-08T16:00:00-03:00", events: [{ minute: 22, team: "away", type: "GOAL" as const, player: "Erling Haaland" }, { minute: 61, team: "away", type: "GOAL" as const, player: "Phil Foden" }] },
-      { home: "Lille", away: "Real Betis", hs: 2, as: 3, date: "2026-09-08T16:00:00-03:00", events: [{ minute: 15, team: "away", type: "GOAL" as const, player: "Vitor Roque" }, { minute: 29, team: "home", type: "GOAL" as const, player: "Jonathan David" }, { minute: 52, team: "away", type: "GOAL" as const, player: "Isco" }, { minute: 64, team: "home", type: "RED_CARD" as const, player: "Alexsandro", detail: "Cartão Vermelho" }, { minute: 77, team: "away", type: "GOAL" as const, player: "Giovani Lo Celso" }, { minute: 89, team: "home", type: "GOAL" as const, player: "Edon Zhegrova" }] },
-      { home: "Real Madrid", away: "Inter", hs: 2, as: 1, date: "2026-09-08T16:00:00-03:00", events: [{ minute: 24, team: "home", type: "GOAL" as const, player: "Kylian Mbappé" }, { minute: 58, team: "away", type: "GOAL" as const, player: "Lautaro Martínez" }, { minute: 81, team: "home", type: "GOAL" as const, player: "Vinícius Júnior" }] },
+      { home: "AEK", away: "LASK", hs: 1, as: 0, date: "2026-09-08T13:45:00-03:00", events: [
+        { minute: 21, team: "home", type: "GOAL" as const, player: "Răzvan Marin" },
+      ]},
+      { home: "Club Brugge", away: "Aston Villa", hs: 2, as: 3, date: "2026-09-08T13:45:00-03:00", events: [
+        { minute: 11, team: "away", type: "GOAL" as const, player: "John McGinn" },
+        { minute: 19, team: "home", type: "GOAL" as const, player: "Hugo Vetlesen" },
+        { minute: 22, team: "away", type: "GOAL" as const, player: "Emiliano Buendía" },
+        { minute: 43, team: "away", type: "GOAL" as const, player: "Nicolas Jackson" },
+        { minute: 61, team: "home", type: "GOAL" as const, player: "Nicolò Tresoldi", detail: "Penalty" },
+      ]},
+      { home: "Dortmund", away: "Villarreal", hs: 3, as: 2, date: "2026-09-08T16:00:00-03:00", events: [
+        { minute: 53, team: "home", type: "GOAL" as const, player: "Renato Veiga", detail: "OG" },
+        { minute: 66, team: "away", type: "GOAL" as const, player: "Santiago Mouriño" },
+        { minute: 80, team: "home", type: "GOAL" as const, player: "Serhou Guirassy" },
+        { minute: 85, team: "home", type: "GOAL" as const, player: "Serhou Guirassy", detail: "Penalty" },
+        { minute: 93, team: "away", type: "GOAL" as const, player: "Serhou Guirassy", detail: "OG" },
+      ]},
+      { home: "Porto", away: "Man City", hs: 0, as: 2, date: "2026-09-08T16:00:00-03:00", events: [
+        { minute: 47, team: "away", type: "GOAL" as const, player: "Erling Haaland" },
+        { minute: 91, team: "away", type: "GOAL" as const, player: "Erling Haaland" },
+      ]},
+      { home: "Lille", away: "Real Betis", hs: 2, as: 3, date: "2026-09-08T16:00:00-03:00", events: [
+        { minute: 12, team: "home", type: "GOAL" as const, player: "Ayase Ueda" },
+        { minute: 33, team: "away", type: "GOAL" as const, player: "Marc Bartra" },
+        { minute: 36, team: "home", type: "GOAL" as const, player: "Alexsandro Ribeiro" },
+        { minute: 49, team: "away", type: "GOAL" as const, player: "Marc Bartra" },
+        { minute: 53, team: "away", type: "GOAL" as const, player: "Troy Parrott" },
+        { minute: 74, team: "home", type: "RED_CARD" as const, player: "Thomas Meunier", detail: "Cartão Vermelho" },
+      ]},
+      { home: "Real Madrid", away: "Inter", hs: 2, as: 1, date: "2026-09-08T16:00:00-03:00", events: [
+        { minute: 14, team: "home", type: "GOAL" as const, player: "Kylian Mbappé" },
+        { minute: 23, team: "home", type: "GOAL" as const, player: "Federico Valverde" },
+        { minute: 77, team: "away", type: "GOAL" as const, player: "Carlos Augusto" },
+      ]},
 
       // 09/09/2026
-      { home: "Barcelona", away: "Feyenoord", hs: 5, as: 1, date: "2026-09-09T13:45:00-03:00", events: [{ minute: 8, team: "home", type: "GOAL" as const, player: "Robert Lewandowski" }, { minute: 21, team: "home", type: "GOAL" as const, player: "Lamine Yamal" }, { minute: 39, team: "home", type: "GOAL" as const, player: "Raphinha" }, { minute: 54, team: "away", type: "GOAL" as const, player: "Santiago Giménez" }, { minute: 68, team: "home", type: "GOAL" as const, player: "Dani Olmo" }, { minute: 84, team: "home", type: "GOAL" as const, player: "Pedri" }] },
-      { home: "Stuttgart", away: "Viking", hs: 3, as: 1, date: "2026-09-09T13:45:00-03:00", events: [{ minute: 19, team: "home", type: "GOAL" as const, player: "Deniz Undav" }, { minute: 44, team: "home", type: "GOAL" as const, player: "Ermedin Demirović" }, { minute: 62, team: "away", type: "GOAL" as const, player: "Zlatko Tripić" }, { minute: 79, team: "home", type: "GOAL" as const, player: "Enzo Millot" }] },
-      { home: "Liverpool", away: "Atlético Madrid", hs: 2, as: 1, date: "2026-09-09T16:00:00-03:00", events: [{ minute: 14, team: "home", type: "GOAL" as const, player: "Mohamed Salah" }, { minute: 37, team: "away", type: "GOAL" as const, player: "Antoine Griezmann" }, { minute: 76, team: "home", type: "GOAL" as const, player: "Darwin Núñez" }] },
-      { home: "PSG", away: "Slovan", hs: 6, as: 1, date: "2026-09-09T16:00:00-03:00", events: [{ minute: 5, team: "home", type: "GOAL" as const, player: "Bradley Barcola" }, { minute: 17, team: "home", type: "GOAL" as const, player: "Ousmane Dembélé" }, { minute: 33, team: "home", type: "GOAL" as const, player: "Vitinha" }, { minute: 48, team: "away", type: "GOAL" as const, player: "Vladimír Weiss" }, { minute: 59, team: "home", type: "GOAL" as const, player: "Randal Kolo Muani" }, { minute: 72, team: "home", type: "GOAL" as const, player: "Marco Asensio" }, { minute: 87, team: "home", type: "GOAL" as const, player: "Gonçalo Ramos" }] },
-      { home: "Napoli", away: "Arsenal", hs: 0, as: 1, date: "2026-09-09T16:00:00-03:00", events: [{ minute: 63, team: "away", type: "GOAL" as const, player: "Bukayo Saka" }] },
-      { home: "Sporting", away: "Galatasaray", hs: 3, as: 1, date: "2026-09-09T16:00:00-03:00", events: [{ minute: 23, team: "home", type: "GOAL" as const, player: "Viktor Gyökeres" }, { minute: 41, team: "home", type: "GOAL" as const, player: "Francisco Trincão" }, { minute: 60, team: "away", type: "GOAL" as const, player: "Victor Osimhen" }, { minute: 82, team: "home", type: "GOAL" as const, player: "Pedro Gonçalves" }] },
+      { home: "Barcelona", away: "Feyenoord", hs: 5, as: 1, date: "2026-09-09T13:45:00-03:00", events: [
+        { minute: 3, team: "home", type: "GOAL" as const, player: "Raphinha" },
+        { minute: 22, team: "home", type: "GOAL" as const, player: "Karim Adeyemi" },
+        { minute: 57, team: "home", type: "GOAL" as const, player: "Raphinha" },
+        { minute: 77, team: "home", type: "GOAL" as const, player: "Lamine Yamal" },
+        { minute: 82, team: "away", type: "GOAL" as const, player: "Sem Steijn" },
+        { minute: 85, team: "home", type: "GOAL" as const, player: "Gabriel Jesus" },
+      ]},
+      { home: "Stuttgart", away: "Viking", hs: 3, as: 1, date: "2026-09-09T13:45:00-03:00", events: [
+        { minute: 20, team: "home", type: "GOAL" as const, player: "Ermedin Demirović" },
+        { minute: 22, team: "away", type: "GOAL" as const, player: "Zlatko Tripić" },
+        { minute: 26, team: "home", type: "GOAL" as const, player: "Ermedin Demirović" },
+        { minute: 32, team: "home", type: "GOAL" as const, player: "Ermedin Demirović" },
+      ]},
+      { home: "Liverpool", away: "Atlético Madrid", hs: 2, as: 1, date: "2026-09-09T16:00:00-03:00", events: [
+        { minute: 17, team: "away", type: "GOAL" as const, player: "Marcos Llorente" },
+        { minute: 40, team: "home", type: "GOAL" as const, player: "Dominik Szoboszlai" },
+        { minute: 50, team: "home", type: "GOAL" as const, player: "Alexis Mac Allister" },
+      ]},
+      { home: "PSG", away: "Slovan", hs: 6, as: 1, date: "2026-09-09T16:00:00-03:00", events: [
+        { minute: 17, team: "home", type: "GOAL" as const, player: "Ousmane Dembélé" },
+        { minute: 23, team: "home", type: "GOAL" as const, player: "Ousmane Dembélé" },
+        { minute: 31, team: "home", type: "GOAL" as const, player: "Ferran Torres" },
+        { minute: 47, team: "home", type: "GOAL" as const, player: "Ferran Torres" },
+        { minute: 57, team: "home", type: "GOAL" as const, player: "Ferran Torres" },
+        { minute: 58, team: "away", type: "GOAL" as const, player: "Suleiman Camara" },
+        { minute: 87, team: "home", type: "GOAL" as const, player: "Fabián Ruiz" },
+      ]},
+      { home: "Napoli", away: "Arsenal", hs: 0, as: 1, date: "2026-09-09T16:00:00-03:00", events: [
+        { minute: 75, team: "away", type: "GOAL" as const, player: "Martin Ødegaard" },
+      ]},
+      { home: "Sporting", away: "Galatasaray", hs: 3, as: 1, date: "2026-09-09T16:00:00-03:00", events: [
+        { minute: 5, team: "away", type: "GOAL" as const, player: "Gonçalo Inácio", detail: "OG" },
+        { minute: 27, team: "home", type: "GOAL" as const, player: "Geny Catamo" },
+        { minute: 57, team: "home", type: "GOAL" as const, player: "Luis Javier Suárez", detail: "Penalty" },
+        { minute: 63, team: "home", type: "GOAL" as const, player: "Rodrigo Zalazar" },
+      ]},
 
       // 10/09/2026
-      { home: "Fenerbahçe", away: "Roma", hs: 1, as: 1, date: "2026-09-10T13:45:00-03:00", events: [{ minute: 31, team: "away", type: "GOAL" as const, player: "Paulo Dybala" }, { minute: 74, team: "home", type: "GOAL" as const, player: "Edin Džeko" }] },
-      { home: "PSV", away: "Shakhtar", hs: 1, as: 1, date: "2026-09-10T13:45:00-03:00", events: [{ minute: 18, team: "away", type: "GOAL" as const, player: "Georgiy Sudakov" }, { minute: 57, team: "home", type: "GOAL" as const, player: "Luuk de Jong" }] },
-      { home: "Como", away: "Leipzig", hs: 4, as: 1, date: "2026-09-10T16:00:00-03:00", events: [{ minute: 11, team: "home", type: "GOAL" as const, player: "Patrick Cutrone" }, { minute: 29, team: "home", type: "GOAL" as const, player: "Gabriel Strefezza" }, { minute: 47, team: "away", type: "GOAL" as const, player: "Benjamin Šeško" }, { minute: 68, team: "home", type: "GOAL" as const, player: "Nico Paz" }, { minute: 85, team: "home", type: "GOAL" as const, player: "Patrick Cutrone" }] },
-      { home: "Bayern", away: "Bodø/Glimt", hs: 5, as: 0, date: "2026-09-10T16:00:00-03:00", events: [{ minute: 14, team: "home", type: "GOAL" as const, player: "Harry Kane" }, { minute: 27, team: "home", type: "GOAL" as const, player: "Michael Olise" }, { minute: 38, team: "away", type: "RED_CARD" as const, player: "Jostein Gundersen", detail: "Cartão Vermelho" }, { minute: 51, team: "home", type: "GOAL" as const, player: "Jamal Musiala" }, { minute: 73, team: "home", type: "GOAL" as const, player: "Harry Kane" }, { minute: 86, team: "home", type: "GOAL" as const, player: "Mathys Tel" }] },
-      { home: "Man Utd", away: "Sabah", hs: 4, as: 0, date: "2026-09-10T16:00:00-03:00", events: [{ minute: 9, team: "home", type: "GOAL" as const, player: "Bruno Fernandes" }, { minute: 32, team: "home", type: "GOAL" as const, player: "Rasmus Højlund" }, { minute: 61, team: "home", type: "GOAL" as const, player: "Alejandro Garnacho" }, { minute: 80, team: "home", type: "GOAL" as const, player: "Kobbie Mainoo" }] },
-      { home: "Slavia Praha", away: "Lens", hs: 2, as: 3, date: "2026-09-10T16:00:00-03:00", events: [{ minute: 16, team: "away", type: "GOAL" as const, player: "Florian Sotoca" }, { minute: 35, team: "home", type: "GOAL" as const, player: "Mojmír Chytil" }, { minute: 53, team: "away", type: "GOAL" as const, player: "Wesley Saïd" }, { minute: 70, team: "home", type: "GOAL" as const, player: "Lukáš Provod" }, { minute: 72, team: "home", type: "RED_CARD" as const, player: "David Douděra", detail: "Cartão Vermelho" }, { minute: 83, team: "away", type: "GOAL" as const, player: "M'Bala Nzola" }] },
+      { home: "Fenerbahçe", away: "Roma", hs: 1, as: 1, date: "2026-09-10T13:45:00-03:00", events: [
+        { minute: 39, team: "away", type: "GOAL" as const, player: "Bryan Cristante" },
+        { minute: 48, team: "home", type: "GOAL" as const, player: "Archie Brown" },
+      ]},
+      { home: "PSV", away: "Shakhtar", hs: 1, as: 1, date: "2026-09-10T13:45:00-03:00", events: [
+        { minute: 46, team: "away", type: "GOAL" as const, player: "Gleiker Mendoza" },
+        { minute: 48, team: "home", type: "GOAL" as const, player: "Sergiño Dest" },
+      ]},
+      { home: "Como", away: "Leipzig", hs: 4, as: 1, date: "2026-09-10T16:00:00-03:00", events: [
+        { minute: 15, team: "home", type: "GOAL" as const, player: "Martin Baturina" },
+        { minute: 38, team: "home", type: "GOAL" as const, player: "Anastasios Douvikas" },
+        { minute: 54, team: "home", type: "GOAL" as const, player: "Assane Diao" },
+        { minute: 58, team: "away", type: "GOAL" as const, player: "Andrija Maksimović" },
+        { minute: 90, team: "home", type: "GOAL" as const, player: "Máximo Perrone" },
+      ]},
+      { home: "Bayern", away: "Bodø/Glimt", hs: 5, as: 0, date: "2026-09-10T16:00:00-03:00", events: [
+        { minute: 47, team: "home", type: "GOAL" as const, player: "Jamal Musiala" },
+        { minute: 61, team: "home", type: "GOAL" as const, player: "Harry Kane" },
+        { minute: 61, team: "away", type: "RED_CARD" as const, player: "Jostein Gundersen", detail: "Cartão Vermelho" },
+        { minute: 77, team: "home", type: "GOAL" as const, player: "Alphonso Davies" },
+        { minute: 83, team: "home", type: "GOAL" as const, player: "Michael Olise" },
+        { minute: 92, team: "home", type: "GOAL" as const, player: "Michael Olise" },
+      ]},
+      { home: "Man Utd", away: "Sabah", hs: 4, as: 0, date: "2026-09-10T16:00:00-03:00", events: [
+        { minute: 27, team: "home", type: "GOAL" as const, player: "Matheus Cunha" },
+        { minute: 42, team: "home", type: "GOAL" as const, player: "Bruno Fernandes" },
+        { minute: 45, team: "home", type: "GOAL" as const, player: "Benjamin Šeško" },
+        { minute: 68, team: "home", type: "GOAL" as const, player: "Lisandro Martínez" },
+      ]},
+      { home: "Slavia Praha", away: "Lens", hs: 2, as: 3, date: "2026-09-10T16:00:00-03:00", events: [
+        { minute: 51, team: "home", type: "GOAL" as const, player: "Danijel Šturm" },
+        { minute: 73, team: "away", type: "GOAL" as const, player: "Abdallah Sima" },
+        { minute: 82, team: "home", type: "RED_CARD" as const, player: "Oscar Dorley", detail: "Cartão Vermelho" },
+        { minute: 88, team: "home", type: "GOAL" as const, player: "Danijel Šturm" },
+        { minute: 91, team: "away", type: "GOAL" as const, player: "Florian Thauvin" },
+        { minute: 93, team: "away", type: "GOAL" as const, player: "Ruben Aguilar" },
+      ]},
     ];
 
     for (const m of round1Matches) {
@@ -3767,6 +3857,74 @@ export const seedCupCompetitions = mutation({
         goalsFor: row.goalsFor,
         goalsAgainst: row.goalsAgainst,
         description: row.description,
+      });
+    }
+
+    // 5b. Artilharia Oficial da Champions League – Rodada 1
+    // Autogolos excluídos (detail === "OG") conforme regras UEFA
+    const uclScorerMap = new Map<string, { goals: number; teamId: Id<"teams">; teamName: string; teamCode: string; teamLogoUrl: string }>();
+
+    for (const m of round1Matches) {
+      const homeId = getTeam(m.home);
+      const awayId = getTeam(m.away);
+      const homeTeamDef = uclTeamsDefs.find((t) => uclTeamMap.get(t.name) === homeId)!;
+      const awayTeamDef = uclTeamsDefs.find((t) => uclTeamMap.get(t.name) === awayId)!;
+
+      for (const ev of m.events) {
+        if (ev.type !== "GOAL") continue;
+        if ((ev as any).detail === "OG") continue; // Autogolos não contam para artilharia
+
+        const scorerId = ev.team === "home" ? homeId : awayId;
+        const scorerDef = ev.team === "home" ? homeTeamDef : awayTeamDef;
+        const key = `${ev.player}::${scorerId}`;
+        const existing = uclScorerMap.get(key);
+        if (existing) {
+          existing.goals += 1;
+        } else {
+          uclScorerMap.set(key, {
+            goals: 1,
+            teamId: scorerId,
+            teamName: scorerDef.shortName,
+            teamCode: scorerDef.code,
+            teamLogoUrl: scorerDef.logoUrl,
+          });
+        }
+      }
+    }
+
+    // Remove artilharia anterior da UCL
+    const oldUclScorers = await ctx.db
+      .query("topScorers")
+      .withIndex("by_league", (q) => q.eq("leagueId", ucl!._id))
+      .collect();
+    for (const sc of oldUclScorers) await ctx.db.delete(sc._id);
+
+    // Ordena por golos desc, depois por nome asc
+    const uclScorerEntries = Array.from(uclScorerMap.entries())
+      .map(([key, data]) => ({ playerName: key.split("::")[0], ...data }))
+      .sort((a, b) => b.goals - a.goals || a.playerName.localeCompare(b.playerName));
+
+    let scorerRank = 0;
+    let prevGoals = -1;
+    let tieRank = 0;
+    for (const sc of uclScorerEntries) {
+      if (sc.goals !== prevGoals) {
+        tieRank = scorerRank + 1;
+      }
+      scorerRank++;
+      prevGoals = sc.goals;
+
+      await ctx.db.insert("topScorers", {
+        leagueId: ucl!._id,
+        rank: tieRank,
+        playerName: sc.playerName,
+        teamId: sc.teamId,
+        teamName: sc.teamName,
+        teamCode: sc.teamCode,
+        teamLogoUrl: sc.teamLogoUrl,
+        goals: sc.goals,
+        assists: 0,
+        matches: 1,
       });
     }
 
