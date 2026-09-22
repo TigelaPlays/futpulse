@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "upload-assets": "node scripts/upload-assets.js"
+    "upload-assets": "node scripts/upload-assets.js",
+    "sync:sofascore": "node scripts/sync-sofascore.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",

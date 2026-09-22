@@ -12,6 +12,8 @@ export default defineSchema({
     type: v.union(v.literal("league"), v.literal("cup")),
     externalId: v.optional(v.number()),
     priority: v.optional(v.number()),
+    format: v.optional(v.string()), // Ex: "league_phase" (UCL), "group_knockout" (Libertadores), "knockout" (Copa do Brasil)
+    currentStage: v.optional(v.string()),
   })
     .index("by_externalId", ["externalId"])
     .index("by_priority", ["priority"]),
@@ -41,6 +43,8 @@ export default defineSchema({
     externalId: v.optional(v.number()),
     leagueId: v.id("leagues"),
     round: v.string(),
+    stage: v.optional(v.string()), // Ex: "Fase de Liga", "Fase de Grupos", "Oitavas de Final"
+    group: v.optional(v.string()), // Ex: "Grupo A", "Grupo B"
     homeTeamId: v.id("teams"),
     awayTeamId: v.id("teams"),
     stadiumId: v.optional(v.id("stadiums")), // Vínculo com estádio
@@ -140,6 +144,8 @@ export default defineSchema({
     goalsFor: v.number(),
     goalsAgainst: v.number(),
     description: v.optional(v.string()), // Ex: "Libertadores", "Rebaixamento"
+    group: v.optional(v.string()), // Ex: "Grupo A", "Fase de Liga"
+    stage: v.optional(v.string()),
   })
     .index("by_league_season", ["leagueId", "season"])
     .index("by_league_rank", ["leagueId", "rank"]),

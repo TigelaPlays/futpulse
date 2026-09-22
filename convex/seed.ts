@@ -3230,5 +3230,329 @@ export const checkSerieBMatches = query({
   },
 });
 
+// Popula metadados, equipes, confrontos e classificação inicial para UEFA Champions League e Copa Libertadores
+export const seedCupCompetitions = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // 1. UEFA Champions League (API-Football ID: 2, Copa / Fase de Liga)
+    let ucl = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 2))
+      .first();
 
+    if (!ucl) {
+      const uclId = await ctx.db.insert("leagues", {
+        name: "UEFA Champions League",
+        country: "Europa",
+        logoUrl: "https://media.api-sports.io/football/leagues/2.png",
+        season: 2026,
+        type: "cup",
+        format: "league_phase",
+        currentStage: "Fase de Liga",
+        priority: 4,
+        externalId: 2,
+      });
+      ucl = await ctx.db.get(uclId);
+    } else {
+      await ctx.db.patch(ucl._id, {
+        format: "league_phase",
+        currentStage: "Fase de Liga",
+        type: "cup",
+        priority: 4,
+      });
+    }
 
+    // 2. Copa Libertadores (API-Football ID: 13, Copa / Grupos + Mata-Mata)
+    let lib = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 13))
+      .first();
+
+    if (!lib) {
+      const libId = await ctx.db.insert("leagues", {
+        name: "Copa Libertadores",
+        country: "América do Sul",
+        logoUrl: "https://media.api-sports.io/football/leagues/13.png",
+        season: 2026,
+        type: "cup",
+        format: "group_knockout",
+        currentStage: "Fase de Grupos",
+        priority: 3,
+        externalId: 13,
+      });
+      lib = await ctx.db.get(libId);
+    } else {
+      await ctx.db.patch(lib._id, {
+        format: "group_knockout",
+        currentStage: "Fase de Grupos",
+        type: "cup",
+        priority: 3,
+      });
+    }
+
+    if (!ucl || !lib) throw new Error("Falha ao registrar ligas de copa.");
+
+    // 3. Equipes da Champions League
+    const uclTeamsDefs = [
+      { name: "Real Madrid", code: "RMA", externalId: 541, logoUrl: "https://media.api-sports.io/football/teams/541.png" },
+      { name: "Manchester City", code: "MCI", externalId: 50, logoUrl: "https://media.api-sports.io/football/teams/50.png" },
+      { name: "Bayern München", code: "BAY", externalId: 157, logoUrl: "https://media.api-sports.io/football/teams/157.png" },
+      { name: "Paris Saint-Germain", code: "PSG", externalId: 85, logoUrl: "https://media.api-sports.io/football/teams/85.png" },
+      { name: "Arsenal", code: "ARS", externalId: 42, logoUrl: "https://media.api-sports.io/football/teams/42.png" },
+      { name: "Liverpool", code: "LIV", externalId: 40, logoUrl: "https://media.api-sports.io/football/teams/40.png" },
+      { name: "Barcelona", code: "BAR", externalId: 529, logoUrl: "https://media.api-sports.io/football/teams/529.png" },
+      { name: "Inter de Milão", code: "INT", externalId: 505, logoUrl: "https://media.api-sports.io/football/teams/505.png" },
+    ];
+
+    const uclTeamMap = new Map<string, Id<"teams">>();
+    for (const t of uclTeamsDefs) {
+      let team = await ctx.db
+        .query("teams")
+        .withIndex("by_externalId", (q) => q.eq("externalId", t.externalId))
+        .first();
+
+      if (!team) {
+        const id = await ctx.db.insert("teams", t);
+        uclTeamMap.set(t.name, id);
+      } else {
+        uclTeamMap.set(t.name, team._id);
+      }
+    }
+
+    // 4. Equipes da Libertadores
+    const libTeamsDefs = [
+      { name: "Flamengo", code: "FLA", externalId: 127, logoUrl: "https://media.api-sports.io/football/teams/127.png" },
+      { name: "Palmeiras", code: "PAL", externalId: 121, logoUrl: "https://media.api-sports.io/football/teams/121.png" },
+      { name: "River Plate", code: "RIV", externalId: 435, logoUrl: "https://media.api-sports.io/football/teams/435.png" },
+      { name: "Boca Juniors", code: "BOC", externalId: 451, logoUrl: "https://media.api-sports.io/football/teams/451.png" },
+      { name: "São Paulo", code: "SAO", externalId: 126, logoUrl: "https://media.api-sports.io/football/teams/126.png" },
+      { name: "Atlético-MG", code: "CAM", externalId: 1062, logoUrl: "https://media.api-sports.io/football/teams/1062.png" },
+      { name: "Peñarol", code: "PEN", externalId: 2335, logoUrl: "https://media.api-sports.io/football/teams/2335.png" },
+      { name: "LDU Quito", code: "LDU", externalId: 2307, logoUrl: "https://media.api-sports.io/football/teams/2307.png" },
+    ];
+
+    const libTeamMap = new Map<string, Id<"teams">>();
+    for (const t of libTeamsDefs) {
+      let team = await ctx.db
+        .query("teams")
+        .withIndex("by_externalId", (q) => q.eq("externalId", t.externalId))
+        .first();
+
+      if (!team) {
+        const id = await ctx.db.insert("teams", t);
+        libTeamMap.set(t.name, id);
+      } else {
+        libTeamMap.set(t.name, team._id);
+      }
+    }
+
+    // 5. Partidas da Rodada 1 da Champions League (Fase de Liga)
+    const existingUclMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", ucl!._id))
+      .collect();
+
+    const now = Date.now();
+    let uclCreated = 0;
+    if (existingUclMatches.length === 0) {
+      const uclMatches = [
+        {
+          home: "Real Madrid",
+          away: "Manchester City",
+          homeScore: 3,
+          awayScore: 2,
+          round: "Rodada 1",
+          stage: "Fase de Liga",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 3 * 24 * 60 * 60 * 1000,
+        },
+        {
+          home: "Bayern München",
+          away: "Paris Saint-Germain",
+          homeScore: 2,
+          awayScore: 0,
+          round: "Rodada 1",
+          stage: "Fase de Liga",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 3 * 24 * 60 * 60 * 1000 + 7200000,
+        },
+        {
+          home: "Barcelona",
+          away: "Inter de Milão",
+          homeScore: 2,
+          awayScore: 1,
+          round: "Rodada 1",
+          stage: "Fase de Liga",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 2 * 24 * 60 * 60 * 1000,
+        },
+        {
+          home: "Arsenal",
+          away: "Liverpool",
+          homeScore: 1,
+          awayScore: 1,
+          round: "Rodada 1",
+          stage: "Fase de Liga",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 2 * 24 * 60 * 60 * 1000 + 7200000,
+        },
+      ];
+
+      for (const m of uclMatches) {
+        const homeId = uclTeamMap.get(m.home);
+        const awayId = uclTeamMap.get(m.away);
+        if (homeId && awayId) {
+          const matchId = await ctx.db.insert("matches", {
+            leagueId: ucl!._id,
+            homeTeamId: homeId,
+            awayTeamId: awayId,
+            homeScore: m.homeScore,
+            awayScore: m.awayScore,
+            round: m.round,
+            stage: m.stage,
+            status: m.status,
+            statusShort: m.statusShort,
+            startTime: m.startTime,
+          });
+          uclCreated++;
+
+          // Insere estatísticas representativas
+          await ctx.db.insert("matchStatistics", {
+            matchId,
+            homePossession: 53,
+            awayPossession: 47,
+            homeTotalShots: 15,
+            awayTotalShots: 12,
+            homeShotsOnTarget: 7,
+            awayShotsOnTarget: 5,
+            homeCorners: 6,
+            awayCorners: 4,
+            homeFouls: 9,
+            awayFouls: 13,
+            homeYellowCards: 2,
+            awayYellowCards: 3,
+            homeRedCards: 0,
+            awayRedCards: 0,
+            homePasses: 510,
+            awayPasses: 450,
+            homePassAccuracy: 88,
+            awayPassAccuracy: 83,
+          });
+        }
+      }
+    }
+
+    // 6. Partidas da Rodada 1 da Copa Libertadores (Fase de Grupos)
+    const existingLibMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", lib!._id))
+      .collect();
+
+    let libCreated = 0;
+    if (existingLibMatches.length === 0) {
+      const libMatches = [
+        {
+          home: "Flamengo",
+          away: "River Plate",
+          homeScore: 2,
+          awayScore: 1,
+          round: "Rodada 1",
+          stage: "Fase de Grupos",
+          group: "Grupo A",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 3 * 24 * 60 * 60 * 1000,
+        },
+        {
+          home: "Palmeiras",
+          away: "Boca Juniors",
+          homeScore: 2,
+          awayScore: 0,
+          round: "Rodada 1",
+          stage: "Fase de Grupos",
+          group: "Grupo B",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 3 * 24 * 60 * 60 * 1000 + 7200000,
+        },
+        {
+          home: "São Paulo",
+          away: "LDU Quito",
+          homeScore: 1,
+          awayScore: 0,
+          round: "Rodada 1",
+          stage: "Fase de Grupos",
+          group: "Grupo C",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 2 * 24 * 60 * 60 * 1000,
+        },
+        {
+          home: "Atlético-MG",
+          away: "Peñarol",
+          homeScore: 2,
+          awayScore: 2,
+          round: "Rodada 1",
+          stage: "Fase de Grupos",
+          group: "Grupo D",
+          status: "FINISHED" as const,
+          statusShort: "FT",
+          startTime: now - 2 * 24 * 60 * 60 * 1000 + 7200000,
+        },
+      ];
+
+      for (const m of libMatches) {
+        const homeId = libTeamMap.get(m.home);
+        const awayId = libTeamMap.get(m.away);
+        if (homeId && awayId) {
+          const matchId = await ctx.db.insert("matches", {
+            leagueId: lib!._id,
+            homeTeamId: homeId,
+            awayTeamId: awayId,
+            homeScore: m.homeScore,
+            awayScore: m.awayScore,
+            round: m.round,
+            stage: m.stage,
+            group: m.group,
+            status: m.status,
+            statusShort: m.statusShort,
+            startTime: m.startTime,
+          });
+          libCreated++;
+
+          await ctx.db.insert("matchStatistics", {
+            matchId,
+            homePossession: 58,
+            awayPossession: 42,
+            homeTotalShots: 17,
+            awayTotalShots: 8,
+            homeShotsOnTarget: 6,
+            awayShotsOnTarget: 3,
+            homeCorners: 8,
+            awayCorners: 2,
+            homeFouls: 14,
+            awayFouls: 16,
+            homeYellowCards: 3,
+            awayYellowCards: 4,
+            homeRedCards: 0,
+            awayRedCards: 1,
+            homePasses: 490,
+            awayPasses: 340,
+            homePassAccuracy: 85,
+            awayPassAccuracy: 75,
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      ucl: { id: ucl._id, matchesCreated: uclCreated },
+      libertadores: { id: lib._id, matchesCreated: libCreated },
+    };
+  },
+});

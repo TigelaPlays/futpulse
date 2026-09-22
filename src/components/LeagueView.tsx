@@ -45,8 +45,26 @@ export function LeagueView({
 
   const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
 
+  const isUCL = league.name.toLowerCase().includes("champions");
+  const isLibertadores = league.name.toLowerCase().includes("libertadores");
+  const isCup = isUCL || isLibertadores || league.name.toLowerCase().includes("copa");
+
   const minRound = 1;
-  const maxRound = 38;
+  const maxRound = isUCL ? 8 : isLibertadores ? 6 : isCup ? 8 : 38;
+
+  const stageSubtitle = isUCL
+    ? "Fase de Liga (8 Rodadas) • Mata-Mata"
+    : isLibertadores
+    ? "Fase de Grupos (6 Rodadas) • Mata-Mata"
+    : isCup
+    ? "Torneio de Copa"
+    : `${maxRound} Rodadas`;
+
+  const roundDisplay = isUCL
+    ? `Fase de Liga • Rodada ${currentRound}`
+    : isLibertadores
+    ? `Fase de Grupos • Rodada ${currentRound}`
+    : `Rodada ${currentRound}`;
 
   const handlePrevRound = () => {
     if (currentRound !== undefined) {
@@ -99,7 +117,7 @@ export function LeagueView({
               )}
             </h1>
             <p className="text-[11px] sm:text-xs text-slate-500 truncate">
-              Temporada {league.season ?? 2026} • {maxRound} Rodadas
+              Temporada {league.season ?? 2026} • {stageSubtitle}
             </p>
           </div>
         </div>
@@ -120,9 +138,9 @@ export function LeagueView({
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <div className="px-2 text-center min-w-[90px]">
+          <div className="px-2 text-center min-w-[100px] sm:min-w-[140px]">
             <span className="text-xs font-bold text-slate-900 tracking-wide uppercase">
-              Rodada {currentRound}
+              {roundDisplay}
             </span>
           </div>
 

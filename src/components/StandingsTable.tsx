@@ -21,6 +21,53 @@ function getZoneInfo(
   leagueName: string,
   description?: string
 ): ZoneInfo {
+  const isChampions = leagueName.toLowerCase().includes("champions");
+  const isLibertadores = leagueName.toLowerCase().includes("libertadores");
+
+  if (isChampions) {
+    if (rank <= 8) {
+      return {
+        label: rank === 1 ? "Oitavas de Final (Direto)" : undefined,
+        borderColor: "border-l-emerald-600",
+      };
+    }
+    if (rank <= 24) {
+      return {
+        label: rank === 9 ? "Play-offs (16avos)" : undefined,
+        borderColor: "border-l-teal-400",
+      };
+    }
+    if (rank > 24) {
+      return {
+        label: rank === 25 ? "Eliminação" : undefined,
+        borderColor: "border-l-rose-600",
+      };
+    }
+    return { borderColor: "border-l-transparent" };
+  }
+
+  if (isLibertadores) {
+    if (rank <= 2) {
+      return {
+        label: rank === 1 ? "Oitavas de Final" : undefined,
+        borderColor: "border-l-emerald-600",
+      };
+    }
+    if (rank === 3) {
+      return {
+        label: "Play-offs (Sul-Americana)",
+        borderColor: "border-l-sky-500",
+      };
+    }
+    if (rank >= 4) {
+      return {
+        label: rank === 4 ? "Eliminação" : undefined,
+        borderColor: "border-l-rose-600",
+      };
+    }
+    return { borderColor: "border-l-transparent" };
+  }
+
   const isSerieB =
     leagueName.toLowerCase().includes("série b") ||
     leagueName.toLowerCase().includes("serie b");
