@@ -358,33 +358,33 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                   </button>
                 </div>
 
-                {/* Placar Central, Escudos e Nomes dos Clubes */}
-                <div className="grid grid-cols-7 items-center text-center py-1">
+                {/* Placar Central, Escudos e Nomes dos Clubes com Perfeita Simetria */}
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center text-center py-2 px-1">
                   {/* Mandante */}
-                  <div className="col-span-3 flex flex-col items-center gap-1.5 px-1">
+                  <div className="flex flex-col items-center justify-center gap-1.5 min-w-0">
                     {match.homeTeam?.logoUrl ? (
                       <img
                         src={match.homeTeam.logoUrl}
                         alt={match.homeTeam?.name ?? "Mandante"}
-                        className="w-13 h-13 sm:w-14 sm:h-14 object-contain drop-shadow-md transition-transform hover:scale-105"
+                        className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
                       />
                     ) : (
-                      <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
                         {match.homeTeam?.name?.charAt(0) ?? "M"}
                       </div>
                     )}
-                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1">
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[130px] text-center">
                       {match.homeTeam?.name ?? "Mandante"}
                     </span>
                   </div>
 
                   {/* Placar Central */}
-                  <div className="col-span-1 flex flex-col items-center">
-                    <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-xl font-mono font-bold text-xl sm:text-2xl text-white shadow-lg tracking-tight">
+                  <div className="flex flex-col items-center justify-center px-2 sm:px-4 shrink-0">
+                    <div className="bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1.5 rounded-xl font-mono font-bold text-2xl sm:text-3xl text-white shadow-lg tracking-wider whitespace-nowrap">
                       {match.status === "SCHEDULED" ? "VS" : `${match.homeScore} - ${match.awayScore}`}
                     </div>
                     <span
-                      className={`text-[10px] sm:text-[11px] mt-1.5 font-bold uppercase px-2 py-0.5 rounded-full ${
+                      className={`text-[10px] sm:text-[11px] mt-2 font-bold uppercase tracking-wider px-3 py-0.5 rounded-full whitespace-nowrap shadow-xs ${
                         isLive
                           ? "bg-rose-500/25 text-rose-300 border border-rose-500/40 animate-pulse"
                           : match.status === "FINISHED"
@@ -395,38 +395,38 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                       {getStatusText()}
                     </span>
                     {match.homeHalftimeScore !== undefined && match.awayHalftimeScore !== undefined && (
-                      <span className="text-[10px] text-slate-300/80 mt-0.5 font-medium">
+                      <span className="text-[10px] text-slate-300/80 mt-1 font-medium whitespace-nowrap">
                         (HT {match.homeHalftimeScore} - {match.awayHalftimeScore})
                       </span>
                     )}
                     {match.homePenaltyScore !== undefined && match.awayPenaltyScore !== undefined && (
-                      <span className="text-[10px] text-amber-300 mt-0.5 font-mono font-semibold">
+                      <span className="text-[10px] text-amber-300 mt-1 font-mono font-semibold whitespace-nowrap">
                         (Pên {match.homePenaltyScore} - {match.awayPenaltyScore})
                       </span>
                     )}
                   </div>
 
                   {/* Visitante */}
-                  <div className="col-span-3 flex flex-col items-center gap-1.5 px-1">
+                  <div className="flex flex-col items-center justify-center gap-1.5 min-w-0">
                     {match.awayTeam?.logoUrl ? (
                       <img
                         src={match.awayTeam.logoUrl}
                         alt={match.awayTeam?.name ?? "Visitante"}
-                        className="w-13 h-13 sm:w-14 sm:h-14 object-contain drop-shadow-md transition-transform hover:scale-105"
+                        className="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
                       />
                     ) : (
-                      <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
                         {match.awayTeam?.name?.charAt(0) ?? "V"}
                       </div>
                     )}
-                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1">
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[130px] text-center">
                       {match.awayTeam?.name ?? "Visitante"}
                     </span>
                   </div>
                 </div>
 
                 {/* Linha Inferior do Hero: Badges de Data/Horário e Estádio */}
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-white/10 text-xs text-slate-200">
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2.5 border-t border-white/10 text-xs text-slate-200">
                   {match.startTime && (
                     <div className="flex items-center gap-1.5 font-medium bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/10">
                       <Calendar className="w-3.5 h-3.5 text-slate-300 shrink-0" />
