@@ -2520,3 +2520,209 @@ export const seedSerieBRounds14to18 = mutation({
   },
 });
 
+// ─── Rodadas 19 a 23 — Brasileirão Série B 2026 (Fonte: ge.globo.com) ───────
+export const seedSerieBRounds19to23 = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let serieB = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 72))
+      .first();
+
+    if (!serieB) {
+      const allLeagues = await ctx.db.query("leagues").collect();
+      serieB = allLeagues.find((l) => l.name.toLowerCase().includes("série b")) ?? null;
+    }
+
+    if (!serieB) throw new Error("Liga Série B não encontrada.");
+
+    const clean = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[-_]/g, " ")
+        .trim();
+
+    const ALIASES: Record<string, string> = {
+      "america mineiro": "america mg",
+      "america-mg": "america mg",
+      "athletic club": "athletic",
+      "atletico goianiense": "atletico go",
+      "atletico-go": "atletico go",
+      "botafogo sp": "botafogo sp",
+      "botafogo-sp": "botafogo sp",
+      "operario pr": "operario pr",
+      "operario-pr": "operario pr",
+      "operario ferroviario": "operario pr",
+      "sport recife": "sport",
+    };
+
+    const normalize = (s: string) => { const c = clean(s); return ALIASES[c] ?? c; };
+
+    const allTeams = await ctx.db.query("teams").collect();
+
+    const getOrCreate = async (name: string) => {
+      const norm = normalize(name);
+      let team = allTeams.find((t) => normalize(t.name) === norm);
+      if (!team) {
+        const id = await ctx.db.insert("teams", { name, logoUrl: "" });
+        team = (await ctx.db.get(id))!;
+        allTeams.push(team);
+      }
+      return team;
+    };
+
+    const allStadiums = await ctx.db.query("stadiums").collect();
+    const getOrCreateStadium = async (name: string) => {
+      let stadium = allStadiums.find((s) => s.name.toLowerCase() === name.toLowerCase());
+      if (!stadium) {
+        const id = await ctx.db.insert("stadiums", { name, city: "Brasil", imageUrl: "" });
+        stadium = (await ctx.db.get(id))!;
+        allStadiums.push(stadium);
+      }
+      return stadium;
+    };
+
+    type MatchInput = {
+      stadium: string;
+      home: string;
+      away: string;
+      hs: number;
+      as: number;
+      date: string; // ISO
+    };
+
+    const rounds: { round: string; matches: MatchInput[] }[] = [
+      {
+        round: "Rodada 19",
+        matches: [
+          { stadium: "Jorge Ismael de Biasi",     home: "Novorizontino", away: "Criciúma",      hs: 0, as: 1, date: "2026-07-21T19:30:00-03:00" },
+          { stadium: "Ressacada",                 home: "Avaí",          away: "América-MG",    hs: 2, as: 1, date: "2026-07-21T19:30:00-03:00" },
+          { stadium: "OBA",                       home: "Vila Nova",     away: "Fortaleza",     hs: 2, as: 1, date: "2026-07-21T21:35:00-03:00" },
+          { stadium: "Germano Krüger",            home: "Operário-PR",   away: "Ponte Preta",   hs: 3, as: 2, date: "2026-07-22T19:30:00-03:00" },
+          { stadium: "Presidente Vargas (CE)",    home: "Ceará",         away: "CRB",           hs: 0, as: 1, date: "2026-07-22T19:30:00-03:00" },
+          { stadium: "Hailé Pinheiro (Serrinha)", home: "Goiás",         away: "Sport",         hs: 1, as: 1, date: "2026-07-22T20:30:00-03:00" },
+          { stadium: "Esportes da Sorte Aflitos", home: "Náutico",       away: "Londrina",      hs: 2, as: 1, date: "2026-07-22T21:30:00-03:00" },
+          { stadium: "Arena Sicredi",             home: "Athletic Club", away: "São Bernardo",  hs: 2, as: 1, date: "2026-07-23T19:30:00-03:00" },
+          { stadium: "Arena Pantanal",            home: "Cuiabá",        away: "Atlético-GO",   hs: 0, as: 1, date: "2026-07-23T20:30:00-03:00" },
+          { stadium: "Arena Nicnet (Santa Cruz)", home: "Botafogo-SP",   away: "Juventude",     hs: 4, as: 2, date: "2026-07-23T21:30:00-03:00" },
+        ],
+      },
+      {
+        round: "Rodada 20",
+        matches: [
+          { stadium: "Primeiro de Maio", home: "São Bernardo",  away: "Ceará",         hs: 3, as: 4, date: "2026-07-26T16:00:00-03:00" },
+          { stadium: "Heriberto Hülse",  home: "Criciúma",      away: "Náutico",       hs: 0, as: 0, date: "2026-07-26T16:00:00-03:00" },
+          { stadium: "Independência",    home: "América-MG",    away: "Goiás",         hs: 1, as: 0, date: "2026-07-26T18:30:00-03:00" },
+          { stadium: "VGD",              home: "Londrina",      away: "Novorizontino", hs: 1, as: 4, date: "2026-07-26T18:30:00-03:00" },
+          { stadium: "Antônio Accioly",  home: "Atlético-GO",   away: "Operário-PR",   hs: 3, as: 1, date: "2026-07-27T19:30:00-03:00" },
+          { stadium: "Ilha do Retiro",   home: "Sport",         away: "Cuiabá",        hs: 1, as: 1, date: "2026-07-27T19:30:00-03:00" },
+          { stadium: "Rei Pelé (AL)",    home: "CRB",           away: "Vila Nova",     hs: 2, as: 0, date: "2026-07-27T19:30:00-03:00" },
+          { stadium: "Moisés Lucarelli", home: "Ponte Preta",   away: "Athletic Club", hs: 1, as: 1, date: "2026-07-28T19:30:00-03:00" },
+          { stadium: "Alfredo Jaconi",   home: "Juventude",     away: "Avaí",          hs: 1, as: 0, date: "2026-07-28T19:30:00-03:00" },
+          { stadium: "Castelão (CE)",    home: "Fortaleza",     away: "Botafogo-SP",   hs: 1, as: 0, date: "2026-07-28T21:35:00-03:00" },
+        ],
+      },
+      {
+        round: "Rodada 21",
+        matches: [
+          { stadium: "Germano Krüger",            home: "Operário-PR",   away: "São Bernardo",  hs: 1, as: 3, date: "2026-08-07T19:30:00-03:00" },
+          { stadium: "Castelão (CE)",             home: "Ceará",         away: "Ponte Preta",   hs: 2, as: 0, date: "2026-08-07T20:30:00-03:00" },
+          { stadium: "OBA",                       home: "Vila Nova",     away: "Sport",         hs: 0, as: 1, date: "2026-08-08T16:00:00-03:00" },
+          { stadium: "Arena Nicnet (Santa Cruz)", home: "Botafogo-SP",   away: "América-MG",    hs: 2, as: 1, date: "2026-08-08T18:30:00-03:00" },
+          { stadium: "Arena Sicredi",             home: "Athletic Club", away: "Criciúma",      hs: 2, as: 0, date: "2026-08-09T11:00:00-03:00" },
+          { stadium: "Jorge Ismael de Biasi",     home: "Novorizontino", away: "Juventude",     hs: 0, as: 1, date: "2026-08-09T16:00:00-03:00" },
+          { stadium: "Esportes da Sorte Aflitos", home: "Náutico",       away: "Atlético-GO",   hs: 1, as: 1, date: "2026-08-09T16:00:00-03:00" },
+          { stadium: "Arena Pantanal",            home: "Cuiabá",        away: "Fortaleza",     hs: 1, as: 1, date: "2026-08-09T18:00:00-03:00" },
+          { stadium: "Hailé Pinheiro (Serrinha)", home: "Goiás",         away: "Londrina",      hs: 1, as: 0, date: "2026-08-10T19:30:00-03:00" },
+          { stadium: "Ressacada",                 home: "Avaí",          away: "CRB",           hs: 0, as: 1, date: "2026-08-11T19:30:00-03:00" },
+        ],
+      },
+      {
+        round: "Rodada 22",
+        matches: [
+          { stadium: "Moisés Lucarelli", home: "Ponte Preta",   away: "Náutico",       hs: 1, as: 1, date: "2026-08-14T19:30:00-03:00" },
+          { stadium: "Primeiro de Maio", home: "São Bernardo",  away: "Botafogo-SP",   hs: 0, as: 1, date: "2026-08-14T19:30:00-03:00" },
+          { stadium: "Ilha do Retiro",   home: "Sport",         away: "Londrina",      hs: 2, as: 1, date: "2026-08-14T20:30:00-03:00" },
+          { stadium: "Castelão (CE)",    home: "Ceará",         away: "Cuiabá",        hs: 1, as: 3, date: "2026-08-15T16:00:00-03:00" },
+          { stadium: "Antônio Accioly",  home: "Atlético-GO",   away: "Vila Nova",     hs: 0, as: 2, date: "2026-08-15T16:00:00-03:00" },
+          { stadium: "Heriberto Hülse",  home: "Criciúma",      away: "Goiás",         hs: 1, as: 0, date: "2026-08-15T16:00:00-03:00" },
+          { stadium: "Alfredo Jaconi",   home: "Juventude",     away: "Fortaleza",     hs: 0, as: 0, date: "2026-08-15T18:30:00-03:00" },
+          { stadium: "Germano Krüger",   home: "Operário-PR",   away: "Avaí",          hs: 1, as: 2, date: "2026-08-16T11:00:00-03:00" },
+          { stadium: "Independência",    home: "América-MG",    away: "Athletic Club", hs: 1, as: 3, date: "2026-08-16T18:30:00-03:00" },
+          { stadium: "Rei Pelé (AL)",    home: "CRB",           away: "Novorizontino", hs: 0, as: 0, date: "2026-08-16T18:30:00-03:00" },
+        ],
+      },
+      {
+        round: "Rodada 23",
+        matches: [
+          { stadium: "VGD",                       home: "Londrina",      away: "Atlético-GO",   hs: 0, as: 0, date: "2026-08-18T19:30:00-03:00" },
+          { stadium: "Esportes da Sorte Aflitos", home: "Náutico",       away: "Ceará",         hs: 1, as: 0, date: "2026-08-18T21:30:00-03:00" },
+          { stadium: "Hailé Pinheiro (Serrinha)", home: "Goiás",         away: "Juventude",     hs: 0, as: 1, date: "2026-08-18T21:35:00-03:00" },
+          { stadium: "Castelão (CE)",             home: "Fortaleza",     away: "São Bernardo",  hs: 1, as: 1, date: "2026-08-19T19:30:00-03:00" },
+          { stadium: "Ressacada",                 home: "Avaí",          away: "Sport",         hs: 2, as: 1, date: "2026-08-19T19:30:00-03:00" },
+          { stadium: "Arena Pantanal",            home: "Cuiabá",        away: "Operário-PR",   hs: 1, as: 0, date: "2026-08-19T20:30:00-03:00" },
+          { stadium: "OBA",                       home: "Vila Nova",     away: "Ponte Preta",   hs: 6, as: 0, date: "2026-08-19T20:30:00-03:00" },
+          { stadium: "Arena Nicnet (Santa Cruz)", home: "Botafogo-SP",   away: "Criciúma",      hs: 1, as: 1, date: "2026-08-19T21:30:00-03:00" },
+          { stadium: "Arena Sicredi",             home: "Athletic Club", away: "CRB",           hs: 0, as: 2, date: "2026-08-20T19:30:00-03:00" },
+          { stadium: "Jorge Ismael de Biasi",     home: "Novorizontino", away: "América-MG",    hs: 3, as: 0, date: "2026-08-20T20:30:00-03:00" },
+        ],
+      },
+    ];
+
+    let totalInserted = 0;
+
+    for (const roundData of rounds) {
+      const existing = await ctx.db
+        .query("matches")
+        .withIndex("by_league_and_round", (q) => q.eq("leagueId", serieB!._id))
+        .collect();
+
+      const roundNum = roundData.round.replace(/\D/g, "");
+      const toDelete = existing.filter(
+        (m) =>
+          m.round.toLowerCase() === roundData.round.toLowerCase() ||
+          m.round.replace(/\D/g, "") === roundNum
+      );
+
+      for (const m of toDelete) {
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const e of events) await ctx.db.delete(e._id);
+        await ctx.db.delete(m._id);
+      }
+
+      for (const m of roundData.matches) {
+        const homeTeam = await getOrCreate(m.home);
+        const awayTeam = await getOrCreate(m.away);
+        const stadiumDoc = await getOrCreateStadium(m.stadium);
+
+        await ctx.db.insert("matches", {
+          leagueId: serieB!._id,
+          round: roundData.round,
+          homeTeamId: homeTeam._id,
+          awayTeamId: awayTeam._id,
+          stadiumId: stadiumDoc._id,
+          status: "FINISHED",
+          statusShort: "FT",
+          homeScore: m.hs,
+          awayScore: m.as,
+          startTime: new Date(m.date).getTime(),
+        });
+
+        totalInserted++;
+      }
+    }
+
+    return {
+      success: true,
+      rounds: rounds.map((r) => r.round),
+      totalMatches: totalInserted,
+    };
+  },
+});
+
+
