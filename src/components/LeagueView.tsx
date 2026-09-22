@@ -136,20 +136,24 @@ export function LeagueView({
         </button>
       </div>
 
-      {/* Grid Split Lado a Lado (Desktop) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Coluna Principal: Tabela de Classificação (8 colunas) */}
+      {/* Grid Split Lado a Lado (Desktop) - Perfeitamente Simétrico */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] gap-6 items-stretch">
+        {/* Coluna Principal: Tabela de Classificação */}
         <div
-          className={`lg:col-span-8 ${
+          className={`h-full ${
             mobileTab === "standings" ? "block" : "hidden lg:block"
           }`}
         >
-          <StandingsTable leagueId={leagueId} leagueName={league.name} />
+          <StandingsTable
+            leagueId={leagueId}
+            leagueName={league.name}
+            currentRound={currentRound}
+          />
         </div>
 
-        {/* Coluna Lateral: Jogos da Rodada (4 colunas) */}
+        {/* Coluna Lateral: Jogos da Rodada */}
         <div
-          className={`lg:col-span-4 sticky top-4 ${
+          className={`h-full ${
             mobileTab === "matches" ? "block" : "hidden lg:block"
           }`}
         >

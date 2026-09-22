@@ -912,6 +912,29 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Bloco de Partidas Favoritas (se houver alguma favoritada e sem liga selecionada) */}
+        {!selectedLeagueId && favoriteMatches.length > 0 && (
+          <div className="bg-white border border-amber-300/80 rounded-xl overflow-hidden shadow-xs animate-fade-in">
+            {/* Cabeçalho de Favoritos */}
+            <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 px-4 py-3 border-b border-amber-200/80 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+                <span className="font-bold text-sm tracking-wide text-amber-950">
+                  Partidas Favoritas
+                </span>
+                <span className="text-xs text-amber-700 font-medium">
+                  • {favoriteMatches.length} {favoriteMatches.length === 1 ? "jogo fixado" : "jogos fixados"}
+                </span>
+              </div>
+            </div>
+
+            {/* Lista de Partidas Favoritas */}
+            <div className="divide-y divide-slate-100">
+              {favoriteMatches.map((match: any) => renderMatchRow(match, true))}
+            </div>
+          </div>
+        )}
+
         {/* Alternador de Visualização: Jogos vs Tabela de Classificação */}
         {selectedLeagueId && (
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
@@ -945,45 +968,20 @@ export default function App() {
           </div>
         )}
 
-        {/* Bloco de Partidas Favoritas (se houver alguma favoritada e estiver no modo jogos) */}
-        {viewMode === "matches" && favoriteMatches.length > 0 && (
-          <div className="bg-white border border-amber-300/80 rounded-xl overflow-hidden shadow-xs animate-fade-in">
-            {/* Cabeçalho de Favoritos */}
-            <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 px-4 py-3 border-b border-amber-200/80 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
-                <span className="font-bold text-sm tracking-wide text-amber-950">
-                  Partidas Favoritas
-                </span>
-                <span className="text-xs text-amber-700 font-medium">
-                  • {favoriteMatches.length} {favoriteMatches.length === 1 ? "jogo fixado" : "jogos fixados"}
-                </span>
-              </div>
-            </div>
-
-            {/* Lista de Partidas Favoritas */}
-            <div className="divide-y divide-slate-100">
-              {favoriteMatches.map((match: any) => renderMatchRow(match, true))}
-            </div>
-          </div>
-        )}
-
         {selectedLeagueId && selectedLeague && viewMode === "standings" ? (
           <LeagueView
             leagueId={selectedLeagueId}
             league={selectedLeague}
             onNavigateToMatches={() => {
               setViewMode("matches");
-              setSelectedLeagueId(selectedLeagueId);
             }}
           />
         ) : (
           <>
-            {/* Bloco de Artilharia Oficial (Fonte GE) na Grade Geral de Jogos */}
+            {/* Bloco de Artilharia Oficial na Grade Geral de Jogos */}
             {viewMode === "matches" && (
               <TopScorersWidget leagueId={selectedLeagueId} />
             )}
-
             {matches === undefined ? (
               <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
                 <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />

@@ -428,3 +428,57 @@ export const recalculateAndSaveStandings = mutation({
     return { success: true, count: standingsList.length };
   },
 });
+
+// Retorna a classificação calculada dinamicamente a partir das partidas até a rodada indicada
+export const getStandingsByRound = query({
+  args: {
+    leagueId: v.id("leagues"),
+    upToRound: v.number(),
+    filter: v.optional(
+      v.union(v.literal("all"), v.literal("home"), v.literal("away"))
+    ),
+  },
+  handler: async (ctx, args) => {
+    const filter = args.filter ?? "all";
+    const league = await ctx.db.get(args.leagueId);
+
+    // Busca todas as partidas da liga
+    const allMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+
+    // Filtra apenas partidas finalizadas até a rodada selecionada
+    const finishedMatches = allMatches.filter((m) => {
+      if (m.status !== "FINISHED") return false;
+      const num = parseInt(m.round.replace(/\D/g, ""), 10);
+      if (isNaN(num)) return false;
+      return num <= args.upToRound;
+    });
+
+    if (finishedMatches.length === 0) return [];
+
+    // Coleta todos os times que participaram até esta rodada
+    const teamIdSet = new Set<Id<"teams">>();
+    for (const m of finishedMatches) {
+      teamIdSet.add(m.homeTeamId);
+      teamIdSet.add(m.awayTeamId);
+    }
+
+    const teamDocMap = new Map<string, Doc<"teams">>();
+    await Promise.all(
+      Array.from(teamIdSet).map(async (tid) => {
+        const team = await ctx.db.get(tid);
+        if (team) teamDocMap.set(tid, team);
+      })
+    );
+
+    return computeStandingsData(
+      finishedMatches,
+      Array.from(teamIdSet),
+      teamDocMap,
+      filter,
+      league?.name ?? ""
+    );
+  },
+});

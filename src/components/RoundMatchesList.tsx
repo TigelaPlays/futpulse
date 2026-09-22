@@ -168,14 +168,14 @@ export function RoundMatchesList({
       </div>
 
       {/* Lista de Partidas com a estrutura oficial do Print */}
-      <div className="divide-y divide-slate-100 overflow-y-auto max-h-[720px] no-scrollbar flex-1">
+      <div className="divide-y divide-slate-100 flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar">
         {matches === undefined ? (
-          <div className="flex items-center justify-center py-16 text-slate-500 gap-2">
+          <div className="flex-1 flex items-center justify-center py-16 text-slate-500 gap-2">
             <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs">Carregando rodada...</span>
           </div>
         ) : matches.length === 0 ? (
-          <div className="text-center py-14 px-4 space-y-2">
+          <div className="flex-1 flex flex-col justify-center text-center py-14 px-4 space-y-2">
             <Clock className="w-7 h-7 text-slate-400 mx-auto" />
             <p className="text-xs font-semibold text-slate-700">
               Nenhum jogo cadastrado para a {round}
@@ -195,24 +195,24 @@ export function RoundMatchesList({
             return (
               <div
                 key={m._id}
-                className="p-4 hover:bg-slate-50/70 transition-colors bg-white space-y-2.5"
+                className="px-3.5 py-2.5 sm:py-3 hover:bg-slate-50/70 transition-colors bg-white flex-1 flex flex-col justify-center space-y-1.5"
               >
-                {/* Linha 1: [Estádio]    [dd/MM] • [Dia da semana] • [FIM ou HH:mm] */}
-                <div className="flex items-center justify-center gap-2 text-xs">
-                  <span className="text-slate-500 uppercase font-medium tracking-wide">
+                {/* Cabeçalho do Card: Estádio em cima, Data/Hora embaixo */}
+                <div className="text-center space-y-0.5">
+                  <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase truncate px-2 font-mono">
                     {stadium}
-                  </span>
-                  <div className="flex items-center gap-1 font-bold text-slate-800">
-                    <span>{dateStr}</span>
-                    <span className="text-slate-400 font-normal">•</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-600">
+                    <span className="font-semibold text-slate-700">{dateStr}</span>
+                    <span className="text-slate-300 select-none">•</span>
                     <span>{weekday}</span>
-                    <span className="text-slate-400 font-normal">•</span>
+                    <span className="text-slate-300 select-none">•</span>
                     <span
                       className={
                         isLive
                           ? "text-emerald-600 font-bold"
                           : isFinished
-                          ? "text-slate-800"
+                          ? "text-slate-900 font-bold"
                           : "text-slate-700 font-semibold"
                       }
                     >
@@ -221,15 +221,15 @@ export function RoundMatchesList({
                   </div>
                 </div>
 
-                {/* Linha 2: [CODE] [Escudo]  1 × 0  [Escudo] [CODE] */}
-                <div className="flex items-center justify-center gap-3.5 py-1">
+                {/* Confronto: [CODE] [Escudo]  1 × 0  [Escudo] [CODE] */}
+                <div className="flex items-center justify-center gap-3 py-0.5">
                   {/* Mandante */}
-                  <div className="flex items-center justify-end gap-2.5 flex-1 min-w-0">
-                    <span className="text-sm font-normal text-slate-600 tracking-wider">
+                  <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
                       {homeCode}
                     </span>
                     {m.homeTeam?.logoUrl ? (
-                      <div className="w-8 h-8 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
+                      <div className="w-7 h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
                         <img
                           src={m.homeTeam.logoUrl}
                           alt={m.homeTeam?.name ?? homeCode}
@@ -238,33 +238,33 @@ export function RoundMatchesList({
                         />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
+                      <div className="w-7 h-7 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
                         {homeCode.slice(0, 1)}
                       </div>
                     )}
                   </div>
 
-                  {/* Placar Central: 1 × 0 */}
-                  <div className="shrink-0 flex items-center justify-center gap-1.5 px-1 min-w-[64px]">
+                  {/* Placar Central */}
+                  <div className="shrink-0 flex items-center justify-center gap-1 px-1 min-w-[56px]">
                     {m.status === "SCHEDULED" ? (
-                      <div className="flex items-center gap-1.5 font-bold text-slate-400 text-lg">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-300 text-base">
                         <span>—</span>
-                        <span className="text-slate-300 font-normal text-base">×</span>
+                        <span className="text-slate-200 font-normal text-sm">×</span>
                         <span>—</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 font-bold text-xl tabular-nums text-slate-950 font-sans">
+                      <div className="flex items-center gap-1 font-black text-lg tabular-nums text-slate-950 font-sans">
                         <span>{m.homeScore}</span>
-                        <span className="text-slate-400 font-normal text-base select-none">×</span>
+                        <span className="text-slate-300 font-normal text-base select-none">×</span>
                         <span>{m.awayScore}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Visitante */}
-                  <div className="flex items-center justify-start gap-2.5 flex-1 min-w-0">
+                  <div className="flex items-center justify-start gap-2 flex-1 min-w-0">
                     {m.awayTeam?.logoUrl ? (
-                      <div className="w-8 h-8 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
+                      <div className="w-7 h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
                         <img
                           src={m.awayTeam.logoUrl}
                           alt={m.awayTeam?.name ?? awayCode}
@@ -273,21 +273,21 @@ export function RoundMatchesList({
                         />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
+                      <div className="w-7 h-7 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 flex items-center justify-center shrink-0 border border-slate-200">
                         {awayCode.slice(0, 1)}
                       </div>
                     )}
-                    <span className="text-sm font-normal text-slate-600 tracking-wider">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
                       {awayCode}
                     </span>
                   </div>
                 </div>
 
-                {/* Linha 3: SAIBA COMO FOI (Link verde de navegação) */}
-                <div className="text-center pt-1">
+                {/* Linha 3: SAIBA COMO FOI */}
+                <div className="text-center pt-0.5">
                   <button
                     onClick={onNavigateToMatches}
-                    className="text-[#00a651] hover:text-emerald-700 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer hover:underline inline-block py-0.5"
+                    className="text-[#00a651] hover:text-emerald-700 font-extrabold text-[10.5px] uppercase tracking-wider transition-colors cursor-pointer hover:underline inline-block"
                   >
                     SAIBA COMO FOI
                   </button>
