@@ -153,12 +153,26 @@ export const getTopScorers = query({
       const match = await ctx.db.get(args.matchId);
       if (!match) return null;
 
-      const [homeTeam, awayTeam, league, stadium] = await Promise.all([
+      const [homeTeam, awayTeam, league] = await Promise.all([
         ctx.db.get(match.homeTeamId),
         ctx.db.get(match.awayTeamId),
         ctx.db.get(match.leagueId),
-        match.stadiumId ? ctx.db.get(match.stadiumId) : null,
       ]);
+
+      let stadium = match.stadiumId ? await ctx.db.get(match.stadiumId) : null;
+      if (!stadium && match.homeTeamId) {
+        stadium = await ctx.db
+          .query("stadiums")
+          .withIndex("by_team", (q) => q.eq("teamId", match.homeTeamId))
+          .first();
+      }
+
+      if (stadium && stadium.customImageStorageId) {
+        const freshUrl = await ctx.storage.getUrl(stadium.customImageStorageId);
+        if (freshUrl) {
+          stadium = { ...stadium, imageUrl: freshUrl };
+        }
+      }
 
     // Busca todos os eventos associados a essa partida
     const events = await ctx.db

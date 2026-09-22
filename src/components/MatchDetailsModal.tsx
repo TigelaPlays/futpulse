@@ -4,6 +4,50 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
 
+const STADIUM_CITIES: Record<string, string> = {
+  "Heriberto Hülse": "Criciúma (SC)",
+  "Arena Pantanal": "Cuiabá (MT)",
+  "Independência": "Belo Horizonte (MG)",
+  "Arena Independência": "Belo Horizonte (MG)",
+  "Alfredo Jaconi": "Caxias do Sul (RS)",
+  "Antônio Accioly": "Goiânia (GO)",
+  "Ressacada": "Florianópolis (SC)",
+  "Estádio da Ressacada": "Florianópolis (SC)",
+  "Hailé Pinheiro (Serrinha)": "Goiânia (GO)",
+  "Estádio da Serrinha": "Goiânia (GO)",
+  "Serrinha": "Goiânia (GO)",
+  "Aflitos": "Recife (PE)",
+  "Estádio dos Aflitos": "Recife (PE)",
+  "Jorge Ismael de Biasi": "Novo Horizonte (SP)",
+  "Germano Krüger": "Ponta Grossa (PR)",
+  "Castelão": "Fortaleza (CE)",
+  "Castelão (CE)": "Fortaleza (CE)",
+  "Arena Castelão": "Fortaleza (CE)",
+  "Estádio do Café": "Londrina (PR)",
+  "VGD": "Londrina (PR)",
+  "Arena Sicredi": "São João del-Rei (MG)",
+  "OBA": "Goiânia (GO)",
+  "Onésio Brasileiro Alvarenga": "Goiânia (GO)",
+  "Primeiro de Maio": "São Bernardo do Campo (SP)",
+  "Rei Pelé": "Maceió (AL)",
+  "Rei Pelé (AL)": "Maceió (AL)",
+  "Santa Cruz": "Ribeirão Preto (SP)",
+  "Arena Nicnet (Santa Cruz)": "Ribeirão Preto (SP)",
+  "Arena Nicnet": "Ribeirão Preto (SP)",
+  "Ilha do Retiro": "Recife (PE)",
+  "Moisés Lucarelli": "Campinas (SP)",
+};
+
+function getStadiumDisplayLocation(stadium?: { name?: string; city?: string } | null): string {
+  if (!stadium?.name) return "";
+  const knownCity = STADIUM_CITIES[stadium.name];
+  if (knownCity) return `${stadium.name} • ${knownCity}`;
+  if (stadium.city && stadium.city.toLowerCase() !== "brasil") {
+    return `${stadium.name} • ${stadium.city}`;
+  }
+  return stadium.name;
+}
+
 interface MatchDetailsModalProps {
   matchId: Id<"matches"> | null;
   onClose: () => void;
@@ -160,138 +204,200 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
         className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header do Modal */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-slate-50/90">
-          <div className="flex items-center gap-2">
-            {match?.league?.logoUrl ? (
-              <div className="w-6 h-6 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shadow-2xs border border-slate-200 shrink-0">
-                <img
-                  src={match.league.logoUrl}
-                  alt={match.league.name ?? "Liga"}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
-              <Trophy className="w-5 h-5 text-emerald-600" />
-            )}
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              {match?.league?.name ?? "Detalhes da Partida"}
-              {match?.round ? ` • ${match.round}` : ""}
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Fechar"
-            className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Placar e Conteúdo */}
         {match === undefined ? (
-          <div className="p-12 flex justify-center items-center text-slate-500 gap-2">
-            <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            <span>A carregar detalhes...</span>
-          </div>
+          <>
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-slate-50">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                Detalhes da Partida
+              </span>
+              <button
+                onClick={onClose}
+                aria-label="Fechar"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-12 flex justify-center items-center text-slate-500 gap-2">
+              <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+              <span>A carregar detalhes...</span>
+            </div>
+          </>
         ) : match === null ? (
-          <div className="p-12 flex flex-col items-center justify-center text-slate-500 gap-3">
-            <AlertCircle className="w-8 h-8 text-amber-600" />
-            <span className="text-sm font-medium">Partida não encontrada.</span>
-          </div>
+          <>
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-slate-50">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                Detalhes da Partida
+              </span>
+              <button
+                onClick={onClose}
+                aria-label="Fechar"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-12 flex flex-col items-center justify-center text-slate-500 gap-3">
+              <AlertCircle className="w-8 h-8 text-amber-600" />
+              <span className="text-sm font-medium">Partida não encontrada.</span>
+            </div>
+          </>
         ) : (
-          <div className="p-6 overflow-y-auto space-y-6">
-            {/* Placar */}
-            <div className="grid grid-cols-7 items-center text-center">
-              {/* Mandante */}
-              <div className="col-span-3 flex flex-col items-center gap-2">
-                {match.homeTeam?.logoUrl ? (
-                  <img
-                    src={match.homeTeam.logoUrl}
-                    alt={match.homeTeam?.name ?? "Mandante"}
-                    className="w-12 h-12 object-contain drop-shadow-sm"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center font-bold text-slate-600">
-                    {match.homeTeam?.name?.charAt(0) ?? "M"}
-                  </div>
-                )}
-                <span className="font-bold text-sm text-slate-900">
-                  {match.homeTeam?.name ?? "Mandante"}
-                </span>
-              </div>
+          <>
+            {/* Header Hero com Foto Panorâmica do Estádio */}
+            <div className="relative overflow-hidden bg-[#161b22] text-white shrink-0">
+              {/* Foto Panorâmica de Fundo do Estádio (se disponível) */}
+              {match.stadium?.imageUrl && (
+                <img
+                  src={match.stadium.imageUrl}
+                  alt={match.stadium.name}
+                  className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+                />
+              )}
 
-              {/* Placar Central */}
-              <div className="col-span-1 flex flex-col items-center">
-                <div className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg font-mono font-bold text-xl text-slate-900 shadow-2xs">
-                  {match.status === "SCHEDULED" ? "VS" : `${match.homeScore} - ${match.awayScore}`}
+              {/* Camada de Sobreposição Degradê Escura para Garantir Contraste */}
+              <div
+                className={`absolute inset-0 ${
+                  match.stadium?.imageUrl
+                    ? "bg-gradient-to-b from-black/85 via-black/70 to-[#161b22]"
+                    : "bg-gradient-to-b from-[#0f141c] via-[#161b22] to-[#161b22]"
+                }`}
+              />
+
+              {/* Conteúdo do Header Hero */}
+              <div className="relative z-10 px-5 pt-3.5 pb-4 space-y-3.5">
+                {/* Linha Superior: Liga / Rodada e Botão Fechar */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {match.league?.logoUrl ? (
+                      <div className="w-5 h-5 rounded-full bg-white/10 backdrop-blur-xs p-0.5 flex items-center justify-center border border-white/20 shrink-0">
+                        <img
+                          src={match.league.logoUrl}
+                          alt={match.league.name ?? "Liga"}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <Trophy className="w-4 h-4 text-emerald-400" />
+                    )}
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      {match.league?.name ?? "Detalhes da Partida"}
+                      {match.round ? ` • ${match.round}` : ""}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={onClose}
+                    aria-label="Fechar"
+                    className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <span className="text-[11px] text-slate-600 mt-1 font-semibold">
-                  {getStatusText()}
-                </span>
-                {match.homeHalftimeScore !== undefined && match.awayHalftimeScore !== undefined && (
-                  <span className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                    (HT {match.homeHalftimeScore} - {match.awayHalftimeScore})
-                  </span>
-                )}
-                {match.homePenaltyScore !== undefined && match.awayPenaltyScore !== undefined && (
-                  <span className="text-[10px] text-amber-700 mt-0.5 font-mono font-semibold">
-                    (Pên {match.homePenaltyScore} - {match.awayPenaltyScore})
-                  </span>
-                )}
-              </div>
 
-              {/* Visitante */}
-              <div className="col-span-3 flex flex-col items-center gap-2">
-                {match.awayTeam?.logoUrl ? (
-                  <img
-                    src={match.awayTeam.logoUrl}
-                    alt={match.awayTeam?.name ?? "Visitante"}
-                    className="w-12 h-12 object-contain drop-shadow-sm"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center font-bold text-slate-600">
-                    {match.awayTeam?.name?.charAt(0) ?? "V"}
+                {/* Placar Central, Escudos e Nomes dos Clubes */}
+                <div className="grid grid-cols-7 items-center text-center py-1">
+                  {/* Mandante */}
+                  <div className="col-span-3 flex flex-col items-center gap-1.5 px-1">
+                    {match.homeTeam?.logoUrl ? (
+                      <img
+                        src={match.homeTeam.logoUrl}
+                        alt={match.homeTeam?.name ?? "Mandante"}
+                        className="w-13 h-13 sm:w-14 sm:h-14 object-contain drop-shadow-md transition-transform hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+                        {match.homeTeam?.name?.charAt(0) ?? "M"}
+                      </div>
+                    )}
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1">
+                      {match.homeTeam?.name ?? "Mandante"}
+                    </span>
                   </div>
-                )}
-                <span className="font-bold text-sm text-slate-900">
-                  {match.awayTeam?.name ?? "Visitante"}
-                </span>
+
+                  {/* Placar Central */}
+                  <div className="col-span-1 flex flex-col items-center">
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-xl font-mono font-bold text-xl sm:text-2xl text-white shadow-lg tracking-tight">
+                      {match.status === "SCHEDULED" ? "VS" : `${match.homeScore} - ${match.awayScore}`}
+                    </div>
+                    <span
+                      className={`text-[10px] sm:text-[11px] mt-1.5 font-bold uppercase px-2 py-0.5 rounded-full ${
+                        isLive
+                          ? "bg-rose-500/25 text-rose-300 border border-rose-500/40 animate-pulse"
+                          : match.status === "FINISHED"
+                          ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/30"
+                          : "bg-white/10 text-slate-300 border border-white/10"
+                      }`}
+                    >
+                      {getStatusText()}
+                    </span>
+                    {match.homeHalftimeScore !== undefined && match.awayHalftimeScore !== undefined && (
+                      <span className="text-[10px] text-slate-300/80 mt-0.5 font-medium">
+                        (HT {match.homeHalftimeScore} - {match.awayHalftimeScore})
+                      </span>
+                    )}
+                    {match.homePenaltyScore !== undefined && match.awayPenaltyScore !== undefined && (
+                      <span className="text-[10px] text-amber-300 mt-0.5 font-mono font-semibold">
+                        (Pên {match.homePenaltyScore} - {match.awayPenaltyScore})
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Visitante */}
+                  <div className="col-span-3 flex flex-col items-center gap-1.5 px-1">
+                    {match.awayTeam?.logoUrl ? (
+                      <img
+                        src={match.awayTeam.logoUrl}
+                        alt={match.awayTeam?.name ?? "Visitante"}
+                        className="w-13 h-13 sm:w-14 sm:h-14 object-contain drop-shadow-md transition-transform hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+                        {match.awayTeam?.name?.charAt(0) ?? "V"}
+                      </div>
+                    )}
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1">
+                      {match.awayTeam?.name ?? "Visitante"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Linha Inferior do Hero: Badges de Data/Horário e Estádio */}
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-white/10 text-xs text-slate-200">
+                  {match.startTime && (
+                    <div className="flex items-center gap-1.5 font-medium bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/10">
+                      <Calendar className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                      <span>
+                        {new Date(match.startTime).toLocaleDateString("pt-BR", {
+                          weekday: "short",
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                        {" • "}
+                        {new Date(match.startTime).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  )}
+
+                  {match.stadium && (
+                    <div className="flex items-center gap-1.5 font-medium bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-emerald-500/30 text-emerald-300">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-white font-medium">
+                        {getStadiumDisplayLocation(match.stadium)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Informações Oficiais: Data, Horário e Estádio */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600">
-              {match.startTime && (
-                <div className="flex items-center gap-1.5 font-medium">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>
-                    {new Date(match.startTime).toLocaleDateString("pt-BR", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                    {" • "}
-                    {new Date(match.startTime).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              )}
-              {match.stadium && (
-                <div className="flex items-center gap-1.5 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>
-                    {match.stadium.name}
-                    {match.stadium.city ? ` (${match.stadium.city})` : ""}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Alternador de Abas */}
+            {/* Corpo do Modal: Abas e Conteúdo */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+              {/* Alternador de Abas */}
             <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
               <button
                 onClick={() => setActiveTab("timeline")}
@@ -467,7 +573,8 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                 )}
               </div>
             )}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>
