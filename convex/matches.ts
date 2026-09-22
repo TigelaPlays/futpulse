@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // Retorna todas as partidas enriquecidas com os dados dos times e da liga
@@ -180,8 +180,11 @@ export const getTopScorers = query({
       .withIndex("by_match", (q) => q.eq("matchId", match._id))
       .collect();
 
-    // Ordena do primeiro minuto até o último
-    events.sort((a, b) => a.minute - b.minute);
+    // Ordena do primeiro minuto até o último cronologicamente
+    events.sort((a, b) => {
+      if (a.minute !== b.minute) return a.minute - b.minute;
+      return (a.extraMinute ?? 0) - (b.extraMinute ?? 0);
+    });
 
     const statistics = await ctx.db
       .query("matchStatistics")
@@ -250,5 +253,157 @@ export const listMatchesByRound = query({
         };
       })
     );
+  },
+});
+
+// Registra os gols da partida e sincroniza a artilharia da liga
+export const registerMatchGoals = mutation({
+  args: {
+    matchId: v.id("matches"),
+    goals: v.array(
+      v.object({
+        team: v.union(v.literal("home"), v.literal("away")),
+        playerName: v.string(),
+        minute: v.number(),
+        isPenalty: v.optional(v.boolean()),
+        isOwnGoal: v.optional(v.boolean()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const match = await ctx.db.get(args.matchId);
+    if (!match) throw new Error("Partida não encontrada.");
+
+    // 1. Remove eventos antigos de gol para evitar duplicação
+    const existingEvents = await ctx.db
+      .query("matchEvents")
+      .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
+      .collect();
+
+    for (const ev of existingEvents) {
+      if (ev.type === "GOAL") {
+        await ctx.db.delete(ev._id);
+      }
+    }
+
+    // 2. Insere os novos gols em matchEvents
+    const homeTeam = await ctx.db.get(match.homeTeamId);
+    const awayTeam = await ctx.db.get(match.awayTeamId);
+
+    const insertedEventIds = [];
+    for (const g of args.goals) {
+      const teamId = g.team === "home" ? match.homeTeamId : match.awayTeamId;
+      let detail = "Gol Normal";
+      if (g.isPenalty) detail = "Pênalti";
+      else if (g.isOwnGoal) detail = "Gol Contra";
+
+      const evId = await ctx.db.insert("matchEvents", {
+        matchId: args.matchId,
+        minute: g.minute,
+        teamId,
+        playerName: g.playerName.trim(),
+        type: "GOAL",
+        detail,
+      });
+      insertedEventIds.push(evId);
+    }
+
+    // 3. Atualiza placar da partida
+    const homeGoalsCount = args.goals.filter(
+      (g) => (g.team === "home" && !g.isOwnGoal) || (g.team === "away" && g.isOwnGoal)
+    ).length;
+    const awayGoalsCount = args.goals.filter(
+      (g) => (g.team === "away" && !g.isOwnGoal) || (g.team === "home" && g.isOwnGoal)
+    ).length;
+
+    await ctx.db.patch(match._id, {
+      homeScore: homeGoalsCount,
+      awayScore: awayGoalsCount,
+      status: match.status === "SCHEDULED" ? "FINISHED" : match.status,
+    });
+
+    // 4. Sincroniza artilheiros (topScorers) da liga
+    const validGoalsByPlayer = new Map<
+      string,
+      { count: number; penalties: number; teamId?: any; teamName: string; teamCode?: string; teamLogoUrl?: string }
+    >();
+
+    for (const g of args.goals) {
+      if (g.isOwnGoal) continue;
+      const key = g.playerName.trim();
+      const isHome = g.team === "home";
+      const targetTeam = isHome ? homeTeam : awayTeam;
+
+      const current = validGoalsByPlayer.get(key) || {
+        count: 0,
+        penalties: 0,
+        teamId: targetTeam?._id,
+        teamName: targetTeam?.name ?? (isHome ? "Mandante" : "Visitante"),
+        teamCode: targetTeam?.code,
+        teamLogoUrl: targetTeam?.logoUrl,
+      };
+
+      current.count += 1;
+      if (g.isPenalty) current.penalties += 1;
+      validGoalsByPlayer.set(key, current);
+    }
+
+    if (validGoalsByPlayer.size > 0) {
+      const existingScorers = await ctx.db
+        .query("topScorers")
+        .withIndex("by_league", (q) => q.eq("leagueId", match.leagueId))
+        .collect();
+
+      const cleanStr = (s: string) =>
+        s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      for (const [playerName, data] of validGoalsByPlayer.entries()) {
+        const cleanPlayer = cleanStr(playerName);
+        const existing = existingScorers.find(
+          (sc) => cleanStr(sc.playerName) === cleanPlayer
+        );
+
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            goals: existing.goals + data.count,
+            penalties: (existing.penalties ?? 0) + data.penalties,
+          });
+        } else {
+          await ctx.db.insert("topScorers", {
+            leagueId: match.leagueId,
+            rank: 999,
+            playerName,
+            teamId: data.teamId,
+            teamName: data.teamName,
+            teamCode: data.teamCode,
+            teamLogoUrl: data.teamLogoUrl,
+            goals: data.count,
+            penalties: data.penalties,
+          });
+        }
+      }
+
+      // Re-ranqueia a artilharia da liga
+      const allScorers = await ctx.db
+        .query("topScorers")
+        .withIndex("by_league", (q) => q.eq("leagueId", match.leagueId))
+        .collect();
+
+      allScorers.sort((a, b) => b.goals - a.goals);
+
+      for (let i = 0; i < allScorers.length; i++) {
+        const newRank = i + 1;
+        if (allScorers[i].rank !== newRank) {
+          await ctx.db.patch(allScorers[i]._id, { rank: newRank });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      registeredGoals: insertedEventIds.length,
+      homeScore: homeGoalsCount,
+      awayScore: awayGoalsCount,
+    };
   },
 });

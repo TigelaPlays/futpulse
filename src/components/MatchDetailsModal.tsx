@@ -143,21 +143,84 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
     return match.statusShort || match.status;
   };
 
-  const getEventBadge = (type: string) => {
-    switch (type) {
-      case "GOAL":
-        return { label: "⚽ Golo: ", color: "text-emerald-700" };
-      case "YELLOW_CARD":
-        return { label: "🟨 Cartão Amarelo: ", color: "text-amber-600" };
-      case "RED_CARD":
-        return { label: "🟥 Cartão Vermelho: ", color: "text-rose-600" };
-      case "SUBSTITUTION":
-        return { label: "🔄 Substituição: ", color: "text-blue-600" };
-      case "VAR":
-        return { label: "🖥️ Decisão VAR: ", color: "text-purple-600" };
-      default:
-        return { label: "• ", color: "text-slate-700" };
+  const getTimelineEventMeta = (event: { type: string; detail?: string }) => {
+    const detailLower = (event.detail ?? "").toLowerCase();
+
+    if (event.type === "GOAL") {
+      if (detailLower.includes("penalt") || detailLower.includes("(p)")) {
+        return {
+          icon: "⚽",
+          badge: "Pênalti",
+          label: "Gol de Pênalti",
+          badgeBg: "bg-emerald-100 text-emerald-800 border-emerald-300",
+        };
+      }
+      if (detailLower.includes("contra") || detailLower.includes("own")) {
+        return {
+          icon: "⚽",
+          badge: "Gol Contra",
+          label: "Gol Contra",
+          badgeBg: "bg-rose-100 text-rose-800 border-rose-300",
+        };
+      }
+      return {
+        icon: "⚽",
+        badge: "Gol",
+        label: "Gol",
+        badgeBg: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      };
     }
+
+    if (
+      event.type === "YELLOW_CARD" ||
+      ((event.type as string) === "CARD" &&
+        (detailLower.includes("amarelo") || detailLower.includes("yellow") || !detailLower.includes("red")))
+    ) {
+      return {
+        icon: "🟨",
+        badge: "Amarelo",
+        label: "Cartão Amarelo",
+        badgeBg: "bg-amber-100 text-amber-800 border-amber-300",
+      };
+    }
+
+    if (
+      event.type === "RED_CARD" ||
+      ((event.type as string) === "CARD" &&
+        (detailLower.includes("vermelho") || detailLower.includes("red")))
+    ) {
+      return {
+        icon: "🟥",
+        badge: "Vermelho",
+        label: "Cartão Vermelho",
+        badgeBg: "bg-rose-100 text-rose-800 border-rose-300",
+      };
+    }
+
+    if (event.type === "SUBSTITUTION") {
+      return {
+        icon: "🔄",
+        badge: "Substituição",
+        label: "Substituição",
+        badgeBg: "bg-blue-100 text-blue-800 border-blue-300",
+      };
+    }
+
+    if (event.type === "VAR") {
+      return {
+        icon: "🖥️",
+        badge: "VAR",
+        label: "Decisão VAR",
+        badgeBg: "bg-purple-100 text-purple-800 border-purple-300",
+      };
+    }
+
+    return {
+      icon: "•",
+      badge: "Lance",
+      label: "Lance",
+      badgeBg: "bg-slate-100 text-slate-800 border-slate-300",
+    };
   };
 
   const renderStatRow = (label: string, homeVal: number, awayVal: number, isPercentage = false) => {
@@ -462,41 +525,100 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {match.events.map((event, idx) => {
-                      const isHomeTeam = event.teamId === match.homeTeamId;
-                      const badge = getEventBadge(event.type);
+                  <div className="space-y-3">
+                    {/* Cabeçalho da Régua: Mandante vs Visitante */}
+                    <div className="grid grid-cols-2 text-xs font-bold text-slate-600 pb-2 border-b border-slate-200/80 px-2">
+                      <div className="pr-6 text-right truncate">
+                        {match.homeTeam?.name ?? "Mandante"}
+                      </div>
+                      <div className="pl-6 text-left truncate">
+                        {match.awayTeam?.name ?? "Visitante"}
+                      </div>
+                    </div>
 
-                      return (
-                        <div
-                          key={event._id ?? idx}
-                          className={`flex items-center gap-3 p-2.5 rounded-lg border text-xs ${
-                            isHomeTeam
-                              ? "bg-slate-50/90 border-slate-200 text-left"
-                              : "bg-slate-50/90 border-slate-200 flex-row-reverse text-right"
-                          }`}
-                        >
-                          <span className="font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 shadow-2xs">
-                            {event.minute}
-                            {event.extraMinute ? `+${event.extraMinute}` : ""}
-                            '
-                          </span>
+                    {/* Régua Cronológica Central */}
+                    <div className="relative py-2">
+                      {/* Eixo Vertical Central */}
+                      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 -translate-x-1/2 bg-slate-200" />
 
-                          <div className="flex-1">
-                            <div className="font-semibold text-slate-900">
-                              <span className={badge.color}>{badge.label}</span>
-                              {event.playerName}
-                            </div>
-                            {(event.detail || event.assistPlayerName) && (
-                              <div className="text-[11px] text-slate-500">
-                                {event.detail}
-                                {event.assistPlayerName ? ` (Assistência: ${event.assistPlayerName})` : ""}
+                      <div className="space-y-4">
+                        {match.events.map((event, idx) => {
+                          const isHomeTeam = event.teamId === match.homeTeamId;
+                          const meta = getTimelineEventMeta(event);
+                          const minuteStr = `${event.minute}${event.extraMinute ? `+${event.extraMinute}` : ""}'`;
+
+                          return (
+                            <div
+                              key={event._id ?? idx}
+                              className="relative grid grid-cols-2 items-center text-xs"
+                            >
+                              {/* Eixo Central: Nó do Minuto */}
+                              <div className="absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-center">
+                                <span className="flex items-center justify-center px-1.5 py-0.5 min-w-[34px] text-[11px] font-mono font-bold rounded-full bg-slate-800 text-white border-2 border-white shadow-xs">
+                                  {minuteStr}
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+
+                              {/* Lado Esquerdo: Lances do Mandante */}
+                              <div className="pr-6 text-right">
+                                {isHomeTeam ? (
+                                  <div className="inline-flex items-center gap-2 justify-end max-w-full">
+                                    <div className="flex flex-col items-end min-w-0">
+                                      <div className="font-semibold text-slate-900 truncate flex items-center gap-1.5 justify-end">
+                                        {meta.badge !== "Gol" && (
+                                          <span
+                                            className={`text-[9px] px-1 py-0.5 rounded border font-bold uppercase tracking-wider ${meta.badgeBg}`}
+                                          >
+                                            {meta.badge}
+                                          </span>
+                                        )}
+                                        <span className="truncate">{event.playerName}</span>
+                                      </div>
+                                      {event.assistPlayerName && (
+                                        <div className="text-[10px] text-slate-500">
+                                          (Ass: {event.assistPlayerName})
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="text-base shrink-0 select-none" title={meta.label}>
+                                      {meta.icon}
+                                    </span>
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              {/* Lado Direito: Lances do Visitante */}
+                              <div className="pl-6 text-left">
+                                {!isHomeTeam ? (
+                                  <div className="inline-flex items-center gap-2 justify-start max-w-full">
+                                    <span className="text-base shrink-0 select-none" title={meta.label}>
+                                      {meta.icon}
+                                    </span>
+                                    <div className="flex flex-col items-start min-w-0">
+                                      <div className="font-semibold text-slate-900 truncate flex items-center gap-1.5 justify-start">
+                                        <span className="truncate">{event.playerName}</span>
+                                        {meta.badge !== "Gol" && (
+                                          <span
+                                            className={`text-[9px] px-1 py-0.5 rounded border font-bold uppercase tracking-wider ${meta.badgeBg}`}
+                                          >
+                                            {meta.badge}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {event.assistPlayerName && (
+                                        <div className="text-[10px] text-slate-500">
+                                          (Ass: {event.assistPlayerName})
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
