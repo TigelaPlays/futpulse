@@ -17,12 +17,14 @@ interface LeagueViewProps {
     priority?: number;
   };
   onNavigateToMatches?: () => void;
+  onSelectMatch?: (matchId: Id<"matches">) => void;
 }
 
 export function LeagueView({
   leagueId,
   league,
   onNavigateToMatches,
+  onSelectMatch,
 }: LeagueViewProps) {
   // Busca dinamicamente a última rodada com jogos finalizados da liga
   const latestFinishedRound = useQuery(api.leagues.getLatestFinishedRound, {
@@ -191,6 +193,7 @@ export function LeagueView({
             leagueId={leagueId}
             round={`Rodada ${currentRound}`}
             onNavigateToMatches={onNavigateToMatches}
+            onSelectMatch={onSelectMatch}
           />
         </div>
       </div>

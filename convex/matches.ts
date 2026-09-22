@@ -13,6 +13,8 @@ export const listMatches = query({
       )
     ),
     leagueId: v.optional(v.id("leagues")), // Filtro opcional por campeonato
+    startTimestamp: v.optional(v.number()), // Início do dia (timestamp ms)
+    endTimestamp: v.optional(v.number()), // Fim do dia (timestamp ms)
   },
   handler: async (ctx, args) => {
     const rawMatches = await ctx.db.query("matches").collect();
@@ -21,6 +23,27 @@ export const listMatches = query({
     let matches = args.leagueId
       ? rawMatches.filter((m) => m.leagueId === args.leagueId)
       : rawMatches;
+
+    // Filtro por intervalo de datas (ex: dia de hoje, ontem, etc.)
+    if (args.startTimestamp !== undefined && args.endTimestamp !== undefined) {
+      matches = matches.filter(
+        (m) => m.startTime >= args.startTimestamp! && m.startTime <= args.endTimestamp!
+      );
+    } else if (!args.leagueId) {
+      // Se estiver em "Todas as Ligas" sem filtro de data explícito,
+      // exibe apenas as partidas da rodada mais recente/ativa de cada liga para não poluir
+      const leagueActiveRounds = new Map<string, string>();
+      for (const m of matches) {
+        const lid = m.leagueId;
+        const currentR = leagueActiveRounds.get(lid);
+        const num = parseInt(m.round.replace(/\D/g, ""), 10) || 0;
+        const currentNum = currentR ? parseInt(currentR.replace(/\D/g, ""), 10) || 0 : 0;
+        if (!currentR || num > currentNum) {
+          leagueActiveRounds.set(lid, m.round);
+        }
+      }
+      matches = matches.filter((m) => leagueActiveRounds.get(m.leagueId) === m.round);
+    }
 
     // Filtra por status
     if (args.statusFilter && args.statusFilter !== "ALL") {
@@ -130,10 +153,11 @@ export const getTopScorers = query({
       const match = await ctx.db.get(args.matchId);
       if (!match) return null;
 
-      const [homeTeam, awayTeam, league] = await Promise.all([
+      const [homeTeam, awayTeam, league, stadium] = await Promise.all([
         ctx.db.get(match.homeTeamId),
         ctx.db.get(match.awayTeamId),
         ctx.db.get(match.leagueId),
+        match.stadiumId ? ctx.db.get(match.stadiumId) : null,
       ]);
 
     // Busca todos os eventos associados a essa partida
@@ -155,6 +179,7 @@ export const getTopScorers = query({
       homeTeam,
       awayTeam,
       league,
+      stadium,
       events,
       statistics: statistics ?? null,
     };

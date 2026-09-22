@@ -7,6 +7,7 @@ interface RoundMatchesListProps {
   leagueId: Id<"leagues">;
   round: string;
   onNavigateToMatches?: () => void;
+  onSelectMatch?: (matchId: Id<"matches">) => void;
 }
 
 const WEEKDAYS = [
@@ -149,6 +150,7 @@ export function RoundMatchesList({
   leagueId,
   round,
   onNavigateToMatches,
+  onSelectMatch,
 }: RoundMatchesListProps) {
   const matches = useQuery(api.matches.listMatchesByRound, {
     leagueId,
@@ -204,7 +206,8 @@ export function RoundMatchesList({
             return (
               <div
                 key={m._id}
-                className="px-3.5 py-2.5 sm:py-3 hover:bg-slate-50/70 transition-colors bg-white flex-1 flex flex-col justify-center space-y-1.5"
+                onClick={() => onSelectMatch?.(m._id)}
+                className="px-3.5 py-2.5 sm:py-3 hover:bg-slate-50/90 transition-colors bg-white flex-1 flex flex-col justify-center space-y-1.5 cursor-pointer group"
               >
                 {/* Cabeçalho do Card: Estádio em cima, Data/Hora embaixo */}
                 <div className="text-center space-y-0.5">
@@ -297,8 +300,15 @@ export function RoundMatchesList({
                 {/* Linha 3: SAIBA COMO FOI / FIQUE POR DENTRO */}
                 <div className="text-center pt-0.5">
                   <button
-                    onClick={onNavigateToMatches}
-                    className="text-[#00a651] hover:text-emerald-700 font-extrabold text-[10.5px] uppercase tracking-wider transition-colors cursor-pointer hover:underline inline-block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSelectMatch) {
+                        onSelectMatch(m._id);
+                      } else {
+                        onNavigateToMatches?.();
+                      }
+                    }}
+                    className="text-[#00a651] hover:text-emerald-700 font-extrabold text-[10.5px] uppercase tracking-wider transition-colors cursor-pointer hover:underline inline-block group-hover:underline"
                   >
                     {m.status === "FINISHED" ? "SAIBA COMO FOI" : "FIQUE POR DENTRO"}
                   </button>

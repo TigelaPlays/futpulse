@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle } from "lucide-react";
+import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
 
 interface MatchDetailsModalProps {
   matchId: Id<"matches"> | null;
@@ -260,6 +260,37 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
               </div>
             </div>
 
+            {/* Informações Oficiais: Data, Horário e Estádio */}
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600">
+              {match.startTime && (
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>
+                    {new Date(match.startTime).toLocaleDateString("pt-BR", {
+                      weekday: "short",
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                    {" • "}
+                    {new Date(match.startTime).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              )}
+              {match.stadium && (
+                <div className="flex items-center gap-1.5 font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    {match.stadium.name}
+                    {match.stadium.city ? ` (${match.stadium.city})` : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Alternador de Abas */}
             <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
               <button
@@ -316,8 +347,13 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                 </div>
 
                 {match.events.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-slate-500 bg-slate-50 rounded-lg border border-slate-200">
-                    Nenhum lance registado até ao momento.
+                  <div className="text-center py-6 px-4 text-xs text-slate-600 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <p className="font-bold text-slate-800 text-sm">
+                      Súmula simplificada: {match.homeTeam?.name ?? "Mandante"} {match.homeScore} × {match.awayScore} {match.awayTeam?.name ?? "Visitante"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Nenhum lance detalhado registrado para esta partida histórica.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2.5">

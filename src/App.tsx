@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload } from "lucide-react";
+import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
@@ -12,10 +12,23 @@ import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
+function formatQuickDateLabel(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const dayMonth = `${day}/${month}`;
+  if (offset === 0) return `Hoje (${dayMonth})`;
+  if (offset === -1) return `Ontem (${dayMonth})`;
+  if (offset === 1) return `Amanhã (${dayMonth})`;
+  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  return `${weekdays[d.getDay()]}, ${dayMonth}`;
+}
+
 export default function App() {
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [selectedLeagueId, setSelectedLeagueId] = useState<Id<"leagues"> | null>(null);
-  const [viewMode, setViewMode] = useState<"matches" | "standings">("matches");
+  const [selectedDateOffset, setSelectedDateOffset] = useState<number | null>(0); // 0 = Hoje
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -63,13 +76,28 @@ export default function App() {
   }, []);
 
   const leagues = useQuery(api.leagues.listLeagues);
+
+  // Intervalo de tempo para o filtro por dia (00:00:00 às 23:59:59)
+  const dateRange = (() => {
+    if (selectedDateOffset === null) return null;
+    const d = new Date();
+    d.setDate(d.getDate() + selectedDateOffset);
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    return { start, end };
+  })();
+
   const matches = useQuery(api.matches.listMatches, {
     statusFilter: filter,
     leagueId: selectedLeagueId ?? undefined,
+    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
+    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
   });
   const allMatchesForCounts = useQuery(api.matches.listMatches, {
     statusFilter: "ALL",
     leagueId: selectedLeagueId ?? undefined,
+    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
+    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
   });
 
   const matchCounts = {
@@ -714,16 +742,21 @@ export default function App() {
             </button>
 
             <button
-              onClick={handleSyncDaily}
+              onClick={() => {
+                setSelectedLeagueId(null);
+                setSelectedDateOffset(0);
+                setFilter("ALL");
+                handleSyncDaily();
+              }}
               disabled={isSyncing}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                isSyncing
-                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                selectedLeagueId === null && selectedDateOffset === 0
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold shadow-2xs"
                   : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200 active:scale-95 shadow-2xs"
               }`}
-              title="Carregar grade do dia inteiro"
+              title="Exibir os jogos de hoje e sincronizar grade"
             >
-              <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
+              <CalendarDays className="w-3.5 h-3.5 text-emerald-600" />
               <span className="hidden sm:inline">Grade de Hoje</span>
             </button>
 
@@ -822,10 +855,7 @@ export default function App() {
         {leagues && leagues.length > 0 && (
           <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-slate-200/80 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             <button
-              onClick={() => {
-                setSelectedLeagueId(null);
-                setViewMode("matches");
-              }}
+              onClick={() => setSelectedLeagueId(null)}
               className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer ${
                 selectedLeagueId === null
                   ? "bg-emerald-600 text-white font-bold shadow-xs"
@@ -844,13 +874,7 @@ export default function App() {
                   <button
                     key={lg._id}
                     onClick={() => {
-                      if (selectedLeagueId === lg._id) {
-                        setSelectedLeagueId(null);
-                        setViewMode("matches");
-                      } else {
-                        setSelectedLeagueId(lg._id);
-                        setViewMode("standings");
-                      }
+                      setSelectedLeagueId(isSelected ? null : lg._id);
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
                       isSelected
@@ -882,13 +906,7 @@ export default function App() {
                   <button
                     key={lg._id}
                     onClick={() => {
-                      if (selectedLeagueId === lg._id) {
-                        setSelectedLeagueId(null);
-                        setViewMode("matches");
-                      } else {
-                        setSelectedLeagueId(lg._id);
-                        setViewMode("standings");
-                      }
+                      setSelectedLeagueId(isSelected ? null : lg._id);
                     }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs shrink-0 transition-all cursor-pointer ${
                       isSelected
@@ -911,122 +929,160 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* Bloco de Partidas Favoritas (se houver alguma favoritada e sem liga selecionada) */}
-        {!selectedLeagueId && favoriteMatches.length > 0 && (
-          <div className="bg-white border border-amber-300/80 rounded-xl overflow-hidden shadow-xs animate-fade-in">
-            {/* Cabeçalho de Favoritos */}
-            <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 px-4 py-3 border-b border-amber-200/80 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
-                <span className="font-bold text-sm tracking-wide text-amber-950">
-                  Partidas Favoritas
-                </span>
-                <span className="text-xs text-amber-700 font-medium">
-                  • {favoriteMatches.length} {favoriteMatches.length === 1 ? "jogo fixado" : "jogos fixados"}
-                </span>
-              </div>
-            </div>
-
-            {/* Lista de Partidas Favoritas */}
-            <div className="divide-y divide-slate-100">
-              {favoriteMatches.map((match: any) => renderMatchRow(match, true))}
-            </div>
-          </div>
-        )}
-
-        {/* Alternador de Visualização: Jogos vs Tabela de Classificação */}
-        {selectedLeagueId && (
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-            <div className="flex items-center gap-2 bg-slate-200/70 p-1 rounded-lg border border-slate-300/60">
-              <button
-                onClick={() => setViewMode("standings")}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === "standings"
-                    ? "bg-white text-slate-950 font-bold shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Classificação & Rodadas (Sofascore)
-              </button>
-              <button
-                onClick={() => setViewMode("matches")}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === "matches"
-                    ? "bg-white text-slate-950 font-bold shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Grade Geral de Jogos
-              </button>
-            </div>
-            {selectedLeague && (
-              <span className="text-xs text-slate-600 hidden sm:inline font-medium">
-                {selectedLeague.name}
-              </span>
-            )}
-          </div>
-        )}
-
-        {selectedLeagueId && selectedLeague && viewMode === "standings" ? (
+        {selectedLeagueId && selectedLeague ? (
           <LeagueView
             leagueId={selectedLeagueId}
             league={selectedLeague}
-            onNavigateToMatches={() => {
-              setViewMode("matches");
-            }}
+            onSelectMatch={setSelectedMatchId}
           />
         ) : (
-          <>
+          <div className="space-y-5">
+            {/* Seletor Sofascore de Datas para a Grade Geral */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                <button
+                  onClick={() => setSelectedDateOffset((prev) => (prev ?? 0) - 1)}
+                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                  title="Dia anterior"
+                  aria-label="Dia anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {[-1, 0, 1].map((offset) => {
+                  const isSelected = selectedDateOffset === offset;
+                  return (
+                    <button
+                      key={offset}
+                      onClick={() => setSelectedDateOffset(offset)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-emerald-600 text-white font-bold shadow-xs scale-102"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+                      }`}
+                    >
+                      {formatQuickDateLabel(offset)}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setSelectedDateOffset((prev) => (prev ?? 0) + 1)}
+                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                  title="Próximo dia"
+                  aria-label="Próximo dia"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Botão de Rodada Ativa */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedDateOffset(null)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    selectedDateOffset === null
+                      ? "bg-slate-900 text-white font-bold shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200/80 text-slate-600 border border-slate-200"
+                  }`}
+                  title="Exibir partidas da rodada atual ativa de cada liga"
+                >
+                  Rodada Atual Ativa
+                </button>
+              </div>
+            </div>
+
+            {/* Bloco de Partidas Favoritas (se houver alguma favoritada) */}
+            {favoriteMatches.length > 0 && (
+              <div className="bg-white border border-amber-300/80 rounded-xl overflow-hidden shadow-xs animate-fade-in">
+                <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 px-4 py-3 border-b border-amber-200/80 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+                    <span className="font-bold text-sm tracking-wide text-amber-950">
+                      Partidas Favoritas
+                    </span>
+                    <span className="text-xs text-amber-700 font-medium">
+                      • {favoriteMatches.length} {favoriteMatches.length === 1 ? "jogo fixado" : "jogos fixados"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {favoriteMatches.map((match: any) => renderMatchRow(match, true))}
+                </div>
+              </div>
+            )}
+
+            {/* Lista Agrupada por Campeonato ou Empty State */}
             {matches === undefined ? (
               <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
                 <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
                 <span>Sincronizando partidas...</span>
               </div>
             ) : matches.length === 0 ? (
-              <div className="text-center py-16 bg-white border border-slate-200 rounded-xl text-slate-500 shadow-xs">
-                Nenhuma partida encontrada neste filtro.
+              <div className="text-center py-16 px-4 bg-white border border-slate-200 rounded-xl text-slate-500 shadow-xs space-y-2">
+                <CalendarDays className="w-8 h-8 text-slate-400 mx-auto" />
+                <p className="font-semibold text-slate-800 text-sm">
+                  {selectedDateOffset === 0
+                    ? "Nenhum jogo agendado para hoje"
+                    : selectedDateOffset !== null
+                    ? `Nenhum jogo agendado para ${formatQuickDateLabel(selectedDateOffset)}`
+                    : "Nenhuma partida encontrada neste filtro"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {selectedDateOffset !== null ? (
+                    <button
+                      onClick={() => setSelectedDateOffset(null)}
+                      className="text-emerald-600 hover:underline font-medium cursor-pointer"
+                    >
+                      Clique aqui para ver a rodada atual ativa de cada campeonato
+                    </button>
+                  ) : (
+                    "Tente alternar o filtro de status ou pesquisar por outro termo."
+                  )}
+                </p>
               </div>
             ) : (
-          Object.entries(groupedMatches || {}).map(([leagueName, group]) => (
-            <div
-              key={leagueName}
-              className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs"
-            >
-              {/* Cabeçalho da Liga */}
-              <div className="bg-slate-50/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  {group.league?.logoUrl ? (
-                    <div className="w-6 h-6 rounded-full bg-white p-0.5 flex items-center justify-center shadow-2xs border border-slate-200 shrink-0">
-                      <img
-                        src={group.league.logoUrl}
-                        alt={leagueName}
-                        className="w-full h-full object-contain"
-                      />
+              Object.entries(groupedMatches || {}).map(([leagueName, group]) => (
+                <div
+                  key={leagueName}
+                  className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs"
+                >
+                  {/* Cabeçalho da Liga */}
+                  <div className="bg-slate-50/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      {group.league?.logoUrl ? (
+                        <div className="w-6 h-6 rounded-full bg-white p-0.5 flex items-center justify-center shadow-2xs border border-slate-200 shrink-0">
+                          <img
+                            src={group.league.logoUrl}
+                            alt={leagueName}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <Trophy className="w-5 h-5 text-emerald-600" />
+                      )}
+                      <span className="font-bold text-sm tracking-wide text-slate-900">
+                        {leagueName}
+                      </span>
+                      <span className="text-xs text-slate-500 font-normal">
+                        • {group.league?.country}
+                      </span>
                     </div>
-                  ) : (
-                    <Trophy className="w-5 h-5 text-emerald-600" />
-                  )}
-                  <span className="font-bold text-sm tracking-wide text-slate-900">
-                    {leagueName}
-                  </span>
-                  <span className="text-xs text-slate-500 font-normal">
-                    • {group.league?.country}
-                  </span>
-                </div>
-                <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-slate-200/80 text-slate-700 border border-slate-300/60 font-medium">
-                  {group.league?.type === "cup" ? "Mata-mata" : "Pontos Corridos"}
-                </span>
-              </div>
+                    <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-slate-200/80 text-slate-700 border border-slate-300/60 font-medium">
+                      {group.league?.type === "cup" ? "Mata-mata" : "Pontos Corridos"}
+                    </span>
+                  </div>
 
-              {/* Lista de Partidas */}
-              <div className="divide-y divide-slate-100">
-                {group.matches.map((match: any) => renderMatchRow(match, false))}
-              </div>
-            </div>
-          ))
+                  {/* Lista de Partidas */}
+                  <div className="divide-y divide-slate-100">
+                    {group.matches.map((match: any) => renderMatchRow(match, false))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         )}
-      </>
-    )}
   </main>
 
       {/* Container dos Alertas de Gol Flutuantes */}
