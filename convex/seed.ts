@@ -3292,34 +3292,433 @@ export const seedCupCompetitions = mutation({
 
     if (!ucl || !lib) throw new Error("Falha ao registrar ligas de copa.");
 
-    // 3. Equipes da Champions League
+    // 3. Equipes da Champions League (36 Clubes da Fase de Liga)
     const uclTeamsDefs = [
       { name: "Real Madrid", code: "RMA", externalId: 541, logoUrl: "https://media.api-sports.io/football/teams/541.png" },
       { name: "Manchester City", code: "MCI", externalId: 50, logoUrl: "https://media.api-sports.io/football/teams/50.png" },
       { name: "Bayern München", code: "BAY", externalId: 157, logoUrl: "https://media.api-sports.io/football/teams/157.png" },
       { name: "Paris Saint-Germain", code: "PSG", externalId: 85, logoUrl: "https://media.api-sports.io/football/teams/85.png" },
-      { name: "Arsenal", code: "ARS", externalId: 42, logoUrl: "https://media.api-sports.io/football/teams/42.png" },
       { name: "Liverpool", code: "LIV", externalId: 40, logoUrl: "https://media.api-sports.io/football/teams/40.png" },
-      { name: "Barcelona", code: "BAR", externalId: 529, logoUrl: "https://media.api-sports.io/football/teams/529.png" },
       { name: "Inter de Milão", code: "INT", externalId: 505, logoUrl: "https://media.api-sports.io/football/teams/505.png" },
+      { name: "Arsenal", code: "ARS", externalId: 42, logoUrl: "https://media.api-sports.io/football/teams/42.png" },
+      { name: "Barcelona", code: "BAR", externalId: 529, logoUrl: "https://media.api-sports.io/football/teams/529.png" },
+      { name: "Borussia Dortmund", code: "BVB", externalId: 165, logoUrl: "https://media.api-sports.io/football/teams/165.png" },
+      { name: "Atlético de Madrid", code: "ATM", externalId: 530, logoUrl: "https://media.api-sports.io/football/teams/530.png" },
+      { name: "Bayer Leverkusen", code: "B04", externalId: 168, logoUrl: "https://media.api-sports.io/football/teams/168.png" },
+      { name: "Atalanta", code: "ATA", externalId: 499, logoUrl: "https://media.api-sports.io/football/teams/499.png" },
+      { name: "Juventus", code: "JUV", externalId: 496, logoUrl: "https://media.api-sports.io/football/teams/496.png" },
+      { name: "Benfica", code: "BEN", externalId: 211, logoUrl: "https://media.api-sports.io/football/teams/211.png" },
+      { name: "AC Milan", code: "MIL", externalId: 489, logoUrl: "https://media.api-sports.io/football/teams/489.png" },
+      { name: "Feyenoord", code: "FEY", externalId: 247, logoUrl: "https://media.api-sports.io/football/teams/247.png" },
+      { name: "Sporting CP", code: "SCP", externalId: 228, logoUrl: "https://media.api-sports.io/football/teams/228.png" },
+      { name: "PSV Eindhoven", code: "PSV", externalId: 248, logoUrl: "https://media.api-sports.io/football/teams/248.png" },
+      { name: "Dinamo Zagreb", code: "DZG", externalId: 645, logoUrl: "https://media.api-sports.io/football/teams/645.png" },
+      { name: "Red Bull Salzburg", code: "SAL", externalId: 571, logoUrl: "https://media.api-sports.io/football/teams/571.png" },
+      { name: "Lille", code: "LIL", externalId: 79, logoUrl: "https://media.api-sports.io/football/teams/79.png" },
+      { name: "Crvena Zvezda", code: "CZV", externalId: 597, logoUrl: "https://media.api-sports.io/football/teams/597.png" },
+      { name: "Young Boys", code: "YBO", externalId: 567, logoUrl: "https://media.api-sports.io/football/teams/567.png" },
+      { name: "Celtic", code: "CEL", externalId: 252, logoUrl: "https://media.api-sports.io/football/teams/252.png" },
+      { name: "Slovan Bratislava", code: "SLO", externalId: 1988, logoUrl: "https://media.api-sports.io/football/teams/1988.png" },
+      { name: "Monaco", code: "ASM", externalId: 91, logoUrl: "https://media.api-sports.io/football/teams/91.png" },
+      { name: "Sparta Praha", code: "SPA", externalId: 574, logoUrl: "https://media.api-sports.io/football/teams/574.png" },
+      { name: "Aston Villa", code: "AVL", externalId: 66, logoUrl: "https://media.api-sports.io/football/teams/66.png" },
+      { name: "Bologna", code: "BOL", externalId: 500, logoUrl: "https://media.api-sports.io/football/teams/500.png" },
+      { name: "Girona", code: "GIR", externalId: 547, logoUrl: "https://media.api-sports.io/football/teams/547.png" },
+      { name: "Stuttgart", code: "STU", externalId: 172, logoUrl: "https://media.api-sports.io/football/teams/172.png" },
+      { name: "Sturm Graz", code: "STG", externalId: 1041, logoUrl: "https://media.api-sports.io/football/teams/1041.png" },
+      { name: "Brest", code: "BRE", externalId: 106, logoUrl: "https://media.api-sports.io/football/teams/106.png" },
+      { name: "Club Brugge", code: "CLU", externalId: 569, logoUrl: "https://media.api-sports.io/football/teams/569.png" },
+      { name: "Shakhtar Donetsk", code: "SHA", externalId: 550, logoUrl: "https://media.api-sports.io/football/teams/550.png" },
+      { name: "RB Leipzig", code: "RBL", externalId: 173, logoUrl: "https://media.api-sports.io/football/teams/173.png" },
     ];
 
     const uclTeamMap = new Map<string, Id<"teams">>();
+    const allExistingTeams = await ctx.db.query("teams").collect();
     for (const t of uclTeamsDefs) {
-      let team = await ctx.db
-        .query("teams")
-        .withIndex("by_externalId", (q) => q.eq("externalId", t.externalId))
-        .first();
+      let team = allExistingTeams.find(
+        (tm) => tm.externalId === t.externalId || tm.name.toLowerCase() === t.name.toLowerCase()
+      );
 
       if (!team) {
         const id = await ctx.db.insert("teams", t);
         uclTeamMap.set(t.name, id);
       } else {
+        if (!team.externalId) {
+          await ctx.db.patch(team._id, { externalId: t.externalId, code: t.code });
+        }
         uclTeamMap.set(t.name, team._id);
       }
     }
 
-    // 4. Equipes da Libertadores
+    // 4. Estádios Oficiais Europeus
+    const allStadiums = await ctx.db.query("stadiums").collect();
+    const getOrCreateStadium = async (name: string, city: string = "Europa") => {
+      let stadium = allStadiums.find((s) => s.name.toLowerCase() === name.toLowerCase());
+      if (!stadium) {
+        const id = await ctx.db.insert("stadiums", { name, city, imageUrl: "" });
+        stadium = (await ctx.db.get(id))!;
+        allStadiums.push(stadium);
+      } else if (city !== "Europa" && (stadium.city === "Brasil" || stadium.city === "Europa")) {
+        await ctx.db.patch(stadium._id, { city });
+        stadium.city = city;
+      }
+      return stadium;
+    };
+
+    const europeanStadiumsToEnsure = [
+      { name: "Allianz Arena", city: "Munique (ALE)" },
+      { name: "Anfield", city: "Liverpool (ING)" },
+      { name: "Emirates Stadium", city: "Londres (ING)" },
+      { name: "Etihad Stadium", city: "Manchester (ING)" },
+      { name: "San Siro", city: "Milão (ITA)" },
+      { name: "Santiago Bernabéu", city: "Madri (ESP)" },
+      { name: "Parc des Princes", city: "Paris (FRA)" },
+      { name: "Signal Iduna Park", city: "Dortmund (ALE)" },
+      { name: "Spotify Camp Nou", city: "Barcelona (ESP)" },
+      { name: "Riyadh Air Metropolitano", city: "Madri (ESP)" },
+      { name: "Stadion Feijenoord", city: "Roterdã (HOL)" },
+      { name: "Jan Breydelstadion", city: "Bruges (BEL)" },
+      { name: "José Alvalade", city: "Lisboa (POR)" },
+      { name: "MHPArena", city: "Stuttgart (ALE)" },
+      { name: "Villa Park", city: "Birmingham (ING)" },
+      { name: "Decathlon Arena - Stade Pierre-Mauroy", city: "Villeneuve-d'Ascq (FRA)" },
+      { name: "Philips Stadion", city: "Eindhoven (HOL)" },
+      { name: "Red Bull Arena", city: "Leipzig (ALE)" },
+      { name: "Stadio Olimpico", city: "Roma (ITA)" },
+      { name: "Stadio Diego Armando Maradona", city: "Nápoles (ITA)" },
+      { name: "Old Trafford", city: "Manchester (ING)" },
+      { name: "Estádio do Dragão", city: "Porto (POR)" },
+      { name: "Estadio Benito Villamarín", city: "Sevilha (ESP)" },
+      { name: "Estadio de la Cerámica", city: "Vila-real (ESP)" },
+      { name: "Stade Bollaert-Delelis", city: "Lens (FRA)" },
+      { name: "Stadio Giuseppe Sinigaglia", city: "Como (ITA)" },
+      { name: "RAMS Park", city: "Istambul (TUR)" },
+      { name: "Fortuna Arena", city: "Praga (RTC)" },
+      { name: "Štadión Tehelné pole", city: "Bratislava (ESQ)" },
+      { name: "Metalist Stadium", city: "Kharkiv (UCR)" },
+      { name: "OPAP Arena", city: "Atenas (GRE)" },
+      { name: "Raiffeisen Arena", city: "Linz (AUT)" },
+      { name: "Aspmyra Stadion", city: "Bodø (NOR)" },
+      { name: "Bank Respublika Arena", city: "Masazır (AZE)" },
+      { name: "Chobani Stadium", city: "Istambul (TUR)" },
+      { name: "Lyse Arena", city: "Stavanger (NOR)" },
+      { name: "Allianz Stadium", city: "Turim (ITA)" },
+      { name: "Wankdorf Stadium", city: "Berna (SUI)" },
+      { name: "epet ARENA", city: "Praga (RTC)" },
+      { name: "Renato Dall'Ara", city: "Bolonha (ITA)" },
+      { name: "Celtic Park", city: "Glasgow (ESC)" },
+      { name: "Rajko Mitić Stadium", city: "Belgrado (SER)" },
+      { name: "Stade Louis-II", city: "Mônaco (MON)" },
+      { name: "Gewiss Stadium", city: "Bérgamo (ITA)" },
+      { name: "Stade de Roudourou", city: "Guingamp (FRA)" },
+    ];
+    for (const st of europeanStadiumsToEnsure) {
+      await getOrCreateStadium(st.name, st.city);
+    }
+
+    // 5. Partidas da Rodada 1 da Champions League (Fase de Liga - 18 Confrontos Oficiais)
+    const existingUclMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", ucl!._id))
+      .collect();
+
+    const now = Date.now();
+    let uclCreated = 0;
+
+    if (existingUclMatches.length < 18) {
+      for (const m of existingUclMatches) {
+        const stats = await ctx.db
+          .query("matchStatistics")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const s of stats) await ctx.db.delete(s._id);
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const e of events) await ctx.db.delete(e._id);
+        await ctx.db.delete(m._id);
+      }
+
+      const uclMatches = [
+        // 17/09/2024
+        {
+          home: "Juventus", away: "PSV Eindhoven", homeScore: 3, awayScore: 1,
+          stadium: "Allianz Stadium", city: "Turim (ITA)",
+          startTime: now - 3 * 24 * 60 * 60 * 1000 - 7200000,
+          events: [
+            { minute: 21, team: "home", type: "GOAL" as const, player: "Kenan Yıldız" },
+            { minute: 27, team: "home", type: "GOAL" as const, player: "Weston McKennie" },
+            { minute: 52, team: "home", type: "GOAL" as const, player: "Nicolás González" },
+            { minute: 90, team: "away", type: "GOAL" as const, player: "Ismael Saibari" },
+          ],
+          stats: { homePossession: 44, awayPossession: 56, homeShots: 15, awayShots: 13, homeTarget: 6, awayTarget: 4, homeCorners: 3, awayCorners: 5, homeFouls: 11, awayFouls: 10, homeYellow: 0, awayYellow: 0, homeRed: 0, awayRed: 0, homePasses: 420, awayPasses: 540, homeAcc: 84, awayAcc: 87 },
+        },
+        {
+          home: "Young Boys", away: "Aston Villa", homeScore: 0, awayScore: 3,
+          stadium: "Wankdorf Stadium", city: "Berna (SUI)",
+          startTime: now - 3 * 24 * 60 * 60 * 1000 - 7200000,
+          events: [
+            { minute: 27, team: "away", type: "GOAL" as const, player: "Youri Tielemans" },
+            { minute: 38, team: "away", type: "GOAL" as const, player: "Jacob Ramsey" },
+            { minute: 86, team: "away", type: "GOAL" as const, player: "Amadou Onana" },
+          ],
+          stats: { homePossession: 48, awayPossession: 52, homeShots: 12, awayShots: 18, homeTarget: 5, awayTarget: 7, homeCorners: 5, awayCorners: 6, homeFouls: 14, awayFouls: 12, homeYellow: 3, awayYellow: 1, homeRed: 0, awayRed: 0, homePasses: 430, awayPasses: 480, homeAcc: 80, awayAcc: 85 },
+        },
+        {
+          home: "Bayern München", away: "Dinamo Zagreb", homeScore: 9, awayScore: 2,
+          stadium: "Allianz Arena", city: "Munique (ALE)",
+          startTime: now - 3 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 19, team: "home", type: "GOAL" as const, player: "Harry Kane", detail: "Penalty" },
+            { minute: 33, team: "home", type: "GOAL" as const, player: "Raphaël Guerreiro" },
+            { minute: 38, team: "home", type: "GOAL" as const, player: "Michael Olise" },
+            { minute: 49, team: "away", type: "GOAL" as const, player: "Bruno Petković" },
+            { minute: 50, team: "away", type: "GOAL" as const, player: "Takuya Ogiwara" },
+            { minute: 57, team: "home", type: "GOAL" as const, player: "Harry Kane" },
+            { minute: 61, team: "home", type: "GOAL" as const, player: "Michael Olise" },
+            { minute: 73, team: "home", type: "GOAL" as const, player: "Harry Kane", detail: "Penalty" },
+            { minute: 78, team: "home", type: "GOAL" as const, player: "Harry Kane", detail: "Penalty" },
+            { minute: 85, team: "home", type: "GOAL" as const, player: "Leroy Sané" },
+            { minute: 90, team: "home", type: "GOAL" as const, player: "Leon Goretzka" },
+          ],
+          stats: { homePossession: 70, awayPossession: 30, homeShots: 29, awayShots: 4, homeTarget: 19, awayTarget: 3, homeCorners: 12, awayCorners: 1, homeFouls: 9, awayFouls: 10, homeYellow: 0, awayYellow: 1, homeRed: 0, awayRed: 0, homePasses: 710, awayPasses: 290, homeAcc: 92, awayAcc: 74 },
+        },
+        {
+          home: "AC Milan", away: "Liverpool", homeScore: 1, awayScore: 3,
+          stadium: "San Siro", city: "Milão (ITA)",
+          startTime: now - 3 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 3, team: "home", type: "GOAL" as const, player: "Christian Pulisic" },
+            { minute: 23, team: "away", type: "GOAL" as const, player: "Ibrahima Konaté" },
+            { minute: 41, team: "away", type: "GOAL" as const, player: "Virgil van Dijk" },
+            { minute: 67, team: "away", type: "GOAL" as const, player: "Dominik Szoboszlai" },
+          ],
+          stats: { homePossession: 49, awayPossession: 51, homeShots: 8, awayShots: 23, homeTarget: 2, awayTarget: 11, homeCorners: 2, awayCorners: 5, homeFouls: 13, awayFouls: 14, homeYellow: 2, awayYellow: 2, homeRed: 0, awayRed: 0, homePasses: 460, awayPasses: 490, homeAcc: 84, awayAcc: 87 },
+        },
+        {
+          home: "Real Madrid", away: "Stuttgart", homeScore: 3, awayScore: 1,
+          stadium: "Santiago Bernabéu", city: "Madri (ESP)",
+          startTime: now - 3 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 46, team: "home", type: "GOAL" as const, player: "Kylian Mbappé" },
+            { minute: 68, team: "away", type: "GOAL" as const, player: "Deniz Undav" },
+            { minute: 83, team: "home", type: "GOAL" as const, player: "Antonio Rüdiger" },
+            { minute: 90, team: "home", type: "GOAL" as const, player: "Endrick" },
+          ],
+          stats: { homePossession: 46, awayPossession: 54, homeShots: 19, awayShots: 17, homeTarget: 8, awayTarget: 7, homeCorners: 4, awayCorners: 5, homeFouls: 7, awayFouls: 11, homeYellow: 3, awayYellow: 1, homeRed: 0, awayRed: 0, homePasses: 440, awayPasses: 510, homeAcc: 85, awayAcc: 88 },
+        },
+        {
+          home: "Sporting CP", away: "Lille", homeScore: 2, awayScore: 0,
+          stadium: "José Alvalade", city: "Lisboa (POR)",
+          startTime: now - 3 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 38, team: "home", type: "GOAL" as const, player: "Viktor Gyökeres" },
+            { minute: 40, team: "away", type: "RED_CARD" as const, player: "Angel Gomes" },
+            { minute: 65, team: "home", type: "GOAL" as const, player: "Zeno Debast" },
+          ],
+          stats: { homePossession: 56, awayPossession: 44, homeShots: 18, awayShots: 3, homeTarget: 5, awayTarget: 2, homeCorners: 7, awayCorners: 1, homeFouls: 11, awayFouls: 15, homeYellow: 2, awayYellow: 4, homeRed: 0, awayRed: 1, homePasses: 530, awayPasses: 390, homeAcc: 88, awayAcc: 80 },
+        },
+
+        // 18/09/2024
+        {
+          home: "Sparta Praha", away: "Red Bull Salzburg", homeScore: 3, awayScore: 0,
+          stadium: "epet ARENA", city: "Praga (RTC)",
+          startTime: now - 2 * 24 * 60 * 60 * 1000 - 7200000,
+          events: [
+            { minute: 2, team: "home", type: "GOAL" as const, player: "Kaan Kairinen" },
+            { minute: 42, team: "home", type: "GOAL" as const, player: "Victor Olatunji" },
+            { minute: 58, team: "home", type: "GOAL" as const, player: "Qazim Laçi" },
+          ],
+          stats: { homePossession: 29, awayPossession: 71, homeShots: 11, awayShots: 11, homeTarget: 6, awayTarget: 1, homeCorners: 2, awayCorners: 6, homeFouls: 10, awayFouls: 9, homeYellow: 2, awayYellow: 1, homeRed: 0, awayRed: 0, homePasses: 250, awayPasses: 630, homeAcc: 70, awayAcc: 86 },
+        },
+        {
+          home: "Bologna", away: "Shakhtar Donetsk", homeScore: 0, awayScore: 0,
+          stadium: "Renato Dall'Ara", city: "Bolonha (ITA)",
+          startTime: now - 2 * 24 * 60 * 60 * 1000 - 7200000,
+          events: [
+            { minute: 4, team: "away", type: "YELLOW_CARD" as const, player: "Georgiy Sudakov" },
+            { minute: 35, team: "home", type: "YELLOW_CARD" as const, player: "Stefan Posch" },
+          ],
+          stats: { homePossession: 53, awayPossession: 47, homeShots: 17, awayShots: 4, homeTarget: 5, awayTarget: 1, homeCorners: 8, awayCorners: 1, homeFouls: 15, awayFouls: 13, homeYellow: 3, awayYellow: 3, homeRed: 0, awayRed: 0, homePasses: 490, awayPasses: 410, homeAcc: 84, awayAcc: 81 },
+        },
+        {
+          home: "Celtic", away: "Slovan Bratislava", homeScore: 5, awayScore: 1,
+          stadium: "Celtic Park", city: "Glasgow (ESC)",
+          startTime: now - 2 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 17, team: "home", type: "GOAL" as const, player: "Liam Scales" },
+            { minute: 47, team: "home", type: "GOAL" as const, player: "Kyogo Furuhashi" },
+            { minute: 56, team: "home", type: "GOAL" as const, player: "Arne Engels", detail: "Penalty" },
+            { minute: 60, team: "away", type: "GOAL" as const, player: "Kevin Wimmer" },
+            { minute: 70, team: "home", type: "GOAL" as const, player: "Daizen Maeda" },
+            { minute: 86, team: "home", type: "GOAL" as const, player: "Adam Idah" },
+          ],
+          stats: { homePossession: 56, awayPossession: 44, homeShots: 19, awayShots: 8, homeTarget: 11, awayTarget: 2, homeCorners: 9, awayCorners: 3, homeFouls: 9, awayFouls: 12, homeYellow: 1, awayYellow: 3, homeRed: 0, awayRed: 0, homePasses: 550, awayPasses: 410, homeAcc: 87, awayAcc: 80 },
+        },
+        {
+          home: "Club Brugge", away: "Borussia Dortmund", homeScore: 0, awayScore: 3,
+          stadium: "Jan Breydelstadion", city: "Bruges (BEL)",
+          startTime: now - 2 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 76, team: "away", type: "GOAL" as const, player: "Jamie Bynoe-Gittens" },
+            { minute: 86, team: "away", type: "GOAL" as const, player: "Jamie Bynoe-Gittens" },
+            { minute: 90, team: "away", type: "GOAL" as const, player: "Serhou Guirassy", detail: "Penalty" },
+          ],
+          stats: { homePossession: 37, awayPossession: 63, homeShots: 18, awayShots: 17, homeTarget: 5, awayTarget: 6, homeCorners: 6, awayCorners: 6, homeFouls: 12, awayFouls: 8, homeYellow: 1, awayYellow: 1, homeRed: 0, awayRed: 0, homePasses: 360, awayPasses: 630, homeAcc: 78, awayAcc: 89 },
+        },
+        {
+          home: "Manchester City", away: "Inter de Milão", homeScore: 0, awayScore: 0,
+          stadium: "Etihad Stadium", city: "Manchester (ING)",
+          startTime: now - 2 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 33, team: "home", type: "YELLOW_CARD" as const, player: "Rúben Dias" },
+          ],
+          stats: { homePossession: 60, awayPossession: 40, homeShots: 22, awayShots: 13, homeTarget: 5, awayTarget: 3, homeCorners: 5, awayCorners: 3, homeFouls: 12, awayFouls: 11, homeYellow: 1, awayYellow: 0, homeRed: 0, awayRed: 0, homePasses: 620, awayPasses: 380, homeAcc: 90, awayAcc: 83 },
+        },
+        {
+          home: "Paris Saint-Germain", away: "Girona", homeScore: 1, awayScore: 0,
+          stadium: "Parc des Princes", city: "Paris (FRA)",
+          startTime: now - 2 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 90, team: "home", type: "GOAL" as const, player: "Nuno Mendes" },
+          ],
+          stats: { homePossession: 64, awayPossession: 36, homeShots: 26, awayShots: 3, homeTarget: 5, awayTarget: 1, homeCorners: 6, awayCorners: 2, homeFouls: 10, awayFouls: 10, homeYellow: 2, awayYellow: 2, homeRed: 0, awayRed: 0, homePasses: 660, awayPasses: 350, homeAcc: 91, awayAcc: 81 },
+        },
+
+        // 19/09/2024
+        {
+          home: "Feyenoord", away: "Bayer Leverkusen", homeScore: 0, awayScore: 4,
+          stadium: "Stadion Feijenoord", city: "Roterdã (HOL)",
+          startTime: now - 1 * 24 * 60 * 60 * 1000 - 7200000,
+          events: [
+            { minute: 5, team: "away", type: "GOAL" as const, player: "Florian Wirtz" },
+            { minute: 30, team: "away", type: "GOAL" as const, player: "Alejandro Grimaldo" },
+            { minute: 36, team: "away", type: "GOAL" as const, player: "Florian Wirtz" },
+            { minute: 45, team: "away", type: "GOAL" as const, player: "Timon Wellenreuther (GC)" },
+          ],
+          stats: { homePossession: 47, awayPossession: 53, homeShots: 15, awayShots: 12, homeTarget: 4, awayTarget: 5, homeCorners: 7, awayCorners: 2, homeFouls: 11, awayFouls: 12, homeYellow: 1, awayYellow: 0, homeRed: 0, awayRed: 0, homePasses: 460, awayPasses: 520, homeAcc: 82, awayAcc: 87 },
+        },
+        {
+          home: "Crvena Zvezda", away: "Benfica", homeScore: 1, awayScore: 2,
+          stadium: "Rajko Mitić Stadium", city: "Belgrado (SER)",
+          startTime: now - 1 * 24 * 60 * 60 * 1000 - 7200000,
+          events: [
+            { minute: 9, team: "away", type: "GOAL" as const, player: "Kerem Aktürkoğlu" },
+            { minute: 29, team: "away", type: "GOAL" as const, player: "Orkun Kökçü" },
+            { minute: 86, team: "home", type: "GOAL" as const, player: "Felício Milson" },
+          ],
+          stats: { homePossession: 51, awayPossession: 49, homeShots: 14, awayShots: 11, homeTarget: 3, awayTarget: 4, homeCorners: 5, awayCorners: 4, homeFouls: 14, awayFouls: 16, homeYellow: 2, awayYellow: 3, homeRed: 0, awayRed: 0, homePasses: 470, awayPasses: 450, homeAcc: 83, awayAcc: 82 },
+        },
+        {
+          home: "Monaco", away: "Barcelona", homeScore: 2, awayScore: 1,
+          stadium: "Stade Louis-II", city: "Mônaco (MON)",
+          startTime: now - 1 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 10, team: "away", type: "RED_CARD" as const, player: "Eric García" },
+            { minute: 16, team: "home", type: "GOAL" as const, player: "Maghnes Akliouche" },
+            { minute: 28, team: "away", type: "GOAL" as const, player: "Lamine Yamal" },
+            { minute: 71, team: "home", type: "GOAL" as const, player: "George Ilenikhena" },
+          ],
+          stats: { homePossession: 56, awayPossession: 44, homeShots: 15, awayShots: 4, homeTarget: 8, awayTarget: 1, homeCorners: 5, awayCorners: 0, homeFouls: 13, awayFouls: 12, homeYellow: 3, awayYellow: 3, homeRed: 0, awayRed: 1, homePasses: 480, awayPasses: 370, homeAcc: 86, awayAcc: 81 },
+        },
+        {
+          home: "Atalanta", away: "Arsenal", homeScore: 0, awayScore: 0,
+          stadium: "Gewiss Stadium", city: "Bérgamo (ITA)",
+          startTime: now - 1 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 51, team: "home", type: "YELLOW_CARD" as const, player: "Mateo Retegui", detail: "Pênalti Defendido" },
+          ],
+          stats: { homePossession: 46, awayPossession: 54, homeShots: 8, awayShots: 6, homeTarget: 2, awayTarget: 2, homeCorners: 4, awayCorners: 3, homeFouls: 14, awayFouls: 16, homeYellow: 1, awayYellow: 0, homeRed: 0, awayRed: 0, homePasses: 430, awayPasses: 500, homeAcc: 81, awayAcc: 85 },
+        },
+        {
+          home: "Atlético de Madrid", away: "RB Leipzig", homeScore: 2, awayScore: 1,
+          stadium: "Riyadh Air Metropolitano", city: "Madri (ESP)",
+          startTime: now - 1 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 4, team: "away", type: "GOAL" as const, player: "Benjamin Šeško" },
+            { minute: 28, team: "home", type: "GOAL" as const, player: "Antoine Griezmann" },
+            { minute: 90, team: "home", type: "GOAL" as const, player: "José María Giménez" },
+          ],
+          stats: { homePossession: 51, awayPossession: 49, homeShots: 21, awayShots: 7, homeTarget: 6, awayTarget: 3, homeCorners: 6, awayCorners: 2, homeFouls: 11, awayFouls: 13, homeYellow: 3, awayYellow: 3, homeRed: 0, awayRed: 0, homePasses: 490, awayPasses: 460, homeAcc: 85, awayAcc: 84 },
+        },
+        {
+          home: "Brest", away: "Sturm Graz", homeScore: 2, awayScore: 1,
+          stadium: "Stade de Roudourou", city: "Guingamp (FRA)",
+          startTime: now - 1 * 24 * 60 * 60 * 1000,
+          events: [
+            { minute: 23, team: "home", type: "GOAL" as const, player: "Hugo Magnetti" },
+            { minute: 45, team: "away", type: "GOAL" as const, player: "Edimilson Fernandes (GC)" },
+            { minute: 56, team: "home", type: "GOAL" as const, player: "Abdallah Sima" },
+            { minute: 88, team: "away", type: "RED_CARD" as const, player: "Dimitri Lavalée" },
+          ],
+          stats: { homePossession: 55, awayPossession: 45, homeShots: 15, awayShots: 9, homeTarget: 6, awayTarget: 3, homeCorners: 6, awayCorners: 4, homeFouls: 12, awayFouls: 15, homeYellow: 2, awayYellow: 4, homeRed: 0, awayRed: 1, homePasses: 480, awayPasses: 390, homeAcc: 83, awayAcc: 77 },
+        },
+      ];
+
+      for (const m of uclMatches) {
+        const homeId = uclTeamMap.get(m.home);
+        const awayId = uclTeamMap.get(m.away);
+        if (homeId && awayId) {
+          const stadium = await getOrCreateStadium(m.stadium, m.city);
+          const matchId = await ctx.db.insert("matches", {
+            leagueId: ucl!._id,
+            homeTeamId: homeId,
+            awayTeamId: awayId,
+            stadiumId: stadium._id,
+            homeScore: m.homeScore,
+            awayScore: m.awayScore,
+            round: "Rodada 1",
+            stage: "Fase de Liga",
+            status: "FINISHED",
+            statusShort: "FT",
+            startTime: m.startTime,
+          });
+          uclCreated++;
+
+          // Insere estatísticas
+          if (m.stats) {
+            await ctx.db.insert("matchStatistics", {
+              matchId,
+              homePossession: m.stats.homePossession,
+              awayPossession: m.stats.awayPossession,
+              homeTotalShots: m.stats.homeShots,
+              awayTotalShots: m.stats.awayShots,
+              homeShotsOnTarget: m.stats.homeTarget,
+              awayShotsOnTarget: m.stats.awayTarget,
+              homeCorners: m.stats.homeCorners,
+              awayCorners: m.stats.awayCorners,
+              homeFouls: m.stats.homeFouls,
+              awayFouls: m.stats.awayFouls,
+              homeYellowCards: m.stats.homeYellow,
+              awayYellowCards: m.stats.awayYellow,
+              homeRedCards: m.stats.homeRed,
+              awayRedCards: m.stats.awayRed,
+              homePasses: m.stats.homePasses,
+              awayPasses: m.stats.awayPasses,
+              homePassAccuracy: m.stats.homeAcc,
+              awayPassAccuracy: m.stats.awayAcc,
+            });
+          }
+
+          // Insere eventos da linha do tempo
+          if (m.events) {
+            for (const ev of m.events) {
+              await ctx.db.insert("matchEvents", {
+                matchId,
+                minute: ev.minute,
+                teamId: ev.team === "home" ? homeId : awayId,
+                type: ev.type,
+                playerName: ev.player,
+                detail: (ev as any).detail,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 6. Equipes da Libertadores
     const libTeamsDefs = [
       { name: "Flamengo", code: "FLA", externalId: 127, logoUrl: "https://media.api-sports.io/football/teams/127.png" },
       { name: "Palmeiras", code: "PAL", externalId: 121, logoUrl: "https://media.api-sports.io/football/teams/121.png" },
@@ -3346,107 +3745,7 @@ export const seedCupCompetitions = mutation({
       }
     }
 
-    // 5. Partidas da Rodada 1 da Champions League (Fase de Liga)
-    const existingUclMatches = await ctx.db
-      .query("matches")
-      .withIndex("by_league", (q) => q.eq("leagueId", ucl!._id))
-      .collect();
-
-    const now = Date.now();
-    let uclCreated = 0;
-    if (existingUclMatches.length === 0) {
-      const uclMatches = [
-        {
-          home: "Real Madrid",
-          away: "Manchester City",
-          homeScore: 3,
-          awayScore: 2,
-          round: "Rodada 1",
-          stage: "Fase de Liga",
-          status: "FINISHED" as const,
-          statusShort: "FT",
-          startTime: now - 3 * 24 * 60 * 60 * 1000,
-        },
-        {
-          home: "Bayern München",
-          away: "Paris Saint-Germain",
-          homeScore: 2,
-          awayScore: 0,
-          round: "Rodada 1",
-          stage: "Fase de Liga",
-          status: "FINISHED" as const,
-          statusShort: "FT",
-          startTime: now - 3 * 24 * 60 * 60 * 1000 + 7200000,
-        },
-        {
-          home: "Barcelona",
-          away: "Inter de Milão",
-          homeScore: 2,
-          awayScore: 1,
-          round: "Rodada 1",
-          stage: "Fase de Liga",
-          status: "FINISHED" as const,
-          statusShort: "FT",
-          startTime: now - 2 * 24 * 60 * 60 * 1000,
-        },
-        {
-          home: "Arsenal",
-          away: "Liverpool",
-          homeScore: 1,
-          awayScore: 1,
-          round: "Rodada 1",
-          stage: "Fase de Liga",
-          status: "FINISHED" as const,
-          statusShort: "FT",
-          startTime: now - 2 * 24 * 60 * 60 * 1000 + 7200000,
-        },
-      ];
-
-      for (const m of uclMatches) {
-        const homeId = uclTeamMap.get(m.home);
-        const awayId = uclTeamMap.get(m.away);
-        if (homeId && awayId) {
-          const matchId = await ctx.db.insert("matches", {
-            leagueId: ucl!._id,
-            homeTeamId: homeId,
-            awayTeamId: awayId,
-            homeScore: m.homeScore,
-            awayScore: m.awayScore,
-            round: m.round,
-            stage: m.stage,
-            status: m.status,
-            statusShort: m.statusShort,
-            startTime: m.startTime,
-          });
-          uclCreated++;
-
-          // Insere estatísticas representativas
-          await ctx.db.insert("matchStatistics", {
-            matchId,
-            homePossession: 53,
-            awayPossession: 47,
-            homeTotalShots: 15,
-            awayTotalShots: 12,
-            homeShotsOnTarget: 7,
-            awayShotsOnTarget: 5,
-            homeCorners: 6,
-            awayCorners: 4,
-            homeFouls: 9,
-            awayFouls: 13,
-            homeYellowCards: 2,
-            awayYellowCards: 3,
-            homeRedCards: 0,
-            awayRedCards: 0,
-            homePasses: 510,
-            awayPasses: 450,
-            homePassAccuracy: 88,
-            awayPassAccuracy: 83,
-          });
-        }
-      }
-    }
-
-    // 6. Partidas da Rodada 1 da Copa Libertadores (Fase de Grupos)
+    // 7. Partidas da Rodada 1 da Copa Libertadores (Fase de Grupos)
     const existingLibMatches = await ctx.db
       .query("matches")
       .withIndex("by_league", (q) => q.eq("leagueId", lib!._id))

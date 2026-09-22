@@ -258,6 +258,10 @@ export function computeStandingsData(
       if (rank <= 2) description = "Promoção";
       else if (rank <= 6) description = "Play-off para Promoção";
       else if (rank > totalTeams - 4) description = "Rebaixamento";
+    } else if (leagueName.toLowerCase().includes("champions")) {
+      if (rank <= 8) description = "Oitavas de Final";
+      else if (rank <= 24) description = "Play-offs das Oitavas";
+      else description = "Eliminado";
     } else {
       if (rank <= 4) description = "Fase de Grupos (Libertadores)";
       else if (rank <= 6) description = "Qualificação (Libertadores)";
