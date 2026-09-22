@@ -8,7 +8,6 @@ import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
-import { TopScorersWidget } from "./components/TopScorersWidget";
 import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
@@ -978,10 +977,6 @@ export default function App() {
           />
         ) : (
           <>
-            {/* Bloco de Artilharia Oficial na Grade Geral de Jogos */}
-            {viewMode === "matches" && (
-              <TopScorersWidget leagueId={selectedLeagueId} />
-            )}
             {matches === undefined ? (
               <div className="flex justify-center items-center py-20 text-slate-500 gap-2">
                 <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
