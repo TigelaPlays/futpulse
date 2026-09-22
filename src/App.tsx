@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
@@ -31,6 +31,14 @@ export default function App() {
   const [selectedDateOffset, setSelectedDateOffset] = useState<number | null>(0); // 0 = Hoje
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [isBetaBannerVisible, setIsBetaBannerVisible] = useState<boolean>(() => {
+    try {
+      const dismissed = window.localStorage.getItem("futpulse_dismiss_beta_banner");
+      return dismissed !== "dismissed";
+    } catch {
+      return true;
+    }
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [goalAlerts, setGoalAlerts] = useState<GoalAlert[]>([]);
@@ -45,6 +53,15 @@ export default function App() {
     }
   });
   const previousScoresRef = useRef<Record<string, { home: number; away: number }>>({});
+
+  const dismissBetaBanner = () => {
+    setIsBetaBannerVisible(false);
+    try {
+      window.localStorage.setItem("futpulse_dismiss_beta_banner", "dismissed");
+    } catch (err) {
+      console.error("Erro ao salvar banner beta:", err);
+    }
+  };
 
   const toggleFavorite = (e: React.MouseEvent, matchId: string) => {
     e.stopPropagation();
@@ -692,6 +709,35 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-900 font-sans selection:bg-emerald-500 selection:text-white">
+      {isBetaBannerVisible && (
+        <div className="border-b border-amber-500/30 bg-slate-950/90 text-amber-200 backdrop-blur-md">
+          <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/10 shadow-[0_0_16px_rgba(251,191,36,0.18)]">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+              </div>
+
+              <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[9px] font-black tracking-[0.18em] text-amber-200 uppercase sm:text-[10px]">
+                [VERSÃO BETA • EM DESENVOLVIMENTO]
+              </span>
+
+              <p className="text-[10px] leading-relaxed text-amber-100/80 sm:text-[11px]">
+                FutPulse Match Center — Projeto experimental acadêmico. Novas ligas, dados em tempo real e chaveamentos sendo integrados.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={dismissBetaBanner}
+              aria-label="Fechar aviso beta"
+              className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/10 text-amber-200 transition-colors hover:bg-amber-500/15 hover:text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <MatchDetailsModal
         matchId={selectedMatchId}
         onClose={() => setSelectedMatchId(null)}
