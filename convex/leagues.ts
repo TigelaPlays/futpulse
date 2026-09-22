@@ -494,11 +494,19 @@ export const getLatestFinishedRound = query({
       .withIndex("by_league", (q) => q.eq("leagueId", args.leagueId))
       .collect();
 
-    const finishedMatches = matches.filter((m) => m.status === "FINISHED");
-    if (finishedMatches.length === 0) return 1;
+    // Prioriza partidas finalizadas da competição no padrão "Rodada X"
+    const rodadaMatches = matches.filter(
+      (m) => m.status === "FINISHED" && m.round.toLowerCase().startsWith("rodada")
+    );
+
+    const candidates = rodadaMatches.length > 0
+      ? rodadaMatches
+      : matches.filter((m) => m.status === "FINISHED");
+
+    if (candidates.length === 0) return 1;
 
     let maxRound = 1;
-    for (const m of finishedMatches) {
+    for (const m of candidates) {
       const num = parseInt(m.round.replace(/\D/g, ""), 10);
       if (!isNaN(num) && num > maxRound) {
         maxRound = num;
