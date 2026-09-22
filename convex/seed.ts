@@ -4066,3 +4066,52 @@ export const seedCupCompetitions = mutation({
     };
   },
 });
+
+// Limpeza pontual: remove eventos mockados da partida Maidstone Utd × Cray Wanderers
+export const cleanMaidstoneEvents = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const teams = await ctx.db.query("teams").collect();
+    const maidstone = teams.find((t) =>
+      t.name.toLowerCase().includes("maidstone")
+    );
+    const cray = teams.find((t) =>
+      t.name.toLowerCase().includes("cray")
+    );
+
+    if (!maidstone || !cray) {
+      return { success: false, reason: "Times não encontrados", eventsDeleted: 0 };
+    }
+
+    // Localiza a partida entre os dois times
+    const allMatches = await ctx.db.query("matches").collect();
+    const match = allMatches.find(
+      (m) =>
+        (m.homeTeamId === maidstone._id || m.awayTeamId === maidstone._id) &&
+        (m.homeTeamId === cray._id || m.awayTeamId === cray._id)
+    );
+
+    if (!match) {
+      return { success: false, reason: "Partida não encontrada", eventsDeleted: 0 };
+    }
+
+    // Deleta todos os eventos da partida
+    const events = await ctx.db
+      .query("matchEvents")
+      .withIndex("by_match", (q) => q.eq("matchId", match._id))
+      .collect();
+
+    for (const ev of events) {
+      await ctx.db.delete(ev._id);
+    }
+
+    return {
+      success: true,
+      matchId: match._id,
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      status: match.status,
+      eventsDeleted: events.length,
+    };
+  },
+});
