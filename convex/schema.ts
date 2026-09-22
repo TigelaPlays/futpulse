@@ -113,6 +113,14 @@ export default defineSchema({
     awayCorners: v.number(),
     homeFouls: v.number(),
     awayFouls: v.number(),
+    homeYellowCards: v.optional(v.number()),
+    awayYellowCards: v.optional(v.number()),
+    homeRedCards: v.optional(v.number()),
+    awayRedCards: v.optional(v.number()),
+    homePasses: v.optional(v.number()),
+    awayPasses: v.optional(v.number()),
+    homePassAccuracy: v.optional(v.number()),
+    awayPassAccuracy: v.optional(v.number()),
   }).index("by_match", ["matchId"]),
 
   // 7. Tabela de Classificação

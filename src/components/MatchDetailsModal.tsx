@@ -225,31 +225,91 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
 
   const renderStatRow = (label: string, homeVal: number, awayVal: number, isPercentage = false) => {
     const total = homeVal + awayVal;
-    const homePercent = total === 0 ? 50 : Math.round((homeVal / total) * 100);
-    const awayPercent = 100 - homePercent;
+    const homePercent = isPercentage
+      ? Math.min(100, Math.max(0, homeVal))
+      : total === 0
+      ? 0
+      : Math.min(100, Math.max(0, Math.round((homeVal / total) * 100)));
+    const awayPercent = isPercentage
+      ? Math.min(100, Math.max(0, awayVal))
+      : total === 0
+      ? 0
+      : Math.min(100, Math.max(0, Math.round((awayVal / total) * 100)));
+
+    const homeDominates = homeVal > awayVal;
+    const awayDominates = awayVal > homeVal;
+    const isTied = homeVal === awayVal;
 
     return (
-      <div className="space-y-1.5 text-xs">
-        <div className="flex justify-between font-semibold text-slate-800">
-          <span className="text-emerald-700 font-mono font-bold">
+      <div className="space-y-1.5 text-xs py-0.5">
+        {/* Linha de Valores e Rótulo */}
+        <div className="grid grid-cols-[60px_1fr_60px] items-center text-xs">
+          {/* Valor do Mandante */}
+          <span
+            className={`font-mono text-sm text-left truncate ${
+              homeDominates
+                ? "font-bold text-emerald-400"
+                : isTied && total > 0
+                ? "font-semibold text-slate-300"
+                : "font-medium text-slate-400"
+            }`}
+          >
             {homeVal}
             {isPercentage ? "%" : ""}
           </span>
-          <span className="text-slate-500 font-medium">{label}</span>
-          <span className="text-teal-700 font-mono font-bold">
+
+          {/* Nome da Métrica */}
+          <span className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-400 font-semibold text-center truncate px-2 select-none">
+            {label}
+          </span>
+
+          {/* Valor do Visitante */}
+          <span
+            className={`font-mono text-sm text-right truncate ${
+              awayDominates
+                ? "font-bold text-teal-400"
+                : isTied && total > 0
+                ? "font-semibold text-slate-300"
+                : "font-medium text-slate-400"
+            }`}
+          >
             {awayVal}
             {isPercentage ? "%" : ""}
           </span>
         </div>
-        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden flex border border-slate-300/70">
-          <div
-            className="bg-emerald-600 transition-all duration-500"
-            style={{ width: `${isPercentage ? homeVal : homePercent}%` }}
-          />
-          <div
-            className="bg-teal-500 transition-all duration-500"
-            style={{ width: `${isPercentage ? awayVal : awayPercent}%` }}
-          />
+
+        {/* Barra de Progresso Bipolar (Espelhada no Centro) */}
+        <div className="h-2 rounded-full overflow-hidden bg-slate-800/80 flex gap-1 mt-1.5">
+          {/* Lado do Mandante: Barra crescendo do centro para a esquerda */}
+          <div className="flex-1 flex justify-end overflow-hidden">
+            <div
+              className={`h-full rounded-l-full transition-all duration-500 ${
+                homeDominates
+                  ? "bg-emerald-500 shadow-xs"
+                  : isTied && total > 0
+                  ? "bg-slate-500"
+                  : "bg-slate-600"
+              }`}
+              style={{ width: `${homePercent}%` }}
+            />
+          </div>
+
+          {/* Divisor Central Sutil */}
+          <div className="w-[1px] h-full bg-slate-700/60 shrink-0" />
+
+          {/* Lado do Visitante: Barra crescendo do centro para a direita */}
+          <div className="flex-1 flex justify-start overflow-hidden">
+            <div
+              className={`h-full rounded-r-full transition-all duration-500 ${
+                awayDominates
+                  ? "bg-teal-400 shadow-xs"
+                  : isTied && total > 0
+                  ? "bg-slate-500"
+                  : "bg-slate-600"
+              }`}
+              style={{ width: `${awayPercent}%` }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -625,76 +685,221 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
             )}
 
             {/* Conteúdo: Estatísticas */}
-            {activeTab === "stats" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Dados Comparativos
-                  </span>
+            {activeTab === "stats" && (() => {
+              const stats = match.statistics;
 
-                  <div className="flex items-center gap-2">
-                    {statsFeedback && (
-                      <span className="text-[11px] font-medium text-emerald-700 animate-fade-in bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        {statsFeedback}
-                      </span>
-                    )}
+              // Cartões Amarelos e Vermelhos computados a partir das estatísticas ou dos eventos registrados
+              const eventsHomeYellows =
+                match.events?.filter(
+                  (e) =>
+                    e.teamId === match.homeTeamId &&
+                    (e.type === "YELLOW_CARD" ||
+                      ((e.type as string) === "CARD" && !e.detail?.toLowerCase().includes("red")))
+                ).length ?? 0;
+              const eventsAwayYellows =
+                match.events?.filter(
+                  (e) =>
+                    e.teamId === match.awayTeamId &&
+                    (e.type === "YELLOW_CARD" ||
+                      ((e.type as string) === "CARD" && !e.detail?.toLowerCase().includes("red")))
+                ).length ?? 0;
 
-                    {match.externalId && (
-                      <button
-                        onClick={handleSyncStats}
-                        disabled={isSyncingStats}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-2xs"
-                        title="Carregar estatísticas oficiais desta partida"
-                      >
-                        <RefreshCw className={`w-3 h-3 ${isSyncingStats ? "animate-spin" : ""}`} />
-                        <span>{isSyncingStats ? "A carregar..." : "Sincronizar Estatísticas"}</span>
-                      </button>
-                    )}
+              const homeYellowCards =
+                stats?.homeYellowCards ?? (eventsHomeYellows > 0 ? eventsHomeYellows : stats ? 0 : undefined);
+              const awayYellowCards =
+                stats?.awayYellowCards ?? (eventsAwayYellows > 0 ? eventsAwayYellows : stats ? 0 : undefined);
+              const hasYellowCards =
+                homeYellowCards !== undefined &&
+                awayYellowCards !== undefined &&
+                (stats?.homeYellowCards !== undefined || eventsHomeYellows > 0 || eventsAwayYellows > 0);
+
+              const eventsHomeReds =
+                match.events?.filter(
+                  (e) =>
+                    e.teamId === match.homeTeamId &&
+                    (e.type === "RED_CARD" ||
+                      ((e.type as string) === "CARD" && e.detail?.toLowerCase().includes("red")))
+                ).length ?? 0;
+              const eventsAwayReds =
+                match.events?.filter(
+                  (e) =>
+                    e.teamId === match.awayTeamId &&
+                    (e.type === "RED_CARD" ||
+                      ((e.type as string) === "CARD" && e.detail?.toLowerCase().includes("red")))
+                ).length ?? 0;
+
+              const homeRedCards =
+                stats?.homeRedCards ?? (eventsHomeReds > 0 ? eventsHomeReds : stats ? 0 : undefined);
+              const awayRedCards =
+                stats?.awayRedCards ?? (eventsAwayReds > 0 ? eventsAwayReds : stats ? 0 : undefined);
+              const hasRedCards =
+                homeRedCards !== undefined &&
+                awayRedCards !== undefined &&
+                (stats?.homeRedCards !== undefined || eventsHomeReds > 0 || eventsAwayReds > 0);
+
+              const hasPassAccuracy =
+                stats?.homePassAccuracy !== undefined &&
+                stats?.awayPassAccuracy !== undefined &&
+                (stats.homePassAccuracy > 0 || stats.awayPassAccuracy > 0);
+              const hasPasses =
+                stats?.homePasses !== undefined &&
+                stats?.awayPasses !== undefined &&
+                (stats.homePasses > 0 || stats.awayPasses > 0);
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Dados Comparativos
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      {statsFeedback && (
+                        <span className="text-[11px] font-medium text-emerald-700 animate-fade-in bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          {statsFeedback}
+                        </span>
+                      )}
+
+                      {match.externalId && (
+                        <button
+                          onClick={handleSyncStats}
+                          disabled={isSyncingStats}
+                          className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-2xs"
+                          title="Carregar estatísticas oficiais desta partida"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isSyncingStats ? "animate-spin" : ""}`} />
+                          <span>{isSyncingStats ? "A carregar..." : "Sincronizar Estatísticas"}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {!stats ? (
+                    <div className="text-center py-10 px-4 text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center gap-2.5">
+                      <div className="p-3 bg-slate-100 rounded-full text-slate-400 border border-slate-200">
+                        <BarChart2 className="w-6 h-6" />
+                      </div>
+                      <p className="font-bold text-slate-800 text-sm">
+                        Estatísticas detalhadas indisponíveis para esta partida.
+                      </p>
+                      <p className="text-[11px] text-slate-500 max-w-sm">
+                        Os dados de posse de bola e finalizações são computados para jogos monitorados em tempo real.
+                      </p>
+                      {match.externalId && (
+                        <button
+                          onClick={handleSyncStats}
+                          disabled={isSyncingStats}
+                          className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-2xs"
+                          title="Carregar dados estatísticos oficiais desta partida"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isSyncingStats ? "animate-spin" : ""}`} />
+                          <span>{isSyncingStats ? "A carregar dados..." : "Tentar Sincronizar Agora"}</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-[#121820] text-white p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-md space-y-4">
+                      {/* Mini Header dos Clubes */}
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 border-b border-slate-800/80 text-xs font-bold text-slate-300">
+                        <div className="flex items-center gap-2 justify-start truncate min-w-0">
+                          {match.homeTeam?.logoUrl ? (
+                            <img
+                              src={match.homeTeam.logoUrl}
+                              alt=""
+                              className="w-4 h-4 object-contain shrink-0"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                              {match.homeTeam?.name?.charAt(0) ?? "M"}
+                            </div>
+                          )}
+                          <span className="truncate text-slate-200">
+                            {match.homeTeam?.name ?? "Mandante"}
+                          </span>
+                        </div>
+
+                        <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold px-2 shrink-0">
+                          vs
+                        </span>
+
+                        <div className="flex items-center gap-2 justify-end truncate min-w-0 text-right">
+                          <span className="truncate text-slate-200">
+                            {match.awayTeam?.name ?? "Visitante"}
+                          </span>
+                          {match.awayTeam?.logoUrl ? (
+                            <img
+                              src={match.awayTeam.logoUrl}
+                              alt=""
+                              className="w-4 h-4 object-contain shrink-0"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                              {match.awayTeam?.name?.charAt(0) ?? "V"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Métricas Suportadas com Barras Bipolares */}
+                      <div className="space-y-4">
+                        {renderStatRow(
+                          "Posse de Bola",
+                          stats.homePossession,
+                          stats.awayPossession,
+                          true
+                        )}
+                        {renderStatRow(
+                          "Finalizações Totais",
+                          stats.homeTotalShots,
+                          stats.awayTotalShots
+                        )}
+                        {renderStatRow(
+                          "Finalizações no Alvo",
+                          stats.homeShotsOnTarget,
+                          stats.awayShotsOnTarget
+                        )}
+                        {renderStatRow(
+                          "Escanteios",
+                          stats.homeCorners,
+                          stats.awayCorners
+                        )}
+                        {renderStatRow(
+                          "Faltas Cometidas",
+                          stats.homeFouls,
+                          stats.awayFouls
+                        )}
+                        {hasYellowCards &&
+                          renderStatRow(
+                            "Cartões Amarelos",
+                            homeYellowCards,
+                            awayYellowCards
+                          )}
+                        {hasRedCards &&
+                          renderStatRow(
+                            "Cartões Vermelhos",
+                            homeRedCards,
+                            awayRedCards
+                          )}
+                        {hasPassAccuracy
+                          ? renderStatRow(
+                              "Precisão de Passes",
+                              stats.homePassAccuracy!,
+                              stats.awayPassAccuracy!,
+                              true
+                            )
+                          : hasPasses
+                          ? renderStatRow(
+                              "Total de Passes",
+                              stats.homePasses!,
+                              stats.awayPasses!
+                            )
+                          : null}
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {!match.statistics ? (
-                  <div className="text-center py-8 text-xs text-slate-500 bg-slate-50 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
-                    <BarChart2 className="w-6 h-6 text-slate-400" />
-                    <span>Estatísticas ainda não sincronizadas para esta partida.</span>
-                    {match.externalId && (
-                      <span className="text-[11px] text-emerald-700 font-medium">
-                        Clique em "Sincronizar Estatísticas" acima para carregar.
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-3.5 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
-                    {renderStatRow(
-                      "Posse de Bola",
-                      match.statistics.homePossession,
-                      match.statistics.awayPossession,
-                      true
-                    )}
-                    {renderStatRow(
-                      "Remates à Baliza",
-                      match.statistics.homeShotsOnTarget,
-                      match.statistics.awayShotsOnTarget
-                    )}
-                    {renderStatRow(
-                      "Total de Remates",
-                      match.statistics.homeTotalShots,
-                      match.statistics.awayTotalShots
-                    )}
-                    {renderStatRow(
-                      "Cantos",
-                      match.statistics.homeCorners,
-                      match.statistics.awayCorners
-                    )}
-                    {renderStatRow(
-                      "Faltas",
-                      match.statistics.homeFouls,
-                      match.statistics.awayFouls
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
             </div>
           </>
         )}

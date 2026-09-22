@@ -544,6 +544,14 @@ export const syncMatchStatistics = action({
         awayCorners: getStat(awayRaw, "Corner Kicks"),
         homeFouls: getStat(homeRaw, "Fouls"),
         awayFouls: getStat(awayRaw, "Fouls"),
+        homeYellowCards: getStat(homeRaw, "Yellow Cards") || undefined,
+        awayYellowCards: getStat(awayRaw, "Yellow Cards") || undefined,
+        homeRedCards: getStat(homeRaw, "Red Cards") || undefined,
+        awayRedCards: getStat(awayRaw, "Red Cards") || undefined,
+        homePasses: getStat(homeRaw, "Total Passes") || undefined,
+        awayPasses: getStat(awayRaw, "Total Passes") || undefined,
+        homePassAccuracy: getStat(homeRaw, "Passes %") || undefined,
+        awayPassAccuracy: getStat(awayRaw, "Passes %") || undefined,
       });
 
       return { success: true };
@@ -567,6 +575,14 @@ export const saveSyncedStatistics = internalMutation({
     awayCorners: v.number(),
     homeFouls: v.number(),
     awayFouls: v.number(),
+    homeYellowCards: v.optional(v.number()),
+    awayYellowCards: v.optional(v.number()),
+    homeRedCards: v.optional(v.number()),
+    awayRedCards: v.optional(v.number()),
+    homePasses: v.optional(v.number()),
+    awayPasses: v.optional(v.number()),
+    homePassAccuracy: v.optional(v.number()),
+    awayPassAccuracy: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
