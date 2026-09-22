@@ -65,7 +65,44 @@ export const syncLiveMatches = action({
   },
 });
 
-// 2. Mutation Interna: Normaliza e persiste os dados com idempotência
+/**
+ * Normaliza nomes de rodadas da API-Football para o padrão oficial brasileiro.
+ * Exemplo: "Regular Season - 29" -> "Rodada 29"
+ *          "Round 29" -> "Rodada 29"
+ *          "29ª Rodada" -> "Rodada 29"
+ */
+export function normalizeRoundName(rawRound?: string | null): string {
+  if (!rawRound) return "Rodada 1";
+
+  const trimmed = rawRound.trim();
+
+  // Se já for "Rodada X", preserva
+  if (/^Rodada\s+\d+$/i.test(trimmed)) {
+    const num = trimmed.replace(/\D/g, "");
+    return `Rodada ${num}`;
+  }
+
+  // Captura "Regular Season - 29", "Regular Season - 1", "Round 29", etc.
+  const regularSeasonMatch = trimmed.match(/(?:Regular\s+Season|Round)\s*[-:]?\s*(\d+)/i);
+  if (regularSeasonMatch) {
+    return `Rodada ${regularSeasonMatch[1]}`;
+  }
+
+  // Captura "29ª Rodada" ou "29 Rodada"
+  const ptMatch = trimmed.match(/(\d+)\s*ª?\s*Rodada/i);
+  if (ptMatch) {
+    return `Rodada ${ptMatch[1]}`;
+  }
+
+  // Se for apenas o número da rodada (ex: "29")
+  if (/^\d+$/.test(trimmed)) {
+    return `Rodada ${trimmed}`;
+  }
+
+  return trimmed;
+}
+
+// 2. Mutation Interna: Normaliza e persiste os dados com idempotência e deduplicação
 export const saveSyncedFixtures = internalMutation({
   args: {
     fixtures: v.any(),
@@ -79,6 +116,20 @@ export const saveSyncedFixtures = internalMutation({
         .query("leagues")
         .withIndex("by_externalId", (q) => q.eq("externalId", league.id))
         .first();
+
+      if (!dbLeague) {
+        // Tenta encontrar por nome aproximado antes de inserir
+        const allLeagues = await ctx.db.query("leagues").collect();
+        const normName = league.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        dbLeague = allLeagues.find((l) => {
+          const lName = l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          return lName.includes(normName) || normName.includes(lName);
+        }) ?? null;
+
+        if (dbLeague && !dbLeague.externalId) {
+          await ctx.db.patch(dbLeague._id, { externalId: league.id });
+        }
+      }
 
       if (!dbLeague) {
         const isCup = [2, 13, 73, 11, 45].includes(league.id);
@@ -96,37 +147,63 @@ export const saveSyncedFixtures = internalMutation({
 
       if (!dbLeague) continue;
 
+      // Helper para buscar clube por externalId ou nome aproximado (evita duplicatas como Operário-PR vs Operario-PR)
+      const findOrCreateTeam = async (apiTeam: any) => {
+        let team = await ctx.db
+          .query("teams")
+          .withIndex("by_externalId", (q) => q.eq("externalId", apiTeam.id))
+          .first();
+
+        if (!team) {
+          const allTeams = await ctx.db.query("teams").collect();
+          const normApiName = apiTeam.name
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[-_]/g, " ")
+            .trim();
+
+          team = allTeams.find((t) => {
+            const tNorm = t.name
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[-_]/g, " ")
+              .trim();
+            return (
+              tNorm === normApiName ||
+              (t.code && apiTeam.code && t.code.toUpperCase() === apiTeam.code.toUpperCase()) ||
+              tNorm.includes(normApiName) ||
+              normApiName.includes(tNorm)
+            );
+          }) ?? null;
+
+          if (team && !team.externalId) {
+            await ctx.db.patch(team._id, {
+              externalId: apiTeam.id,
+              logoUrl: team.logoUrl || apiTeam.logo || "",
+              code: team.code || apiTeam.code || undefined,
+            });
+          }
+        }
+
+        if (!team) {
+          const teamId = await ctx.db.insert("teams", {
+            name: apiTeam.name,
+            code: apiTeam.code ?? undefined,
+            logoUrl: apiTeam.logo ?? "",
+            externalId: apiTeam.id,
+          });
+          team = await ctx.db.get(teamId);
+        }
+
+        return team;
+      };
+
       // 2. Garante a existência do Mandante
-      let dbHomeTeam = await ctx.db
-        .query("teams")
-        .withIndex("by_externalId", (q) => q.eq("externalId", teams.home.id))
-        .first();
-
-      if (!dbHomeTeam) {
-        const teamId = await ctx.db.insert("teams", {
-          name: teams.home.name,
-          code: teams.home.code ?? undefined,
-          logoUrl: teams.home.logo ?? "",
-          externalId: teams.home.id,
-        });
-        dbHomeTeam = await ctx.db.get(teamId);
-      }
-
+      const dbHomeTeam = await findOrCreateTeam(teams.home);
       // 3. Garante a existência do Visitante
-      let dbAwayTeam = await ctx.db
-        .query("teams")
-        .withIndex("by_externalId", (q) => q.eq("externalId", teams.away.id))
-        .first();
-
-      if (!dbAwayTeam) {
-        const teamId = await ctx.db.insert("teams", {
-          name: teams.away.name,
-          code: teams.away.code ?? undefined,
-          logoUrl: teams.away.logo ?? "",
-          externalId: teams.away.id,
-        });
-        dbAwayTeam = await ctx.db.get(teamId);
-      }
+      const dbAwayTeam = await findOrCreateTeam(teams.away);
 
       if (!dbHomeTeam || !dbAwayTeam) continue;
 
@@ -149,16 +226,61 @@ export const saveSyncedFixtures = internalMutation({
       else if (["PST", "CANC", "ABD"].includes(shortStatus)) normalizedStatus = "POSTPONED";
       else if (["NS", "TBD"].includes(shortStatus)) normalizedStatus = "SCHEDULED";
 
-      // 5. Atualiza ou insere a partida
-      const existingMatch = await ctx.db
-        .query("matches")
-        .withIndex("by_externalId", (q) => q.eq("externalId", fixture.id))
-        .first();
+      // Normalização da Rodada: converte "Regular Season - 29" em "Rodada 29"
+      const normalizedRound = normalizeRoundName(league.round);
+
+      // 5. Deduplicação Inteligente:
+      // Busca 1: por externalId oficial da partida
+      let existingMatch = fixture.id
+        ? await ctx.db
+            .query("matches")
+            .withIndex("by_externalId", (q) => q.eq("externalId", fixture.id))
+            .first()
+        : null;
+
+      // Busca 2: na mesma liga, mesma rodada, envolvendo o mesmo mandante e visitante ou pelo menos um deles
+      if (!existingMatch) {
+        const matchesInRound = await ctx.db
+          .query("matches")
+          .withIndex("by_league_and_round", (q) =>
+            q.eq("leagueId", dbLeague!._id).eq("round", normalizedRound)
+          )
+          .collect();
+
+        existingMatch = matchesInRound.find(
+          (m) =>
+            (m.homeTeamId === dbHomeTeam._id && m.awayTeamId === dbAwayTeam._id) ||
+            m.homeTeamId === dbHomeTeam._id ||
+            m.awayTeamId === dbAwayTeam._id
+        ) ?? null;
+      }
+
+      // Busca 3: no mesmo dia (intervalo de 18 horas) no mesmo campeonato compartilhando mandante ou visitante
+      if (!existingMatch && fixture.timestamp) {
+        const fixtureTime = fixture.timestamp * 1000;
+        const timeWindowStart = fixtureTime - 18 * 60 * 60 * 1000;
+        const timeWindowEnd = fixtureTime + 18 * 60 * 60 * 1000;
+
+        const leagueMatches = await ctx.db
+          .query("matches")
+          .withIndex("by_league", (q) => q.eq("leagueId", dbLeague!._id))
+          .collect();
+
+        existingMatch = leagueMatches.find((m) => {
+          const inWindow = m.startTime >= timeWindowStart && m.startTime <= timeWindowEnd;
+          const sharesTeam =
+            m.homeTeamId === dbHomeTeam._id ||
+            m.awayTeamId === dbAwayTeam._id ||
+            m.homeTeamId === dbAwayTeam._id ||
+            m.awayTeamId === dbHomeTeam._id;
+          return inWindow && sharesTeam;
+        }) ?? null;
+      }
 
       const matchPayload = {
         externalId: fixture.id,
         leagueId: dbLeague._id,
-        round: league.round ?? "Rodada Regular",
+        round: normalizedRound,
         homeTeamId: dbHomeTeam._id,
         awayTeamId: dbAwayTeam._id,
         status: normalizedStatus,
@@ -170,8 +292,19 @@ export const saveSyncedFixtures = internalMutation({
       };
 
       if (existingMatch) {
-        await ctx.db.patch(existingMatch._id, matchPayload);
+        // Se SIM: apenas faça PATCH no registro existente atualizando dados, NUNCA duplique
+        await ctx.db.patch(existingMatch._id, {
+          externalId: fixture.id,
+          status: normalizedStatus,
+          statusShort: shortStatus,
+          minute: fixture.status?.elapsed ?? existingMatch.minute,
+          homeScore: goals.home ?? existingMatch.homeScore,
+          awayScore: goals.away ?? existingMatch.awayScore,
+          round: normalizedRound,
+          startTime: existingMatch.startTime || matchPayload.startTime,
+        });
       } else {
+        // Se NÃO existir: proceda com a inserção
         await ctx.db.insert("matches", matchPayload);
       }
     }

@@ -1,7 +1,8 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { computeStandingsData } from "./leagues";
+import { normalizeRoundName } from "./ingestion";
 
 export const populateMockData = mutation({
   args: {},
@@ -3079,5 +3080,155 @@ export const seedSerieBRound29 = mutation({
     };
   },
 });
+
+// Limpeza Imediata de duplicatas e registros com "Regular Season"
+export const cleanupDuplicateMatches = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const allMatches = await ctx.db.query("matches").collect();
+    const removed: any[] = [];
+    const normalized: any[] = [];
+
+    // 1. Remove qualquer partida cujo round contenha "Regular Season"
+    for (const m of allMatches) {
+      if (m.round && /Regular\s+Season/i.test(m.round)) {
+        // Remove eventos vinculados
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const ev of events) {
+          await ctx.db.delete(ev._id);
+        }
+
+        // Remove estatísticas vinculadas
+        const stats = await ctx.db
+          .query("matchStatistics")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const st of stats) {
+          await ctx.db.delete(st._id);
+        }
+
+        await ctx.db.delete(m._id);
+        removed.push({
+          id: m._id,
+          round: m.round,
+          reason: "Regular Season round",
+        });
+      } else {
+        const normRound = normalizeRoundName(m.round);
+        if (normRound !== m.round) {
+          await ctx.db.patch(m._id, { round: normRound });
+          normalized.push({ id: m._id, old: m.round, new: normRound });
+        }
+      }
+    }
+
+    // 2. Remove partidas conflitantes onde um time jogaria 2 vezes na mesma rodada/dia
+    const remainingMatches = await ctx.db.query("matches").collect();
+    const duplicateRemoved: any[] = [];
+    const leagueRounds = new Map<string, typeof remainingMatches[0]>();
+
+    for (const m of remainingMatches) {
+      const keyHome = `${m.leagueId}_${m.round}_${m.homeTeamId}`;
+      const keyAway = `${m.leagueId}_${m.round}_${m.awayTeamId}`;
+
+      const existingHome = leagueRounds.get(keyHome);
+      const existingAway = leagueRounds.get(keyAway);
+      const conflict = existingHome || existingAway;
+
+      if (conflict && conflict._id !== m._id) {
+        // Prioriza o registro com estádio cadastrado e com status oficial
+        const mScore = (m.stadiumId ? 10 : 0) + (m.externalId ? 5 : 0);
+        const conflictScore = (conflict.stadiumId ? 10 : 0) + (conflict.externalId ? 5 : 0);
+
+        if (mScore > conflictScore) {
+          await ctx.db.delete(conflict._id);
+          duplicateRemoved.push({
+            id: conflict._id,
+            round: conflict.round,
+            reason: "Duplicate clash in round",
+          });
+          leagueRounds.set(keyHome, m);
+          leagueRounds.set(keyAway, m);
+        } else {
+          await ctx.db.delete(m._id);
+          duplicateRemoved.push({
+            id: m._id,
+            round: m.round,
+            reason: "Duplicate clash in round",
+          });
+        }
+      } else {
+        leagueRounds.set(keyHome, m);
+        leagueRounds.set(keyAway, m);
+      }
+    }
+
+    return {
+      success: true,
+      removedRegularSeasonCount: removed.length,
+      removedRegularSeason: removed,
+      duplicateRemovedCount: duplicateRemoved.length,
+      duplicateRemoved,
+      normalizedCount: normalized.length,
+    };
+  },
+});
+
+// Query para auditoria dos jogos da Série B e verificação da Grade de Hoje
+export const checkSerieBMatches = query({
+  args: {},
+  handler: async (ctx) => {
+    const serieB = await ctx.db
+      .query("leagues")
+      .filter((q) => q.eq(q.field("name"), "Brasileirão Série B"))
+      .first();
+    if (!serieB) return { error: "Série B não encontrada" };
+
+    const matches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", serieB._id))
+      .collect();
+
+    const teamsMap = new Map<string, string>();
+    const teams = await ctx.db.query("teams").collect();
+    for (const t of teams) {
+      teamsMap.set(t._id, t.name);
+    }
+
+    const todayStart = new Date(2026, 8, 22, 0, 0, 0, 0).getTime();
+    const todayEnd = new Date(2026, 8, 22, 23, 59, 59, 999).getTime();
+
+    const todayMatches = matches
+      .filter((m) => m.startTime >= todayStart && m.startTime <= todayEnd)
+      .map((m) => ({
+        id: m._id,
+        round: m.round,
+        home: teamsMap.get(m.homeTeamId),
+        away: teamsMap.get(m.awayTeamId),
+        status: m.status,
+        startTime: new Date(m.startTime).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+        externalId: m.externalId,
+      }));
+
+    const regularSeasonMatches = matches
+      .filter((m) => m.round.includes("Regular Season"))
+      .map((m) => ({
+        id: m._id,
+        round: m.round,
+        home: teamsMap.get(m.homeTeamId),
+        away: teamsMap.get(m.awayTeamId),
+      }));
+
+    return {
+      totalSerieBMatches: matches.length,
+      todayMatches,
+      regularSeasonMatches,
+    };
+  },
+});
+
 
 
