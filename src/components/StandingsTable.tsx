@@ -130,41 +130,63 @@ export function StandingsTable({
 
   const renderFormPills = (formString?: string) => {
     if (!formString) return <span className="text-slate-300">-</span>;
+    // Considera os últimos 5 jogos
     const chars = formString.slice(-5).split("");
+    const isEnglishFormat = formString.includes("W") || formString.includes("L");
 
     return (
-      <div className="inline-flex items-center gap-1 bg-slate-100/90 rounded-md px-1.5 py-0.5 border border-slate-200/80">
-        {chars.map((char, index) => {
-          const upper = char.toUpperCase();
-          if (upper === "W" || upper === "V") {
-            return (
-              <span
-                key={index}
-                className="w-4.5 h-4.5 rounded-[4px] bg-emerald-500 text-white flex items-center justify-center text-[9px] font-extrabold shadow-2xs select-none"
-                title="Vitória"
-              >
-                V
-              </span>
-            );
+      <div className="inline-flex items-center gap-1.5 justify-center py-0.5">
+        {chars.map((rawChar, index) => {
+          const char = rawChar.toUpperCase();
+          let type: "win" | "draw" | "loss" = "draw";
+          let label = "E";
+          let title = "Empate";
+
+          if (isEnglishFormat) {
+            if (char === "W") {
+              type = "win";
+              label = "V";
+              title = "Vitória";
+            } else if (char === "L") {
+              type = "loss";
+              label = "D";
+              title = "Derrota";
+            } else {
+              type = "draw";
+              label = "E";
+              title = "Empate";
+            }
+          } else {
+            // Formato em português: V (Vitória), E (Empate), D (Derrota)
+            if (char === "V") {
+              type = "win";
+              label = "V";
+              title = "Vitória";
+            } else if (char === "D") {
+              type = "loss";
+              label = "D";
+              title = "Derrota";
+            } else {
+              type = "draw";
+              label = "E";
+              title = "Empate";
+            }
           }
-          if (upper === "D" || upper === "E") {
-            return (
-              <span
-                key={index}
-                className="w-4.5 h-4.5 rounded-[4px] bg-slate-400 text-white flex items-center justify-center text-[9px] font-extrabold shadow-2xs select-none"
-                title="Empate"
-              >
-                E
-              </span>
-            );
-          }
+
+          const colorClasses =
+            type === "win"
+              ? "bg-emerald-500 text-white shadow-xs"
+              : type === "loss"
+              ? "bg-rose-500 text-white shadow-xs"
+              : "bg-slate-400 text-white shadow-xs";
+
           return (
             <span
               key={index}
-              className="w-4.5 h-4.5 rounded-[4px] bg-rose-500 text-white flex items-center justify-center text-[9px] font-extrabold shadow-2xs select-none"
-              title="Derrota"
+              className={`w-5 h-5 min-w-[20px] min-h-[20px] rounded-full aspect-square flex items-center justify-center shrink-0 text-[10px] font-black tracking-tight select-none leading-none ${colorClasses}`}
+              title={title}
             >
-              D
+              {label}
             </span>
           );
         })}
@@ -260,7 +282,7 @@ export function StandingsTable({
                 <th className="py-2.5 px-2 text-center w-9" title="Derrotas">D</th>
                 <th className="py-2.5 px-2.5 text-center w-12" title="Saldo de Gols">SG</th>
                 <th className="py-2.5 px-2.5 text-center w-14" title="Gols Pró : Gols Contra">GOLS</th>
-                <th className="py-2.5 px-3 text-center hidden md:table-cell min-w-[130px] font-sans normal-case text-xs text-slate-500 font-semibold">Forma</th>
+                <th className="py-2.5 px-3 text-center hidden md:table-cell min-w-[145px] font-sans normal-case text-xs text-slate-500 font-semibold">Últimos 5</th>
                 <th className="py-2.5 px-3 text-center w-14 font-black text-slate-950 text-xs">PTS</th>
               </tr>
             </thead>
