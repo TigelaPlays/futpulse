@@ -171,6 +171,7 @@ function normalizeStadiumName(str) {
 }
 
 function findMatchingStadium(allStadiums, rawQuery) {
+  const cleanQuery = cleanStadiumString(rawQuery);
   const canonicalTarget = normalizeStadiumName(rawQuery);
   const cleanCanonical = cleanStadiumString(canonicalTarget);
 
