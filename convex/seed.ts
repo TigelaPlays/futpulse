@@ -4626,3 +4626,217 @@ export const seedSerieBRounds30to34 = mutation({
   },
 });
 
+// ─── Rodadas 35 a 38 (Encerramento) — Brasileirão Série B 2026 ───────────────
+export const seedSerieBRounds35to38 = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let serieB = await ctx.db
+      .query("leagues")
+      .withIndex("by_externalId", (q) => q.eq("externalId", 72))
+      .first();
+
+    if (!serieB) {
+      const allLeagues = await ctx.db.query("leagues").collect();
+      serieB = allLeagues.find((l) => l.name.toLowerCase().includes("série b")) ?? null;
+    }
+
+    if (!serieB) throw new Error("Liga Série B não encontrada.");
+
+    const clean = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[-_]/g, " ")
+        .trim();
+
+    const TEAM_ALIASES: Record<string, string> = {
+      "america mineiro": "america mg",
+      "america-mg": "america mg",
+      "athletic club": "athletic",
+      "atletico goianiense": "atletico go",
+      "atletico-go": "atletico go",
+      "botafogo sp": "botafogo sp",
+      "botafogo-sp": "botafogo sp",
+      "operario pr": "operario pr",
+      "operario-pr": "operario pr",
+      "operario ferroviario": "operario pr",
+      "sport recife": "sport",
+      "sport": "sport",
+    };
+
+    const normTeam = (s: string) => {
+      const c = clean(s);
+      return TEAM_ALIASES[c] ?? c;
+    };
+
+    const allTeams = await ctx.db.query("teams").collect();
+    const findTeam = (name: string) => {
+      const n = normTeam(name);
+      const team = allTeams.find((t) => normTeam(t.name) === n);
+      if (!team) throw new Error(`Time não encontrado: ${name}`);
+      return team;
+    };
+
+    const TEAM_HOME_STADIUM: Record<string, string> = {
+      "novorizontino": "Jorge Ismael de Biasi",
+      "avai": "Ressacada",
+      "vila nova": "OBA",
+      "operario pr": "Germano Krüger",
+      "ceara": "Castelão (CE)",
+      "goias": "Hailé Pinheiro (Serrinha)",
+      "nautico": "Estádio dos Aflitos",
+      "athletic": "Arena Sicredi",
+      "cuiaba": "Arena Pantanal",
+      "botafogo sp": "Arena Nicnet (Santa Cruz)",
+      "sao bernardo": "Primeiro de Maio",
+      "criciuma": "Heriberto Hülse",
+      "america mg": "Independência",
+      "londrina": "VGD",
+      "atletico go": "Antônio Accioly",
+      "sport": "Ilha do Retiro",
+      "crb": "Rei Pelé (AL)",
+      "ponte preta": "Moisés Lucarelli",
+      "juventude": "Alfredo Jaconi",
+      "fortaleza": "Castelão (CE)",
+    };
+
+    const allStadiums = await ctx.db.query("stadiums").collect();
+    const findStadiumForTeam = (teamName: string, teamStadiumId?: Id<"stadiums">) => {
+      if (teamStadiumId) {
+        const found = allStadiums.find((s) => s._id === teamStadiumId);
+        if (found) return found;
+      }
+      const n = normTeam(teamName);
+      const targetStadium = TEAM_HOME_STADIUM[n];
+      if (targetStadium) {
+        const found = allStadiums.find(
+          (s) => s.name.toLowerCase() === targetStadium.toLowerCase() || clean(s.name) === clean(targetStadium)
+        );
+        if (found) return found;
+      }
+      throw new Error(`Estádio oficial não encontrado para o mandante: ${teamName}`);
+    };
+
+    type MatchDef = {
+      round: number;
+      date: string;
+      home: string;
+      away: string;
+    };
+
+    const fixtures: MatchDef[] = [
+      // R35 (2026-10-24)
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Ponte Preta", away: "Fortaleza" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "São Bernardo", away: "Vila Nova" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "América-MG", away: "Cuiabá" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Operário-PR", away: "Athletic Club" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Ceará", away: "Goiás" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Atlético-GO", away: "Novorizontino" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Avaí", away: "Botafogo-SP" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Sport", away: "Criciúma" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "CRB", away: "Londrina" },
+      { round: 35, date: "2026-10-24T16:00:00-03:00", home: "Juventude", away: "Náutico" },
+
+      // R36 (2026-10-31)
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Botafogo-SP", away: "Sport" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Novorizontino", away: "Operário-PR" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Athletic Club", away: "Ceará" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Londrina", away: "América-MG" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Fortaleza", away: "Atlético-GO" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Goiás", away: "CRB" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Criciúma", away: "Ponte Preta" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Náutico", away: "Avaí" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Cuiabá", away: "São Bernardo" },
+      { round: 36, date: "2026-10-31T16:00:00-03:00", home: "Vila Nova", away: "Juventude" },
+
+      // R37 (2026-11-07)
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Botafogo-SP", away: "Londrina" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Novorizontino", away: "Fortaleza" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Athletic Club", away: "Atlético-GO" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Operário-PR", away: "Sport" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Ceará", away: "América-MG" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Goiás", away: "Ponte Preta" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Avaí", away: "São Bernardo" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Náutico", away: "CRB" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Cuiabá", away: "Juventude" },
+      { round: 37, date: "2026-11-07T16:00:00-03:00", home: "Vila Nova", away: "Criciúma" },
+
+      // R38 (2026-11-14)
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Ponte Preta", away: "Operário-PR" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "São Bernardo", away: "Athletic Club" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "América-MG", away: "Avaí" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Londrina", away: "Náutico" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Fortaleza", away: "Vila Nova" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Atlético-GO", away: "Cuiabá" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Criciúma", away: "Novorizontino" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Sport", away: "Goiás" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "CRB", away: "Ceará" },
+      { round: 38, date: "2026-11-14T16:00:00-03:00", home: "Juventude", away: "Botafogo-SP" },
+    ];
+
+    // Busca partidas existentes das rodadas 35 a 38 na Série B para evitar duplicatas
+    const existingMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", serieB!._id))
+      .collect();
+
+    let inserted = 0;
+    let skipped = 0;
+    const perRoundStats: Record<string, number> = {};
+
+    for (const f of fixtures) {
+      const roundName = `Rodada ${f.round}`;
+      const homeTeam = findTeam(f.home);
+      const awayTeam = findTeam(f.away);
+      const stadium = findStadiumForTeam(f.home, (homeTeam as any).stadiumId);
+      const timeMs = new Date(f.date).getTime();
+      const statusShort = "16:00";
+
+      // Verificação de duplicata
+      const duplicate = existingMatches.find(
+        (m) =>
+          m.round === roundName &&
+          m.homeTeamId === homeTeam._id &&
+          m.awayTeamId === awayTeam._id
+      );
+
+      if (duplicate) {
+        skipped++;
+        continue;
+      }
+
+      await ctx.db.insert("matches", {
+        leagueId: serieB!._id,
+        round: roundName,
+        homeTeamId: homeTeam._id,
+        awayTeamId: awayTeam._id,
+        stadiumId: stadium._id,
+        status: "SCHEDULED",
+        statusShort,
+        homeScore: 0,
+        awayScore: 0,
+        startTime: timeMs,
+      });
+
+      inserted++;
+      perRoundStats[roundName] = (perRoundStats[roundName] ?? 0) + 1;
+    }
+
+    // Contagem total de partidas da Série B após inserção
+    const finalMatches = await ctx.db
+      .query("matches")
+      .withIndex("by_league", (q) => q.eq("leagueId", serieB!._id))
+      .collect();
+
+    return {
+      success: true,
+      totalInserted: inserted,
+      totalSkipped: skipped,
+      totalSerieBMatches: finalMatches.length,
+      perRoundStats,
+    };
+  },
+});
+
+
