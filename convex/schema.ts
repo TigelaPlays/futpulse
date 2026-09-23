@@ -5,6 +5,7 @@ export default defineSchema({
   // 1. Campeonatos (Pontos corridos e Copas)
   leagues: defineTable({
     name: v.string(),
+    code: v.optional(v.string()),
     country: v.string(),
     logoUrl: v.string(),
     customLogoStorageId: v.optional(v.id("_storage")), // Imagem no Convex File Storage

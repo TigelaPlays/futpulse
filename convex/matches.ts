@@ -542,4 +542,4 @@ export const saveMatchDetailsFromSofascore = mutation({
       insertedEventsCount,
     };
   },
-});
+});
