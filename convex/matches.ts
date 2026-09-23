@@ -430,3 +430,116 @@ export const registerMatchGoals = mutation({
     };
   },
 });
+
+// Salva estatísticas e lances normalizados a partir do Sofascore
+export const saveMatchDetailsFromSofascore = mutation({
+  args: {
+    matchId: v.id("matches"),
+    statistics: v.optional(
+      v.object({
+        possession: v.object({ home: v.number(), away: v.number() }),
+        shotsTotal: v.object({ home: v.number(), away: v.number() }),
+        shotsOnTarget: v.object({ home: v.number(), away: v.number() }),
+        corners: v.object({ home: v.number(), away: v.number() }),
+        fouls: v.object({ home: v.number(), away: v.number() }),
+        passes: v.object({ home: v.number(), away: v.number() }),
+      })
+    ),
+    events: v.optional(
+      v.array(
+        v.object({
+          minute: v.number(),
+          extraTime: v.optional(v.union(v.number(), v.null())),
+          type: v.string(),
+          text: v.string(),
+          isHome: v.boolean(),
+        })
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const match = await ctx.db.get(args.matchId);
+    if (!match) {
+      throw new Error(`Partida não encontrada para o id: ${args.matchId}`);
+    }
+
+    // 1. Atualiza ou cria o registro em matchStatistics
+    let updatedStats = false;
+    if (args.statistics) {
+      const statsPayload = {
+        matchId: args.matchId,
+        homePossession: args.statistics.possession.home,
+        awayPossession: args.statistics.possession.away,
+        homeTotalShots: args.statistics.shotsTotal.home,
+        awayTotalShots: args.statistics.shotsTotal.away,
+        homeShotsOnTarget: args.statistics.shotsOnTarget.home,
+        awayShotsOnTarget: args.statistics.shotsOnTarget.away,
+        homeCorners: args.statistics.corners.home,
+        awayCorners: args.statistics.corners.away,
+        homeFouls: args.statistics.fouls.home,
+        awayFouls: args.statistics.fouls.away,
+        homePasses: args.statistics.passes.home,
+        awayPasses: args.statistics.passes.away,
+      };
+
+      const existingStats = await ctx.db
+        .query("matchStatistics")
+        .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
+        .first();
+
+      if (existingStats) {
+        await ctx.db.patch(existingStats._id, statsPayload);
+      } else {
+        await ctx.db.insert("matchStatistics", statsPayload);
+      }
+      updatedStats = true;
+    }
+
+    // 2. Deleta eventos antigos dessa partida em matchEvents e insere os novos lances processados
+    let insertedEventsCount = 0;
+    if (args.events) {
+      const existingEvents = await ctx.db
+        .query("matchEvents")
+        .withIndex("by_match", (q) => q.eq("matchId", args.matchId))
+        .collect();
+
+      for (const ev of existingEvents) {
+        await ctx.db.delete(ev._id);
+      }
+
+      for (const ev of args.events) {
+        const teamId = ev.isHome ? match.homeTeamId : match.awayTeamId;
+
+        let normalizedType: "GOAL" | "YELLOW_CARD" | "RED_CARD" | "SUBSTITUTION" | "VAR" = "VAR";
+        if (ev.type === "GOAL_HOME" || ev.type === "GOAL_AWAY" || ev.type === "GOAL") {
+          normalizedType = "GOAL";
+        } else if (ev.type === "YELLOW_CARD") {
+          normalizedType = "YELLOW_CARD";
+        } else if (ev.type === "RED_CARD") {
+          normalizedType = "RED_CARD";
+        } else if (ev.type === "SUBSTITUTION") {
+          normalizedType = "SUBSTITUTION";
+        }
+
+        await ctx.db.insert("matchEvents", {
+          matchId: args.matchId,
+          minute: ev.minute,
+          extraMinute: ev.extraTime ?? undefined,
+          teamId,
+          playerName: ev.text || "Jogador",
+          type: normalizedType,
+          detail: ev.type,
+          externalId: `sofascore-${args.matchId}-${ev.minute}-${ev.text}-${ev.type}`,
+        });
+        insertedEventsCount++;
+      }
+    }
+
+    return {
+      success: true,
+      matchId: args.matchId,
+      updatedStats,
+      insertedEventsCount,
+    };
+  },
+});
