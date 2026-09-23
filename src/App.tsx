@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
@@ -110,6 +110,12 @@ export default function App() {
     startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
     endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
   });
+
+  const getDateIsoForOffset = (offset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toISOString().split("T")[0];
+  };
   const allMatchesForCounts = useQuery(api.matches.listMatches, {
     statusFilter: "ALL",
     leagueId: selectedLeagueId ?? undefined,
@@ -228,13 +234,14 @@ export default function App() {
   };
 
   // Sincronização de jogos do dia
-  const handleSyncDaily = async () => {
+  const handleSyncDaily = useCallback(async (dateOverride?: string) => {
     try {
       setIsSyncing(true);
       setSyncFeedback(null);
-      const result = await syncDailyFixtures({});
+      const targetDate = dateOverride ?? getDateIsoForOffset(selectedDateOffset ?? 0);
+      const result = await syncDailyFixtures({ date: targetDate });
       if (result.success) {
-        setSyncFeedback(`${result.syncedCount ?? 0} jogos do dia sincronizados`);
+        setSyncFeedback(`${result.syncedCount ?? 0} jogos de ${targetDate} sincronizados`);
       } else {
         setSyncFeedback("Falha na sincronização");
       }
@@ -245,7 +252,18 @@ export default function App() {
       setIsSyncing(false);
       setTimeout(() => setSyncFeedback(null), 3500);
     }
-  };
+  }, [selectedDateOffset, syncDailyFixtures]);
+
+  useEffect(() => {
+    if (selectedLeagueId !== null || selectedDateOffset === null) return;
+
+    const targetDate = getDateIsoForOffset(selectedDateOffset);
+    const timer = window.setTimeout(() => {
+      void handleSyncDaily(targetDate);
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedDateOffset, selectedLeagueId, handleSyncDaily]);
 
   // Simulação de gol local
   const handleSimulateGoal = async (
@@ -792,7 +810,7 @@ export default function App() {
                 setSelectedLeagueId(null);
                 setSelectedDateOffset(0);
                 setFilter("ALL");
-                handleSyncDaily();
+                void handleSyncDaily(getDateIsoForOffset(0));
               }}
               disabled={isSyncing}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
@@ -987,7 +1005,9 @@ export default function App() {
             <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-xs">
               <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none touch-pan-x py-0.5 max-w-full">
                 <button
-                  onClick={() => setSelectedDateOffset((prev) => (prev ?? 0) - 1)}
+                  onClick={() => {
+                    setSelectedDateOffset((prev) => (prev ?? 0) - 1);
+                  }}
                   className="p-1 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer shrink-0"
                   title="Dia anterior"
                   aria-label="Dia anterior"
@@ -1000,7 +1020,9 @@ export default function App() {
                   return (
                     <button
                       key={offset}
-                      onClick={() => setSelectedDateOffset(offset)}
+                      onClick={() => {
+                        setSelectedDateOffset(offset);
+                      }}
                       className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                         isSelected
                           ? "bg-emerald-600 text-white font-bold shadow-xs scale-102"
