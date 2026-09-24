@@ -164,3 +164,69 @@ export const getLiveMatchesList = query({
     return live;
   },
 });
+
+export const finalizeStaleLiveMatches = mutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    thresholdMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const isDryRun = args.dryRun ?? false;
+    const thresholdMinutes = args.thresholdMinutes ?? 85;
+
+    const allMatches = await ctx.db.query("matches").collect();
+    const allLeagues = await ctx.db.query("leagues").collect();
+    const allTeams = await ctx.db.query("teams").collect();
+
+    const leagueMap = new Map(allLeagues.map((l) => [l._id, l]));
+    const teamMap = new Map(allTeams.map((t) => [t._id, t]));
+
+    const now = Date.now();
+    const min105Ago = now - 105 * 60 * 1000;
+
+    const staleLiveMatches = allMatches.filter((m) => {
+      const isLiveStatus = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
+        m.status
+      );
+      if (!isLiveStatus) return false;
+
+      const isPastThreshold = typeof m.minute === "number" && m.minute >= thresholdMinutes;
+      const isStartTimeStale = m.startTime <= min105Ago;
+
+      return isPastThreshold || isStartTimeStale;
+    });
+
+    const finalizedList: any[] = [];
+
+    for (const match of staleLiveMatches) {
+      const league = leagueMap.get(match.leagueId);
+      const home = teamMap.get(match.homeTeamId);
+      const away = teamMap.get(match.awayTeamId);
+
+      finalizedList.push({
+        id: match._id,
+        externalId: match.externalId,
+        league: league?.name,
+        match: `${home?.name} ${match.homeScore} x ${match.awayScore} ${away?.name}`,
+        previousMinute: match.minute,
+        previousStatus: match.status,
+        startTime: new Date(match.startTime).toISOString(),
+      });
+
+      if (!isDryRun) {
+        await ctx.db.patch(match._id, {
+          status: "FINISHED",
+          statusShort: "FT",
+          minute: 90,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      dryRun: isDryRun,
+      finalizedCount: staleLiveMatches.length,
+      finalizedList,
+    };
+  },
+});

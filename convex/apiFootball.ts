@@ -51,12 +51,14 @@ function mapApiFootballStatus(shortStatus?: string | null): {
     case "ET":
       return { status: "EXTRA_TIME", statusShort: "PR" };
     case "P":
-    case "PEN":
       return { status: "PENALTY_SHOOTOUT", statusShort: "PEN" };
     case "LIVE":
       return { status: "LIVE", statusShort: "AO VIVO" };
     case "FT":
     case "AET":
+    case "PEN":
+    case "AWD":
+    case "WO":
       return { status: "FINISHED", statusShort: "FT" };
     case "NS":
       return { status: "SCHEDULED", statusShort: "NS" };
@@ -186,6 +188,58 @@ export const hasLiveOrImminentMatches = internalQuery({
       m.status === "SCHEDULED" && m.startTime >= now - 5 * 60 * 1000 && m.startTime <= oneHourFromNow
     );
     return !!imminentMatch;
+  },
+});
+
+// Query interna: identifica partidas ao vivo que podem ter terminado (>= 85 min ou iniciadas há mais de 105 min)
+export const getStaleLiveMatches = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const allMatches = await ctx.db.query("matches").collect();
+    const now = Date.now();
+    const min105Ago = now - 105 * 60 * 1000;
+
+    const liveMatches = allMatches.filter((m) =>
+      ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
+    );
+
+    return liveMatches
+      .filter((m) => {
+        const isPast85 = typeof m.minute === "number" && m.minute >= 85;
+        const isPast105FromStart = m.startTime <= min105Ago;
+        return (isPast85 || isPast105FromStart) && typeof m.externalId === "number";
+      })
+      .map((m) => ({
+        id: m._id,
+        externalId: m.externalId!,
+        minute: m.minute,
+        startTime: m.startTime,
+      }));
+  },
+});
+
+// Mutation interna: finaliza partidas expiradas no banco para 'FINISHED' / 'FT'
+export const finalizeExpiredMatches = internalMutation({
+  args: {
+    matchIds: v.array(v.id("matches")),
+  },
+  handler: async (ctx, args) => {
+    let finalizedCount = 0;
+    for (const matchId of args.matchIds) {
+      const match = await ctx.db.get(matchId);
+      if (
+        match &&
+        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status)
+      ) {
+        await ctx.db.patch(matchId, {
+          status: "FINISHED",
+          statusShort: "FT",
+          minute: 90,
+        });
+        finalizedCount++;
+      }
+    }
+    return { finalizedCount };
   },
 });
 
@@ -407,6 +461,9 @@ export const syncLiveMatchesAction = action({
       };
     }
 
+    const staleMatches: Array<{ id: Id<"matches">; externalId: number; minute?: number; startTime: number }> =
+      await ctx.runQuery(internal.apiFootball.getStaleLiveMatches);
+
     let fixtures: any[] = [];
     let currentRemaining = quotaInfo.remaining;
 
@@ -466,6 +523,68 @@ export const syncLiveMatchesAction = action({
         }
       } catch (err: any) {
         console.warn("[API-Football] Falha na consulta live:", err.message);
+      }
+
+      // 4. Verificação de partidas prestes a encerrar (>= 85' ou > 105' de jogo) que saíram do endpoint live=all
+      const missingStale = staleMatches.filter(
+        (sm) => !fixtures.some((f) => f.fixture?.id === sm.externalId)
+      );
+
+      if (missingStale.length > 0 && currentRemaining > 5) {
+        const staleIds = missingStale.map((sm) => sm.externalId);
+        console.log(
+          `[API-Football] 🔍 ${missingStale.length} partidas ao vivo >= 85' não constam mais em live=all. Consultando status final por IDs...`
+        );
+
+        for (let i = 0; i < staleIds.length; i += 20) {
+          const chunkIds = staleIds.slice(i, i + 20).join("-");
+          try {
+            const idRes = await fetch(`https://v3.football.api-sports.io/fixtures?ids=${chunkIds}`, {
+              headers: {
+                "x-apisports-key": apiKey,
+                Accept: "application/json",
+              },
+            });
+            if (idRes.ok) {
+              const idData = await idRes.json();
+              if (Array.isArray(idData.response) && idData.response.length > 0) {
+                console.log(
+                  `[API-Football] ✅ ${idData.response.length} partidas com status final retornadas por ID.`
+                );
+                for (const f of idData.response) {
+                  if (!fixtures.some((existing) => existing.fixture?.id === f.fixture?.id)) {
+                    fixtures.push(f);
+                  }
+                }
+              }
+            }
+          } catch (err: any) {
+            console.warn("[API-Football] Falha na consulta por IDs:", err.message);
+          }
+        }
+      }
+
+      // 5. Finalizador de contingência: se alguma partida congelou em >= 90' ou > 110' e não foi atualizada pela API
+      const stillMissingStale = missingStale.filter(
+        (sm) => !fixtures.some((f) => f.fixture?.id === sm.externalId)
+      );
+      if (stillMissingStale.length > 0) {
+        const idsToFinalize = stillMissingStale
+          .filter(
+            (sm) =>
+              (typeof sm.minute === "number" && sm.minute >= 90) ||
+              sm.startTime <= Date.now() - 110 * 60 * 1000
+          )
+          .map((sm) => sm.id);
+
+        if (idsToFinalize.length > 0) {
+          console.log(
+            `[API-Football] 🏁 Encerrando automaticamente ${idsToFinalize.length} partidas travadas em 90' ausentes do live feed.`
+          );
+          await ctx.runMutation(internal.apiFootball.finalizeExpiredMatches, {
+            matchIds: idsToFinalize,
+          });
+        }
       }
 
       // Se não houver jogos 'live' e a quota permitir (> 5), tenta ligas alvo
