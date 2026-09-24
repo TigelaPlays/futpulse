@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Calendar, Clock } from "lucide-react";
+import { getNationFlagUrl } from "../utils/flagsNationsAssets";
 
 interface RoundMatchesListProps {
   leagueId: Id<"leagues">;
@@ -202,6 +203,8 @@ export function RoundMatchesList({
             const { stadium, dateStr, weekday, timeStr } = formatMatchHeader(m);
             const homeCode = getTeamCode(m.homeTeam);
             const awayCode = getTeamCode(m.awayTeam);
+            const homeLogo = m.homeTeam?.name ? getNationFlagUrl(m.homeTeam.name, m.homeTeam.logoUrl) : m.homeTeam?.logoUrl;
+            const awayLogo = m.awayTeam?.name ? getNationFlagUrl(m.awayTeam.name, m.awayTeam.logoUrl) : m.awayTeam?.logoUrl;
 
             return (
               <div
@@ -244,13 +247,18 @@ export function RoundMatchesList({
                     <span className="text-xs font-bold text-slate-700 tracking-tight truncate max-w-[85px] sm:max-w-[120px] text-right">
                       {m.homeTeam?.name ?? homeCode}
                     </span>
-                    {m.homeTeam?.logoUrl ? (
+                    {homeLogo ? (
                       <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
                         <img
-                          src={m.homeTeam.logoUrl}
+                          src={homeLogo}
                           alt={m.homeTeam?.name ?? homeCode}
                           className="w-full h-full object-contain"
                           loading="lazy"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            target.src = "/favicon.svg";
+                          }}
                         />
                       </div>
                     ) : (
@@ -277,13 +285,18 @@ export function RoundMatchesList({
 
                   {/* Visitante */}
                   <div className="flex items-center justify-start gap-1.5 sm:gap-2 flex-1 min-w-0">
-                    {m.awayTeam?.logoUrl ? (
+                    {awayLogo ? (
                       <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-50 p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs">
                         <img
-                          src={m.awayTeam.logoUrl}
+                          src={awayLogo}
                           alt={m.awayTeam?.name ?? awayCode}
                           className="w-full h-full object-contain"
                           loading="lazy"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            target.src = "/favicon.svg";
+                          }}
                         />
                       </div>
                     ) : (

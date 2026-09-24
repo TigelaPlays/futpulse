@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Trophy, Shield, Info, Layers } from "lucide-react";
+import { getNationFlagUrl } from "../utils/flagsNationsAssets";
 
 type DivisionType = "A" | "B" | "C" | "D";
 
@@ -250,10 +251,18 @@ export function NationsLeagueStandings() {
 
                             {/* Seleção (Bandeira + Nome) */}
                             <td className="py-2.5 px-2 font-semibold text-slate-900 truncate max-w-[140px] sm:max-w-[180px]">
-                              <div className="flex items-center gap-2">
-                                <span className="text-base shrink-0 select-none leading-none">
-                                  {row.teamFlag || "🏳️"}
-                                </span>
+                              <div className="flex items-center">
+                                <img
+                                  src={getNationFlagUrl(row.teamName)}
+                                  alt={row.teamName}
+                                  className="w-5 h-5 object-contain inline-block mr-2 rounded-xs shrink-0 shadow-2xs border border-slate-200/60"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    target.onerror = null;
+                                    target.src = "/favicon.svg";
+                                  }}
+                                  loading="lazy"
+                                />
                                 <span className="truncate text-xs sm:text-sm font-semibold text-slate-900" title={row.teamName}>
                                   {row.teamName}
                                 </span>
