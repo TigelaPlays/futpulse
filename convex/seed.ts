@@ -230,17 +230,7 @@ export const populateSerieBStandings = mutation({
 
     if (!serieB) return;
 
-    // 1. Limpa registros anteriores para não duplicar
-    const existing = await ctx.db
-      .query("standings")
-      .withIndex("by_league_season", (q) =>
-        q.eq("leagueId", serieB._id).eq("season", 2026)
-      )
-      .collect();
 
-    for (const r of existing) {
-      await ctx.db.delete(r._id);
-    }
 
     // 2. Reparos preventivos no banco:
     // Garante que o time 134 não fique como Goiás (134 é Athletico-PR)
@@ -347,24 +337,7 @@ export const populateSerieBStandings = mutation({
         team = await ctx.db.get(teamId);
       }
 
-      if (team) {
-        await ctx.db.insert("standings", {
-          leagueId: serieB._id,
-          season: 2026,
-          rank: item.rank,
-          previousRank: item.previousRank,
-          teamId: team._id,
-          points: item.pts,
-          played: item.j,
-          win: item.v,
-          draw: item.e,
-          lose: item.d,
-          goalsDiff: item.sg,
-          goalsFor: item.gf,
-          goalsAgainst: item.ga,
-          form: item.form,
-        });
-      }
+
     }
 
     return { success: true, total: realStandings.length };
@@ -1485,32 +1458,7 @@ export const seedSerieBRounds2to5Real = mutation({
       serieB.name
     );
 
-    const oldStandings = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", serieB._id))
-      .collect();
 
-    for (const r of oldStandings) await ctx.db.delete(r._id);
-
-    for (const row of standingsList) {
-      await ctx.db.insert("standings", {
-        leagueId: serieB._id,
-        season: serieB.season,
-        rank: row.rank,
-        previousRank: row.previousRank,
-        teamId: row.teamId,
-        points: row.points,
-        goalsDiff: row.goalsDiff,
-        form: row.form,
-        played: row.played,
-        win: row.win,
-        draw: row.draw,
-        lose: row.lose,
-        goalsFor: row.goalsFor,
-        goalsAgainst: row.goalsAgainst,
-        description: row.description,
-      });
-    }
 
     return {
       success: true,
@@ -2025,32 +1973,7 @@ export const seedSerieBRounds6to8Real = mutation({
       serieB.name
     );
 
-    const oldStandings = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", serieB._id))
-      .collect();
 
-    for (const r of oldStandings) await ctx.db.delete(r._id);
-
-    for (const row of standingsList) {
-      await ctx.db.insert("standings", {
-        leagueId: serieB._id,
-        season: serieB.season,
-        rank: row.rank,
-        previousRank: row.previousRank,
-        teamId: row.teamId,
-        points: row.points,
-        goalsDiff: row.goalsDiff,
-        form: row.form,
-        played: row.played,
-        win: row.win,
-        draw: row.draw,
-        lose: row.lose,
-        goalsFor: row.goalsFor,
-        goalsAgainst: row.goalsAgainst,
-        description: row.description,
-      });
-    }
 
     return {
       success: true,
@@ -3805,61 +3728,9 @@ export const seedCupCompetitions = mutation({
       uclCreated++;
     }
 
-    // ----------------------------------------------------
-    // Recalcula e persiste a tabela oficial da Fase de Liga com os 36 clubes
-    const allUclMatches = await ctx.db
-      .query("matches")
-      .withIndex("by_league", (q) => q.eq("leagueId", ucl!._id))
-      .collect();
 
-    const finishedUclMatches = allUclMatches.filter((m) => m.status === "FINISHED");
-    const uclTeamIdSet = new Set<Id<"teams">>();
-    for (const m of allUclMatches) {
-      uclTeamIdSet.add(m.homeTeamId);
-      uclTeamIdSet.add(m.awayTeamId);
-    }
 
-    const teamDocMap = new Map<string, Doc<"teams">>();
-    await Promise.all(
-      Array.from(uclTeamIdSet).map(async (tid) => {
-        const team = await ctx.db.get(tid);
-        if (team) teamDocMap.set(tid, team);
-      })
-    );
 
-    const uclStandingsList = computeStandingsData(
-      finishedUclMatches,
-      Array.from(uclTeamIdSet),
-      teamDocMap,
-      "all",
-      ucl.name
-    );
-
-    const oldStandings = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", ucl!._id))
-      .collect();
-    for (const row of oldStandings) await ctx.db.delete(row._id);
-
-    for (const row of uclStandingsList) {
-      await ctx.db.insert("standings", {
-        leagueId: ucl!._id,
-        season: ucl.season,
-        rank: row.rank,
-        previousRank: row.previousRank,
-        teamId: row.teamId,
-        points: row.points,
-        goalsDiff: row.goalsDiff,
-        form: row.form,
-        played: row.played,
-        win: row.win,
-        draw: row.draw,
-        lose: row.lose,
-        goalsFor: row.goalsFor,
-        goalsAgainst: row.goalsAgainst,
-        description: row.description,
-      });
-    }
 
     // 5b. Artilharia Oficial da Champions League – Rodada 1
     // Autogolos excluídos (detail === "OG") conforme regras UEFA

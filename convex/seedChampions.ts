@@ -516,33 +516,6 @@ export const seedChampionsLeague = mutation({
       ucl.name
     );
 
-    // Remove classificação anterior e grava as 36 posições com descrições das zonas
-    const oldStandings = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", ucl!._id))
-      .collect();
-    for (const row of oldStandings) await ctx.db.delete(row._id);
-
-    for (const row of uclStandingsList) {
-      await ctx.db.insert("standings", {
-        leagueId: ucl!._id,
-        season: ucl.season,
-        rank: row.rank,
-        previousRank: row.previousRank,
-        teamId: row.teamId,
-        points: row.points,
-        goalsDiff: row.goalsDiff,
-        form: row.form,
-        played: row.played,
-        win: row.win,
-        draw: row.draw,
-        lose: row.lose,
-        goalsFor: row.goalsFor,
-        goalsAgainst: row.goalsAgainst,
-        description: row.description,
-      });
-    }
-
     return {
       success: true,
       league: {

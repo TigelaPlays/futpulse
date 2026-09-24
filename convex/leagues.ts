@@ -317,15 +317,6 @@ export const getStandings = query({
       teamIdSet.add(m.awayTeamId);
     }
 
-    const storedStandings = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", args.leagueId))
-      .collect();
-
-    for (const s of storedStandings) {
-      teamIdSet.add(s.teamId);
-    }
-
     // Se houver partidas finalizadas, computa dinamicamente!
     if (finishedMatches.length > 0 && teamIdSet.size > 0) {
       const teamDocMap = new Map<string, Doc<"teams">>();
@@ -345,16 +336,7 @@ export const getStandings = query({
       );
     }
 
-    // Fallback: se não houver partidas cadastradas, retorna a tabela armazenada
-    return await Promise.all(
-      storedStandings.map(async (row) => {
-        const team = await ctx.db.get(row.teamId);
-        return {
-          ...row,
-          team,
-        };
-      })
-    );
+    return [];
   },
 });
 
@@ -397,37 +379,6 @@ export const recalculateAndSaveStandings = mutation({
       "all",
       league.name
     );
-
-    // Limpa a tabela standings antiga desta liga
-    const existing = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", args.leagueId))
-      .collect();
-
-    for (const row of existing) {
-      await ctx.db.delete(row._id);
-    }
-
-    // Insere as linhas recalculadas
-    for (const row of standingsList) {
-      await ctx.db.insert("standings", {
-        leagueId: args.leagueId,
-        season: league.season,
-        rank: row.rank,
-        previousRank: row.previousRank,
-        teamId: row.teamId,
-        points: row.points,
-        goalsDiff: row.goalsDiff,
-        form: row.form,
-        played: row.played,
-        win: row.win,
-        draw: row.draw,
-        lose: row.lose,
-        goalsFor: row.goalsFor,
-        goalsAgainst: row.goalsAgainst,
-        description: row.description,
-      });
-    }
 
     return { success: true, count: standingsList.length };
   },

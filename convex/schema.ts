@@ -132,26 +132,32 @@ export default defineSchema({
 
   // 7. Tabela de Classificação
   standings: defineTable({
-    leagueId: v.id("leagues"),
-    season: v.number(),
-    rank: v.number(),
-    previousRank: v.optional(v.number()), // Posição na rodada anterior
-    teamId: v.id("teams"),
+    leagueId: v.optional(v.string()), // ID ou slug identificando a Nations League
+    division: v.union(v.literal("A"), v.literal("B"), v.literal("C"), v.literal("D")),
+    group: v.string(), // "A1", "A2", "B1", "C1", "D1", etc.
+    teamId: v.optional(v.id("teams")),
+    teamName: v.string(),
+    teamFlag: v.optional(v.string()),
     points: v.number(),
-    goalsDiff: v.number(),
-    form: v.optional(v.string()), // Ex: "WWDLW"
     played: v.number(),
-    win: v.number(),
-    draw: v.number(),
-    lose: v.number(),
+    won: v.number(),
+    drawn: v.number(),
+    lost: v.number(),
     goalsFor: v.number(),
     goalsAgainst: v.number(),
-    description: v.optional(v.string()), // Ex: "Libertadores", "Rebaixamento"
-    group: v.optional(v.string()), // Ex: "Grupo A", "Fase de Liga"
-    stage: v.optional(v.string()),
+    goalDifference: v.number(),
+    form: v.optional(v.array(v.string())), // ex: ["W", "D", "L"]
+    zone: v.union(
+      v.literal("QUARTER_FINALS"),
+      v.literal("PROMOTION"),
+      v.literal("PROMOTION_PLAYOFF"),
+      v.literal("RELEGATION_PLAYOFF"),
+      v.literal("RELEGATION"),
+      v.literal("NONE")
+    ),
   })
-    .index("by_league_season", ["leagueId", "season"])
-    .index("by_league_rank", ["leagueId", "rank"]),
+    .index("by_division_group", ["division", "group"])
+    .index("by_division", ["division"]),
 
   // 8. Artilharia / Top Scorers (Fonte Oficial GE)
   topScorers: defineTable({

@@ -1191,51 +1191,6 @@ export const saveSyncedStandings = internalMutation({
   handler: async (ctx, args) => {
     // Mantém a temporada da liga sincronizada
     await ctx.db.patch(args.leagueId, { season: args.season });
-
-    const existing = await ctx.db
-      .query("standings")
-      .withIndex("by_league_rank", (q) => q.eq("leagueId", args.leagueId))
-      .collect();
-
-    for (const row of existing) {
-      await ctx.db.delete(row._id);
-    }
-
-    for (const item of args.standings) {
-      const teamExternalId = item.team?.id;
-
-      let team = await ctx.db
-        .query("teams")
-        .withIndex("by_externalId", (q) => q.eq("externalId", teamExternalId))
-        .first();
-
-      if (!team) {
-        const teamId = await ctx.db.insert("teams", {
-          name: item.team?.name ?? "Time",
-          logoUrl: item.team?.logo ?? "",
-          externalId: teamExternalId,
-        });
-        team = await ctx.db.get(teamId);
-      }
-
-      if (team) {
-        await ctx.db.insert("standings", {
-          leagueId: args.leagueId,
-          season: args.season,
-          rank: item.rank,
-          teamId: team._id,
-          points: item.points ?? 0,
-          goalsDiff: item.goalsDiff ?? 0,
-          form: item.form ?? undefined,
-          played: item.all?.played ?? 0,
-          win: item.all?.win ?? 0,
-          draw: item.all?.draw ?? 0,
-          lose: item.all?.lose ?? 0,
-          goalsFor: item.all?.goals?.for ?? 0,
-          goalsAgainst: item.all?.goals?.against ?? 0,
-          description: item.description ?? undefined,
-        });
-      }
-    }
+    return { success: true };
   },
 });
