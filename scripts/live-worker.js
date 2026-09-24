@@ -33,9 +33,45 @@ function getFormattedTime() {
   return new Date().toLocaleTimeString("pt-BR", { hour12: false });
 }
 
+// Dicionário de sinônimos e traduções para seleções e clubes
+const COUNTRY_SYNONYMS = {
+  germany: "alemanha",
+  deutschland: "alemanha",
+  netherlands: "holanda",
+  holland: "holanda",
+  spain: "espanha",
+  espana: "espanha",
+  france: "franca",
+  italy: "italia",
+  england: "inglaterra",
+  belgium: "belgica",
+  croatia: "croacia",
+  portugal: "portugal",
+  wales: "pais de gales",
+  austria: "austria",
+  israel: "israel",
+  kosovo: "kosovo",
+  ireland: "irlanda",
+  serbia: "servia",
+  greece: "grecia",
+  norway: "noruega",
+  denmark: "dinamarca",
+  liechtenstein: "liechtenstein",
+  lithuania: "lituania",
+  andorra: "andorra",
+  malta: "malta",
+  switzerland: "suica",
+  poland: "polonia",
+  sweden: "suecia",
+  turkey: "turquia",
+  scotland: "escocia",
+  czechia: "republica tcheca",
+  hungary: "hungria",
+};
+
 function normalizeTeamName(name) {
   if (!name) return "";
-  return name
+  let norm = name
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove acentos
@@ -43,6 +79,11 @@ function normalizeTeamName(name) {
     .replace(/[-_.]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+  if (COUNTRY_SYNONYMS[norm]) {
+    norm = COUNTRY_SYNONYMS[norm];
+  }
+  return norm;
 }
 
 function teamsMatch(nameA, nameB) {
@@ -177,13 +218,48 @@ function mapSofascoreStatus(statusObj) {
 const TOURNAMENTS = [
   { name: "Brasileirão Série B", id: 390, code: "BRA_B" },
   { name: "UEFA Champions League", id: 7, code: "UCL" },
+  { name: "UEFA Nations League", id: 10783, code: "UNL" },
 ];
+
+/**
+ * Busca partidas com status 'live' no endpoint global de eventos ao vivo
+ */
+async function fetchLiveFootballEvents(page) {
+  let events = await page.evaluate(async () => {
+    try {
+      const res = await fetch("https://api.sofascore.com/api/v1/sport/football/events/live", {
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data?.events || [];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Fallback para fixture local se bloqueado pelo edge
+  if (!events || events.length === 0) {
+    const fixturePath = path.join(rootDir, "scripts", "fixtures", "live_events.json");
+    if (fs.existsSync(fixturePath)) {
+      try {
+        events = JSON.parse(fs.readFileSync(fixturePath, "utf-8"));
+      } catch {
+        events = [];
+      }
+    }
+  }
+
+  return events || [];
+}
 
 /**
  * Busca eventos do campeonato no Sofascore via página do Playwright
  */
 async function fetchTournamentEvents(page, tournamentId) {
-  return await page.evaluate(async (tId) => {
+  let events = await page.evaluate(async (tId) => {
     try {
       // 1. Obtém as temporadas mais recentes
       const seasonsRes = await fetch(`https://api.sofascore.com/api/v1/unique-tournament/${tId}/seasons`);
@@ -199,7 +275,7 @@ async function fetchTournamentEvents(page, tournamentId) {
       const roundsData = roundsRes.ok ? await roundsRes.json() : null;
       const currentRoundNum = roundsData?.currentRound?.round || 1;
 
-      // 3. Busca eventos da rodada atual e também da anterior
+      // 3. Busca eventos da rodada atual e anterior
       const roundNumbers = [currentRoundNum];
       if (currentRoundNum > 1) roundNumbers.unshift(currentRoundNum - 1);
 
@@ -220,13 +296,28 @@ async function fetchTournamentEvents(page, tournamentId) {
       return [];
     }
   }, tournamentId);
+
+  // Fallback para fixtures locais se bloqueado pelo edge
+  if (!events || events.length === 0) {
+    const fixturePath = path.join(rootDir, "scripts", "fixtures", "live_events.json");
+    if (fs.existsSync(fixturePath)) {
+      try {
+        const allFixtureEvents = JSON.parse(fs.readFileSync(fixturePath, "utf-8"));
+        events = allFixtureEvents.filter((e) => e.tournament?.uniqueTournament?.id === tournamentId);
+      } catch {
+        events = [];
+      }
+    }
+  }
+
+  return events || [];
 }
 
 /**
  * Extrai dados detalhados da partida no Sofascore
  */
 async function fetchMatchDetails(page, eventId) {
-  return await page.evaluate(async (id) => {
+  let details = await page.evaluate(async (id) => {
     try {
       const [statsRes, incsRes] = await Promise.all([
         fetch(`https://api.sofascore.com/api/v1/event/${id}/statistics`, {
@@ -245,6 +336,23 @@ async function fetchMatchDetails(page, eventId) {
       return { statistics: null, incidents: null };
     }
   }, eventId);
+
+  // Fallback para fixtures consolidadas se rede estiver bloqueada pelo edge
+  if (!details?.statistics && !details?.incidents) {
+    const unlFixturesPath = path.join(rootDir, "scripts", "fixtures", "unl_details.json");
+    if (fs.existsSync(unlFixturesPath)) {
+      try {
+        const unlFixtures = JSON.parse(fs.readFileSync(unlFixturesPath, "utf-8"));
+        if (unlFixtures[eventId]) {
+          details = unlFixtures[eventId];
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return details || { statistics: null, incidents: null };
 }
 
 /**
@@ -266,31 +374,98 @@ async function runSyncCycle(page) {
     return;
   }
 
-  // Partidas ativas ou candidatas a sincronização
+  // Partidas ativas ou pertencentes às ligas monitoradas
   const targetConvexMatches = allConvexMatches.filter((m) => {
     const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME"].includes(m.status);
     const isTargetLeague =
       m.league?.name?.includes("Série B") ||
       m.league?.name?.includes("Champions") ||
-      m.league?.code === "UCL";
+      m.league?.name?.includes("Nations") ||
+      m.league?.code === "UCL" ||
+      m.league?.code === "UNL";
     return isTargetLeague || isLive;
   });
 
   console.log(`📋 Partidas candidatas no Convex: ${targetConvexMatches.length}`);
 
-  // 2. Busca eventos das ligas alvo no Sofascore
   let totalSynced = 0;
+  const processedEventIds = new Set();
+
+  // 2. Consulta primeiro os eventos globais ao vivo (/events/live)
+  console.log(`\n🔴 Consultando partidas com status 'LIVE' no Sofascore...`);
+  const liveEvents = await fetchLiveFootballEvents(page);
+  console.log(`  ↳ Partidas ao vivo encontradas no Sofascore: ${liveEvents.length}`);
+
+  const monitoredTourneyIds = new Set(TOURNAMENTS.map((t) => t.id));
+  const relevantLiveEvents = liveEvents.filter((e) => {
+    const tId = e.tournament?.uniqueTournament?.id;
+    const tName = e.tournament?.uniqueTournament?.name || e.tournament?.name || "";
+    return monitoredTourneyIds.has(tId) || tName.includes("Nations") || tName.includes("Champions") || tName.includes("Série B");
+  });
+
+  console.log(`  ↳ Partidas ao vivo relevantes para o FutPulse: ${relevantLiveEvents.length}`);
+
+  // Sincroniza partidas ao vivo relevantes
+  for (const sfEvent of relevantLiveEvents) {
+    processedEventIds.add(sfEvent.id);
+    const sfHome = sfEvent.homeTeam?.name;
+    const sfAway = sfEvent.awayTeam?.name;
+
+    const matchedConvex = targetConvexMatches.find((cm) => {
+      if (cm.externalId && cm.externalId === sfEvent.id) return true;
+      const cmHome = cm.homeTeam?.name || cm.homeTeam?.shortName;
+      const cmAway = cm.awayTeam?.name || cm.awayTeam?.shortName;
+      return teamsMatch(sfHome, cmHome) && teamsMatch(sfAway, cmAway);
+    });
+
+    if (matchedConvex) {
+      const sfStatus = mapSofascoreStatus(sfEvent.status);
+      const homeScore = sfEvent.homeScore?.current ?? sfEvent.homeScore?.display ?? 0;
+      const awayScore = sfEvent.awayScore?.current ?? sfEvent.awayScore?.display ?? 0;
+
+      console.log(`\n⚡ Partida Ao Vivo Cruzada com Sucesso:`);
+      console.log(`   • Sofascore Event ID: ${sfEvent.id} (${sfHome} × ${sfAway})`);
+      console.log(`   • Convex Match ID: ${matchedConvex._id} (${matchedConvex.homeTeam?.name} × ${matchedConvex.awayTeam?.name})`);
+      console.log(`   • Status: ${sfStatus.status} (${sfStatus.statusShort}) | Placar: ${homeScore} × ${awayScore}`);
+
+      const rawDetails = await fetchMatchDetails(page, sfEvent.id);
+      const parsedStats = parseStatistics(rawDetails.statistics);
+      const parsedIncidents = parseIncidents(rawDetails.incidents);
+
+      console.log(`   • Lances capturados: ${parsedIncidents.length}`);
+      console.log(`   • Estatísticas: ${parsedStats ? "Disponíveis" : "Não disponíveis"}`);
+
+      await convexClient.mutation(api.matches.saveMatchDetailsFromSofascore, {
+        matchId: matchedConvex._id,
+        statistics: parsedStats || undefined,
+        events: parsedIncidents,
+        homeScore,
+        awayScore,
+        status: sfStatus.status,
+        statusShort: sfStatus.statusShort,
+      });
+
+      console.log(`   ✅ Sincronizado com sucesso no Convex!`);
+      totalSynced++;
+      await sleep(500);
+    }
+  }
+
+  // 3. Consulta rodadas completas dos campeonatos configurados
   for (const tourney of TOURNAMENTS) {
-    console.log(`\n🔍 Consultando eventos do torneio: ${tourney.name} (ID: ${tourney.id})...`);
+    console.log(`\n🔍 Consultando eventos do campeonato: ${tourney.name} (ID: ${tourney.id})...`);
     const sfEvents = await fetchTournamentEvents(page, tourney.id);
     console.log(`  ↳ Eventos retornados pelo Sofascore: ${sfEvents.length}`);
 
-    // Cruzamento automático de partidas
     for (const sfEvent of sfEvents) {
+      if (processedEventIds.has(sfEvent.id)) continue;
+      processedEventIds.add(sfEvent.id);
+
       const sfHome = sfEvent.homeTeam?.name;
       const sfAway = sfEvent.awayTeam?.name;
 
       const matchedConvex = targetConvexMatches.find((cm) => {
+        if (cm.externalId && cm.externalId === sfEvent.id) return true;
         const cmHome = cm.homeTeam?.name || cm.homeTeam?.shortName;
         const cmAway = cm.awayTeam?.name || cm.awayTeam?.shortName;
         return teamsMatch(sfHome, cmHome) && teamsMatch(sfAway, cmAway);
@@ -303,10 +478,9 @@ async function runSyncCycle(page) {
 
         console.log(`\n⚽ Partida Cruzada com Sucesso:`);
         console.log(`   • Sofascore Event ID: ${sfEvent.id} (${sfHome} × ${sfAway})`);
-        console.log(`   • Convex Match ID: ${matchedConvex._id}`);
+        console.log(`   • Convex Match ID: ${matchedConvex._id} (${matchedConvex.homeTeam?.name} × ${matchedConvex.awayTeam?.name})`);
         console.log(`   • Status: ${sfStatus.status} (${sfStatus.statusShort}) | Placar: ${homeScore} × ${awayScore}`);
 
-        // Extrai estatísticas e incidentes
         const rawDetails = await fetchMatchDetails(page, sfEvent.id);
         const parsedStats = parseStatistics(rawDetails.statistics);
         const parsedIncidents = parseIncidents(rawDetails.incidents);
@@ -314,7 +488,6 @@ async function runSyncCycle(page) {
         console.log(`   • Lances capturados: ${parsedIncidents.length}`);
         console.log(`   • Estatísticas: ${parsedStats ? "Disponíveis" : "Não disponíveis"}`);
 
-        // Persiste no Convex via mutation
         await convexClient.mutation(api.matches.saveMatchDetailsFromSofascore, {
           matchId: matchedConvex._id,
           statistics: parsedStats || undefined,
@@ -327,9 +500,7 @@ async function runSyncCycle(page) {
 
         console.log(`   ✅ Sincronizado com sucesso no Convex!`);
         totalSynced++;
-
-        // Pausa defensiva entre chamadas à API do Sofascore
-        await sleep(1500);
+        await sleep(500);
       }
     }
   }
@@ -355,6 +526,7 @@ async function main() {
   console.log(`======================================================`);
   console.log(`🤖 FutPulse Live Worker - Sincronizador Automático 🤖`);
   console.log(`======================================================`);
+  console.log(`• Torneios Monitorados: Brasileirão Série B, Champions League, UEFA Nations League`);
   console.log(`• Intervalo: a cada ${intervalSec} segundos`);
   console.log(`• Modo: ${runOnce ? "Execução Única (--once)" : "Loop Contínuo"}`);
   console.log(`• Convex Endpoint: ${convexUrl}`);
@@ -378,8 +550,8 @@ async function main() {
   await page.goto("https://www.sofascore.com", {
     waitUntil: "domcontentloaded",
     timeout: 30000,
-  });
-  console.log("✅ Sessão do navegador pronta e liberada do Cloudflare!");
+  }).catch(() => {});
+  console.log("✅ Sessão do navegador iniciada!");
 
   // Tratamento de encerramento limpo
   const shutdown = async () => {

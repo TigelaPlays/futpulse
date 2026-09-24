@@ -180,4 +180,14 @@ export default defineSchema({
     stepMinutes: v.number(),
     lastTickAt: v.number(),
   }).index("by_match", ["matchId"]),
+
+  // 10. Controle de Quota e Rate Limiting de APIs Externas
+  apiQuota: defineTable({
+    provider: v.string(), // ex: "api-football", "football-data"
+    remainingRequests: v.number(),
+    totalLimit: v.optional(v.number()),
+    resetAt: v.number(), // timestamp ms do reset (meia-noite UTC)
+    lastRequestAt: v.number(),
+    isBlocked: v.boolean(),
+  }).index("by_provider", ["provider"]),
 });

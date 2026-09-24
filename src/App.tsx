@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, Flame, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
+import { Activity, Clock, Trophy, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
@@ -181,8 +181,7 @@ export default function App() {
     });
   }, [matches, soundEnabled]);
 
-  const simulateGoal = useMutation(api.seed.simulateGoal);
-  const syncLiveMatches = useAction(api.ingestion.syncLiveMatches);
+  const syncLiveMatches = useAction(api.apiFootball.syncLiveMatchesAction);
   const syncDailyFixtures = useAction(api.ingestion.syncDailyFixtures);
 
   // Filtra pelo termo da barra de pesquisa
@@ -218,9 +217,15 @@ export default function App() {
     try {
       setIsSyncing(true);
       setSyncFeedback(null);
-      const result = await syncLiveMatches();
-      if (result.success) {
-        setSyncFeedback(`${result.syncedCount ?? 0} ao vivo sincronizados`);
+      const result = await syncLiveMatches({ force: true });
+      if ("fixturesProcessed" in result && result.success) {
+        setSyncFeedback(`${result.fixturesProcessed} partidas ao vivo atualizadas`);
+      } else if ("skipped" in result && result.skipped) {
+        setSyncFeedback("Sem partidas ao vivo pendentes");
+      } else if ("blocked" in result && result.blocked) {
+        setSyncFeedback("Cota diária da API atingida");
+      } else if (result.success) {
+        setSyncFeedback("Partidas sincronizadas com sucesso");
       } else {
         setSyncFeedback("Falha na sincronização");
       }
@@ -264,25 +269,6 @@ export default function App() {
 
     return () => window.clearTimeout(timer);
   }, [selectedDateOffset, selectedLeagueId, handleSyncDaily]);
-
-  // Simulação de gol local
-  const handleSimulateGoal = async (
-    e: React.MouseEvent,
-    matchId: Id<"matches">,
-    isHome: boolean,
-    teamName: string
-  ) => {
-    e.stopPropagation();
-    try {
-      await simulateGoal({
-        matchId,
-        isHome,
-        playerName: `Artilheiro (${teamName})`,
-      });
-    } catch (err) {
-      console.error("Falha ao computar gol:", err);
-    }
-  };
 
   const renderMatchRow = (match: any, isFavoriteBlock = false) => {
     const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
@@ -426,34 +412,11 @@ export default function App() {
             </div>
           </div>
 
-          {/* Asa Direita (140px): Ações ao vivo ou Rótulo de Rodada para manter equilíbrio */}
+          {/* Asa Direita (140px): Rótulo de Rodada ou Liga para manter equilíbrio */}
           <div className="flex items-center justify-end gap-1.5 min-w-0">
-            {isLive ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={(e) =>
-                    handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
-                  }
-                  className="text-[11px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs font-medium"
-                  title={`Adicionar gol para ${match.homeTeam?.name}`}
-                >
-                  <Flame className="w-3 h-3 text-emerald-600 group-hover:text-white" /> +1 {match.homeTeam?.code || "M"}
-                </button>
-                <button
-                  onClick={(e) =>
-                    handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
-                  }
-                  className="text-[11px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-0.5 cursor-pointer active:scale-95 shadow-2xs font-medium"
-                  title={`Adicionar gol para ${match.awayTeam?.name}`}
-                >
-                  <Flame className="w-3 h-3 text-emerald-600 group-hover:text-white" /> +1 {match.awayTeam?.code || "V"}
-                </button>
-              </div>
-            ) : (
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200/70 truncate max-w-[130px]">
-                {isFavoriteBlock ? (match.league?.name || match.round) : match.round}
-              </span>
-            )}
+            <span className="text-[11px] font-medium text-slate-500 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200/70 truncate max-w-[130px]">
+              {isFavoriteBlock ? (match.league?.name || match.round) : match.round}
+            </span>
           </div>
         </div>
 
@@ -696,28 +659,6 @@ export default function App() {
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* Botões de Simulação Mobile */}
-          {isLive && (
-            <div className="flex items-center justify-center gap-2 pt-1.5 border-t border-slate-100">
-              <button
-                onClick={(e) =>
-                  handleSimulateGoal(e, match._id, true, match.homeTeam?.name ?? "Mandante")
-                }
-                className="text-[10px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-1 cursor-pointer font-medium"
-              >
-                <Flame className="w-3 h-3 text-emerald-600" /> +1 {match.homeTeam?.code || "M"}
-              </button>
-              <button
-                onClick={(e) =>
-                  handleSimulateGoal(e, match._id, false, match.awayTeam?.name ?? "Visitante")
-                }
-                className="text-[10px] bg-slate-100 hover:bg-emerald-600 hover:text-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 transition-colors flex items-center gap-1 cursor-pointer font-medium"
-              >
-                <Flame className="w-3 h-3 text-emerald-600" /> +1 {match.awayTeam?.code || "V"}
-              </button>
             </div>
           )}
         </div>

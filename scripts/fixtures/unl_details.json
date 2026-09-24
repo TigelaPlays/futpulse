@@ -1,0 +1,605 @@
+{
+  "15534057": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "47%",
+                  "away": "53%",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Total shots",
+                  "home": "5",
+                  "away": "8",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "2",
+                  "away": "4",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "3",
+                  "away": "4",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Fouls",
+                  "home": "7",
+                  "away": "6",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Passes",
+                  "home": "260",
+                  "away": "295",
+                  "compareCode": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "goal",
+          "homeScore": 0,
+          "awayScore": 1,
+          "isHome": false,
+          "time": 38,
+          "text": "Gol",
+          "player": {
+            "name": "Florian Wirtz"
+          }
+        },
+        {
+          "incidentType": "card",
+          "incidentClass": "yellow",
+          "isHome": true,
+          "time": 42,
+          "player": {
+            "name": "Virgil van Dijk"
+          }
+        }
+      ]
+    }
+  },
+  "15534071": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "54%",
+                  "away": "46%",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Total shots",
+                  "home": "7",
+                  "away": "4",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "3",
+                  "away": "1",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "4",
+                  "away": "2",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Fouls",
+                  "home": "6",
+                  "away": "8",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Passes",
+                  "home": "260",
+                  "away": "215",
+                  "compareCode": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 0,
+          "isHome": true,
+          "time": 29,
+          "text": "Gol",
+          "player": {
+            "name": "Aleksandar Mitrović"
+          }
+        },
+        {
+          "incidentType": "card",
+          "incidentClass": "yellow",
+          "isHome": false,
+          "time": 37,
+          "player": {
+            "name": "Petros Mantalos"
+          }
+        }
+      ]
+    }
+  },
+  "15534097": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "68%",
+                  "away": "32%",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Total shots",
+                  "home": "11",
+                  "away": "3",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "5",
+                  "away": "1",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "6",
+                  "away": "1",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Fouls",
+                  "home": "5",
+                  "away": "9",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Passes",
+                  "home": "380",
+                  "away": "170",
+                  "compareCode": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "card",
+          "incidentClass": "yellow",
+          "isHome": false,
+          "time": 24,
+          "player": {
+            "name": "Ethan Ampadu"
+          }
+        },
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 0,
+          "isHome": true,
+          "time": 45,
+          "text": "Gol",
+          "player": {
+            "name": "João Félix"
+          }
+        }
+      ]
+    }
+  },
+  "15534100": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "45%",
+                  "away": "55%",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Total shots",
+                  "home": "8",
+                  "away": "6",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "4",
+                  "away": "3",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "4",
+                  "away": "5",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Fouls",
+                  "home": "8",
+                  "away": "7",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Passes",
+                  "home": "220",
+                  "away": "275",
+                  "compareCode": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 0,
+          "isHome": true,
+          "time": 14,
+          "text": "Gol",
+          "player": {
+            "name": "Erling Haaland"
+          }
+        },
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 1,
+          "isHome": false,
+          "time": 31,
+          "text": "Gol",
+          "player": {
+            "name": "Rasmus Højlund"
+          }
+        },
+        {
+          "incidentType": "goal",
+          "homeScore": 2,
+          "awayScore": 1,
+          "isHome": true,
+          "time": 41,
+          "text": "Gol",
+          "player": {
+            "name": "Alexander Sørloth"
+          }
+        }
+      ]
+    }
+  },
+  "15534155": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "62%",
+                  "away": "38%",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Total shots",
+                  "home": "9",
+                  "away": "2",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "4",
+                  "away": "0",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "5",
+                  "away": "1",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Fouls",
+                  "home": "5",
+                  "away": "7",
+                  "compareCode": 1
+                },
+                {
+                  "name": "Passes",
+                  "home": "310",
+                  "away": "185",
+                  "compareCode": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 0,
+          "isHome": true,
+          "time": 22,
+          "text": "Gol",
+          "player": {
+            "name": "Marcel Sabitzer"
+          }
+        }
+      ]
+    }
+  },
+  "15534165": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "48%",
+                  "away": "52%",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Total shots",
+                  "home": "3",
+                  "away": "5",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "1",
+                  "away": "2",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "2",
+                  "away": "3",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Fouls",
+                  "home": "7",
+                  "away": "6",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Passes",
+                  "home": "205",
+                  "away": "228",
+                  "compareCode": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "card",
+          "incidentClass": "yellow",
+          "isHome": true,
+          "time": 33,
+          "player": {
+            "name": "Valon Berisha"
+          }
+        }
+      ]
+    }
+  },
+  "15534241": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "35%",
+                  "away": "65%",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Total shots",
+                  "home": "2",
+                  "away": "8",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "0",
+                  "away": "3",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "1",
+                  "away": "6",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Fouls",
+                  "home": "9",
+                  "away": "5",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Passes",
+                  "home": "140",
+                  "away": "320",
+                  "compareCode": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "card",
+          "incidentClass": "yellow",
+          "isHome": true,
+          "time": 27,
+          "player": {
+            "name": "Nicolas Hasler"
+          }
+        }
+      ]
+    }
+  },
+  "15537726": {
+    "statistics": {
+      "statistics": [
+        {
+          "period": "ALL",
+          "groups": [
+            {
+              "groupName": "Match overview",
+              "statisticsItems": [
+                {
+                  "name": "Ball possession",
+                  "home": "42%",
+                  "away": "58%",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Total shots",
+                  "home": "6",
+                  "away": "11",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Shots on target",
+                  "home": "2",
+                  "away": "5",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Corner kicks",
+                  "home": "3",
+                  "away": "7",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Fouls",
+                  "home": "14",
+                  "away": "12",
+                  "compareCode": 2
+                },
+                {
+                  "name": "Passes",
+                  "home": "280",
+                  "away": "390",
+                  "compareCode": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "incidents": {
+      "incidents": [
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 0,
+          "isHome": true,
+          "time": 18,
+          "text": "Gol",
+          "player": {
+            "name": "Ricard Fernández"
+          }
+        },
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 1,
+          "isHome": false,
+          "time": 34,
+          "text": "Gol",
+          "player": {
+            "name": "Teddy Teuma"
+          }
+        },
+        {
+          "incidentType": "goal",
+          "homeScore": 1,
+          "awayScore": 2,
+          "isHome": false,
+          "time": 76,
+          "text": "Gol",
+          "player": {
+            "name": "Luke Montebello"
+          }
+        }
+      ]
+    }
+  }
+}
