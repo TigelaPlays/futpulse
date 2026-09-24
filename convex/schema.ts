@@ -53,6 +53,8 @@ export default defineSchema({
     status: v.union(
       v.literal("SCHEDULED"),
       v.literal("IN_PLAY"),
+      v.literal("LIVE"),
+      v.literal("HALFTIME"),
       v.literal("PAUSED"),
       v.literal("EXTRA_TIME"),
       v.literal("PENALTY_SHOOTOUT"),
@@ -167,4 +169,15 @@ export default defineSchema({
   })
     .index("by_league", ["leagueId"])
     .index("by_league_rank", ["leagueId", "rank"]),
+
+  // 9. Simulação de Partidas em Tempo Real
+  simulations: defineTable({
+    matchId: v.id("matches"),
+    isActive: v.boolean(),
+    isPaused: v.boolean(),
+    speedMultiplier: v.number(),
+    runId: v.string(),
+    stepMinutes: v.number(),
+    lastTickAt: v.number(),
+  }).index("by_match", ["matchId"]),
 });

@@ -8,6 +8,7 @@ import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
+import { SimulationController } from "./components/SimulationController";
 import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
@@ -127,7 +128,7 @@ export default function App() {
     ALL: allMatchesForCounts?.length ?? 0,
     LIVE:
       allMatchesForCounts?.filter((m) =>
-        ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
+        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
       ).length ?? 0,
     FINISHED: allMatchesForCounts?.filter((m) => m.status === "FINISHED").length ?? 0,
     SCHEDULED: allMatchesForCounts?.filter((m) => m.status === "SCHEDULED").length ?? 0,
@@ -285,7 +286,7 @@ export default function App() {
   };
 
   const renderMatchRow = (match: any, isFavoriteBlock = false) => {
-    const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
+    const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
       match.status
     );
     const isFinished = match.status === "FINISHED";
@@ -1157,6 +1158,12 @@ export default function App() {
       <GoalToastContainer
         alerts={goalAlerts}
         onDismiss={(id) => setGoalAlerts((cur) => cur.filter((a) => a.id !== id))}
+      />
+
+      {/* Painel Flutuante do Motor de Simulação */}
+      <SimulationController
+        initialMatchId={selectedMatchId}
+        onSelectMatch={(id) => setSelectedMatchId(id)}
       />
     </div>
   );

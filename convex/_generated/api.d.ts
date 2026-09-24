@@ -15,6 +15,7 @@ import type * as leagues from "../leagues.js";
 import type * as matches from "../matches.js";
 import type * as seed from "../seed.js";
 import type * as seedChampions from "../seedChampions.js";
+import type * as simulation from "../simulation.js";
 import type * as sofascore from "../sofascore.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   matches: typeof matches;
   seed: typeof seed;
   seedChampions: typeof seedChampions;
+  simulation: typeof simulation;
   sofascore: typeof sofascore;
 }>;
 

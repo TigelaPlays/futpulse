@@ -83,7 +83,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
   if (!matchId) return null;
 
   const isLive =
-    match && ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status);
+    match && ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status);
 
   const handleSyncEvents = async () => {
     if (!matchId) return;

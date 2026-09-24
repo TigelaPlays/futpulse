@@ -13,7 +13,7 @@ export function LiveMatchClock({
   statusShort,
   updatedAt,
 }: LiveMatchClockProps) {
-  const isRunning = status === "IN_PLAY" || status === "EXTRA_TIME";
+  const isRunning = status === "IN_PLAY" || status === "LIVE" || status === "EXTRA_TIME";
 
   // Calcula os segundos acumulados apenas dentro da tolerância razoável (máximo 5 minutos de avanço desde o último sync)
   const getElapsedSeconds = () => {
@@ -49,9 +49,9 @@ export function LiveMatchClock({
     const interval = setInterval(() => {
       setTotalSeconds((prev) => {
         const next = prev + 1;
-        // Limite padrão: não ultrapassa 45' na 1H ou 90' na 2H via relógio local até vir confirmação da API
-        if (statusShort === "1H" && next > 45 * 60) return 45 * 60;
-        if (statusShort === "2H" && next > 90 * 60) return 90 * 60;
+        // Limite padrão: não ultrapassa 45' na 1H/1T ou 90' na 2H/2T via relógio local até vir confirmação da API
+        if (["1H", "1T"].includes(statusShort) && next > 45 * 60) return 45 * 60;
+        if (["2H", "2T"].includes(statusShort) && next > 90 * 60) return 90 * 60;
         return next;
       });
     }, 1000);
@@ -60,7 +60,7 @@ export function LiveMatchClock({
   }, [isRunning, statusShort]);
 
   // Se estiver no intervalo ou pausado
-  if (statusShort === "HT" || status === "PAUSED") {
+  if (statusShort === "HT" || status === "PAUSED" || status === "HALFTIME") {
     return (
       <div className="flex items-center gap-1.5 text-amber-800 font-bold text-xs bg-amber-50 border border-amber-300/80 px-2.5 py-0.5 rounded-full shadow-2xs">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />

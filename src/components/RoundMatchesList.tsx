@@ -137,7 +137,7 @@ function formatMatchHeader(match: any): { stadium: string; dateStr: string; week
   let timeStr = "";
   if (match.status === "FINISHED") {
     timeStr = "FIM";
-  } else if (["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status)) {
+  } else if (["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status)) {
     timeStr = match.minute ? `${match.minute}'` : match.statusShort || "AO VIVO";
   } else {
     timeStr = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -198,7 +198,7 @@ export function RoundMatchesList({
         ) : (
           matches.map((m) => {
             const isFinished = m.status === "FINISHED";
-            const isLive = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
+            const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
             const { stadium, dateStr, weekday, timeStr } = formatMatchHeader(m);
             const homeCode = getTeamCode(m.homeTeam);
             const awayCode = getTeamCode(m.awayTeam);

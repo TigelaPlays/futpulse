@@ -72,7 +72,7 @@ export const listMatches = query({
     if (args.statusFilter && args.statusFilter !== "ALL") {
       matches = matches.filter((m) => {
         if (args.statusFilter === "LIVE") {
-          return ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
+          return ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
         }
         if (args.statusFilter === "FINISHED") {
           return m.status === "FINISHED";
@@ -115,8 +115,8 @@ export const listMatches = query({
 
     // Ordenação: primeiro os ao vivo, depois por prioridade de liga e horário
     return hydratedMatches.sort((a, b) => {
-      const isLiveA = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(a.status);
-      const isLiveB = ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(b.status);
+      const isLiveA = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(a.status);
+      const isLiveB = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(b.status);
       if (isLiveA && !isLiveB) return -1;
       if (!isLiveA && isLiveB) return 1;
 
@@ -445,6 +445,10 @@ export const saveMatchDetailsFromSofascore = mutation({
         passes: v.object({ home: v.number(), away: v.number() }),
       })
     ),
+    homeScore: v.optional(v.number()),
+    awayScore: v.optional(v.number()),
+    status: v.optional(v.string()),
+    statusShort: v.optional(v.string()),
     events: v.optional(
       v.array(
         v.object({
@@ -461,6 +465,16 @@ export const saveMatchDetailsFromSofascore = mutation({
     const match = await ctx.db.get(args.matchId);
     if (!match) {
       throw new Error(`Partida não encontrada para o id: ${args.matchId}`);
+    }
+
+    // 0. Atualiza placar e status se fornecidos
+    const matchPatch: Record<string, any> = {};
+    if (args.homeScore !== undefined) matchPatch.homeScore = args.homeScore;
+    if (args.awayScore !== undefined) matchPatch.awayScore = args.awayScore;
+    if (args.status !== undefined) matchPatch.status = args.status;
+    if (args.statusShort !== undefined) matchPatch.statusShort = args.statusShort;
+    if (Object.keys(matchPatch).length > 0) {
+      await ctx.db.patch(args.matchId, matchPatch);
     }
 
     // 1. Atualiza ou cria o registro em matchStatistics
