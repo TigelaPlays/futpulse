@@ -8,7 +8,6 @@ import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
-import { SimulationController } from "./components/SimulationController";
 import { playGoalBeep } from "./lib/sound";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
@@ -1158,12 +1157,6 @@ export default function App() {
       <GoalToastContainer
         alerts={goalAlerts}
         onDismiss={(id) => setGoalAlerts((cur) => cur.filter((a) => a.id !== id))}
-      />
-
-      {/* Painel Flutuante do Motor de Simulação */}
-      <SimulationController
-        initialMatchId={selectedMatchId}
-        onSelectMatch={(id) => setSelectedMatchId(id)}
       />
     </div>
   );

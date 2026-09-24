@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "upload-assets": "node scripts/upload-assets.js",
     "sync:sofascore": "node scripts/sync-sofascore.js",
-    "sync:batch": "node scripts/scrape-sofascore-batch.js"
+    "sync:batch": "node scripts/scrape-sofascore-batch.js",
+    "worker": "node scripts/live-worker.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",
