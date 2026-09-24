@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { StandingsTable } from "./StandingsTable";
+import { NationsLeagueStandings } from "./NationsLeagueStandings";
 import { RoundMatchesList } from "./RoundMatchesList";
 import { ChevronLeft, ChevronRight, Trophy, Calendar } from "lucide-react";
 
@@ -11,6 +12,7 @@ interface LeagueViewProps {
   league: {
     _id?: Id<"leagues">;
     name: string;
+    code?: string;
     country?: string;
     logoUrl?: string;
     season?: number;
@@ -47,12 +49,18 @@ export function LeagueView({
 
   const isUCL = league.name.toLowerCase().includes("champions");
   const isLibertadores = league.name.toLowerCase().includes("libertadores");
-  const isCup = isUCL || isLibertadores || league.name.toLowerCase().includes("copa");
+  const isNationsLeague =
+    league.name.toLowerCase().includes("nations league") ||
+    league.name.toLowerCase().includes("nations-league") ||
+    league.code === "UNL";
+  const isCup = isUCL || isLibertadores || isNationsLeague || league.name.toLowerCase().includes("copa");
 
   const minRound = 1;
-  const maxRound = isUCL ? 8 : isLibertadores ? 6 : isCup ? 8 : 38;
+  const maxRound = isUCL ? 8 : isLibertadores ? 6 : isNationsLeague ? 6 : isCup ? 8 : 38;
 
-  const stageSubtitle = isUCL
+  const stageSubtitle = isNationsLeague
+    ? "Fase de Grupos • Divisões A, B, C e D"
+    : isUCL
     ? "Fase de Liga (8 Rodadas) • Mata-Mata"
     : isLibertadores
     ? "Fase de Grupos (6 Rodadas) • Mata-Mata"
@@ -60,7 +68,9 @@ export function LeagueView({
     ? "Torneio de Copa"
     : `${maxRound} Rodadas`;
 
-  const roundDisplay = isUCL
+  const roundDisplay = isNationsLeague
+    ? `Fase de Grupos • Rodada ${currentRound}`
+    : isUCL
     ? `Fase de Liga • Rodada ${currentRound}`
     : isLibertadores
     ? `Fase de Grupos • Rodada ${currentRound}`
@@ -187,18 +197,28 @@ export function LeagueView({
       </div>
 
       {/* Grid Split Lado a Lado (Desktop) - Perfeitamente Simétrico */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 lg:gap-6 items-stretch">
+      <div
+        className={
+          isNationsLeague
+            ? "grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5 xl:gap-6 items-start"
+            : "grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 lg:gap-6 items-stretch"
+        }
+      >
         {/* Coluna Principal: Tabela de Classificação */}
         <div
           className={`h-full min-w-0 ${
             mobileTab === "standings" ? "block" : "hidden lg:block"
           }`}
         >
-          <StandingsTable
-            leagueId={leagueId}
-            leagueName={league.name}
-            currentRound={currentRound}
-          />
+          {isNationsLeague ? (
+            <NationsLeagueStandings />
+          ) : (
+            <StandingsTable
+              leagueId={leagueId}
+              leagueName={league.name}
+              currentRound={currentRound}
+            />
+          )}
         </div>
 
         {/* Coluna Lateral: Jogos da Rodada */}
