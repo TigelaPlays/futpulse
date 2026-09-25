@@ -2,12 +2,14 @@ import { action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
-// Mapeamento de nomes em português para os nomes do Sofascore (inglês)
+// Mapeamento de nomes em português para os nomes do Sofascore e ESPN (inglês)
 const TEAM_NAME_MAP: Record<string, string> = {
   "itália": "italy",
   "bélgica": "belgium",
   "frança": "france",
-  "turquia": "turkey",
+  "turquia": "türkiye",
+  "turkey": "türkiye",
+  "türkiye": "türkiye",
   "países baixos": "netherlands",
   "holanda": "netherlands",
   "alemanha": "germany",
@@ -19,6 +21,8 @@ const TEAM_NAME_MAP: Record<string, string> = {
   "tchéquia": "czech republic",
   "república tcheca": "czech republic",
   "república checa": "czech republic",
+  "czech republic": "czech republic",
+  "czechia": "czech republic",
   "noruega": "norway",
   "dinamarca": "denmark",
   "portugal": "portugal",
@@ -38,8 +42,11 @@ const TEAM_NAME_MAP: Record<string, string> = {
   "república da irlanda": "ireland",
   "irlanda": "ireland",
   "polônia": "poland",
-  "bósnia e herzegovina": "bosnia & herzegovina",
-  "bósnia": "bosnia & herzegovina",
+  "bósnia e herzegovina": "bosnia-herzegovina",
+  "bósnia": "bosnia-herzegovina",
+  "bosnia": "bosnia-herzegovina",
+  "bosnia and herzegovina": "bosnia-herzegovina",
+  "bosnia & herzegovina": "bosnia-herzegovina",
   "suécia": "sweden",
   "romênia": "romania",
   "san marino": "san marino",
@@ -52,6 +59,7 @@ const TEAM_NAME_MAP: Record<string, string> = {
   "montenegro": "montenegro",
   "chipre": "cyprus",
   "ilhas faroé": "faroe islands",
+  "faroe islands": "faroe islands",
   "cazaquistão": "kazakhstan",
   "eslováquia": "slovakia",
   "moldávia": "moldova",
@@ -74,11 +82,16 @@ function normalize(name: string): string {
 
 export const getScheduledMatches = internalQuery({
   handler: async (ctx) => {
-    const matches = await ctx.db
-      .query("matches")
-      .filter((q) => q.neq(q.field("status"), "FINISHED"))
-      .collect();
+    let unlLeague = await ctx.db
+      .query("leagues")
+      .filter((q) => q.eq(q.field("code"), "UNL"))
+      .first();
 
+    const matchesQuery = unlLeague
+      ? ctx.db.query("matches").withIndex("by_league", (q) => q.eq("leagueId", unlLeague._id))
+      : ctx.db.query("matches");
+
+    const matches = await matchesQuery.collect();
     const list = [];
     for (const m of matches) {
       const home = await ctx.db.get(m.homeTeamId);
@@ -88,6 +101,7 @@ export const getScheduledMatches = internalQuery({
           matchId: m._id,
           homeName: home.name,
           awayName: away.name,
+          status: m.status,
           currentHomeScore: m.homeScore,
           currentAwayScore: m.awayScore,
         });
@@ -133,11 +147,14 @@ export const patchScore = internalMutation({
 
 export const syncLiveFromSofascore = action({
   args: {
-    targetDate: v.optional(v.string()), // ex: "2026-09-24" ou vazio para jogos ao vivo agora
+    targetDate: v.optional(v.string()), // ex: "2026-09-25" ou vazio para jogos ao vivo agora
   },
   handler: async (ctx, args): Promise<any> => {
-    // 1. Define URL: se passar data busca a agenda do dia; se não, busca jogos ao vivo
-    const url = args.targetDate
+    let rawEvents: any[] = [];
+    let source = "sofascore";
+
+    // 1. Tenta Sofascore
+    const sofascoreUrl = args.targetDate
       ? `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${args.targetDate}`
       : `https://api.sofascore.com/api/v1/sport/football/events/live`;
 
@@ -154,24 +171,20 @@ export const syncLiveFromSofascore = action({
       "Cache-Control": "max-age=0",
     };
 
-    let events: any[] = [];
-    let source = "sofascore";
-
     try {
-      const res = await fetch(url, { headers });
+      const res = await fetch(sofascoreUrl, { headers });
       if (res.ok) {
         const data = await res.json();
-        events = data.events || [];
+        rawEvents = data.events || [];
       }
     } catch {
-      // Ignora e tenta o fallback aberto
+      // Ignora e tenta o fallback aberto da ESPN
     }
 
-    // Se Sofascore estiver bloqueado por Cloudflare 403 em servidores cloud, usa ESPN Scoreboard (aberto e gratuito)
-    if (events.length === 0) {
+    // 2. Se Sofascore estiver bloqueado por Cloudflare 403 em servidores cloud, usa ESPN Scoreboard (aberto e gratuito)
+    if (rawEvents.length === 0) {
       source = "espn";
       try {
-        // Obter a data atual no formato YYYYMMDD (ex: 20260925) para não depender do fuso padrão da API
         const now = new Date();
         const yyyy = now.getUTCFullYear();
         const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
@@ -184,37 +197,15 @@ export const syncLiveFromSofascore = action({
         const espnRes = await fetch(espnUrl);
         if (espnRes.ok) {
           const espnData = await espnRes.json();
-          events = (espnData.events || []).map((e: any) => {
-            const comp = e.competitions?.[0] || {};
-            const home = comp.competitors?.find((c: any) => c.homeAway === "home") || {};
-            const away = comp.competitors?.find((c: any) => c.homeAway === "away") || {};
-            const statusState = comp.status?.type?.state; // "pre", "in", "post"
-            let statusType = "notstarted";
-            if (statusState === "in") statusType = "inprogress";
-            else if (statusState === "post") statusType = "finished";
-
-            return {
-              homeTeam: { name: home.team?.name || home.team?.displayName || "" },
-              awayTeam: { name: away.team?.name || away.team?.displayName || "" },
-              homeScore: { current: parseInt(home.score || "0", 10) },
-              awayScore: { current: parseInt(away.score || "0", 10) },
-              status: {
-                type: statusType,
-                description: comp.status?.type?.description || "",
-              },
-              statusTime: {
-                minute: comp.status?.period ? parseInt(comp.status?.displayClock || "0", 10) : undefined,
-              },
-            };
-          });
+          rawEvents = espnData.events || [];
         }
       } catch (err: any) {
         console.error("Falha ao consultar ESPN:", err);
       }
     }
 
-    if (events.length === 0) {
-      return { success: true, updated: 0, source, message: "Nenhum jogo em andamento ou agendado no momento." };
+    if (rawEvents.length === 0) {
+      return { success: true, updated: 0, source, message: "Nenhum jogo retornado no momento." };
     }
 
     const localMatches: any = await ctx.runQuery(internal.syncSofascore.getScheduledMatches);
@@ -232,74 +223,144 @@ export const syncLiveFromSofascore = action({
       | "FINISHED"
       | "POSTPONED";
 
-    for (const lm of localMatches) {
-      const normHome = normalize(lm.homeName);
-      const normAway = normalize(lm.awayName);
+    // 3A. Processamento específico para ESPN (respeitando homeAway: "home" e "away")
+    if (source === "espn") {
+      for (const ev of rawEvents) {
+        const competition = ev.competitions?.[0];
+        if (!competition) continue;
 
-      // Encontra o evento correspondente no Sofascore
-      const ev = events.find((e) => {
-        const h = (e.homeTeam?.name || "").toLowerCase();
-        const a = (e.awayTeam?.name || "").toLowerCase();
-        return (
-          (h.includes(normHome) || normHome.includes(h)) &&
-          (a.includes(normAway) || normAway.includes(a))
-        );
-      });
+        const competitors = competition.competitors || [];
+        const homeComp = competitors.find((c: any) => c.homeAway === "home");
+        const awayComp = competitors.find((c: any) => c.homeAway === "away");
 
-      if (ev) {
-        const homeScore = ev.homeScore?.current ?? 0;
-        const awayScore = ev.awayScore?.current ?? 0;
-        const statusType = ev.status?.type; // "inprogress", "finished", "notstarted", "postponed"
-        const statusDesc = (ev.status?.description || "").toLowerCase();
-        const minute = ev.statusTime?.minute;
+        if (!homeComp || !awayComp) continue;
+
+        const espnHomeName = (homeComp.team?.name || homeComp.team?.displayName || "").toLowerCase();
+        const espnAwayName = (awayComp.team?.name || awayComp.team?.displayName || "").toLowerCase();
+
+        const homeScore = parseInt(homeComp.score ?? "0", 10);
+        const awayScore = parseInt(awayComp.score ?? "0", 10);
+
+        // Status e Minuto
+        const state = ev.status?.type?.state; // "in", "post", "pre"
+        const detail = ev.status?.type?.shortDetail || ""; // "85'", "FT", "HT"
+        const minuteMatch = detail.match(/\d+/);
+        const minute = minuteMatch ? parseInt(minuteMatch[0], 10) : undefined;
 
         let status: ValidStatus = "SCHEDULED";
-        let statusShort = "15:45";
+        let statusShort = detail || "15:45";
 
-        if (statusType === "inprogress") {
-          if (statusDesc.includes("halftime") || statusDesc.includes("intervalo")) {
+        if (state === "in") {
+          if (detail.includes("HT") || detail.toLowerCase().includes("halftime")) {
             status = "HALFTIME";
             statusShort = "INT";
-          } else if (statusDesc.includes("extra") || statusDesc.includes("prorrogação")) {
-            status = "EXTRA_TIME";
-            statusShort = "PR";
-          } else if (statusDesc.includes("penalt")) {
-            status = "PENALTY_SHOOTOUT";
-            statusShort = "PEN";
           } else {
             status = "IN_PLAY";
-            statusShort = minute ? `${minute}'` : "AO VIVO";
+            statusShort = minute ? `${minute}'` : detail || "AO VIVO";
           }
-        } else if (statusType === "finished") {
+        } else if (state === "post") {
           status = "FINISHED";
           statusShort = "FIM";
-        } else if (statusType === "postponed") {
-          status = "POSTPONED";
-          statusShort = "ADIADO";
         }
 
-        await ctx.runMutation(internal.syncSofascore.patchScore, {
-          matchId: lm.matchId,
-          homeScore,
-          awayScore,
-          status,
-          statusShort,
-          minute,
+        // Localiza no banco de dados local
+        for (const lm of localMatches) {
+          const normLocalHome = normalize(lm.homeName);
+          const normLocalAway = normalize(lm.awayName);
+
+          const matchHome = espnHomeName.includes(normLocalHome) || normLocalHome.includes(espnHomeName);
+          const matchAway = espnAwayName.includes(normLocalAway) || normLocalAway.includes(espnAwayName);
+
+          if (matchHome && matchAway) {
+            await ctx.runMutation(internal.syncSofascore.patchScore, {
+              matchId: lm.matchId,
+              homeScore,
+              awayScore,
+              status,
+              minute,
+              statusShort,
+            });
+            updatedCount++;
+            updatedMatches.push({
+              match: `${lm.homeName} ${homeScore} x ${awayScore} ${lm.awayName}`,
+              score: `${homeScore} x ${awayScore}`,
+              status: statusShort,
+            });
+            break;
+          }
+        }
+      }
+    } else {
+      // 3B. Processamento padrão Sofascore
+      for (const lm of localMatches) {
+        const normHome = normalize(lm.homeName);
+        const normAway = normalize(lm.awayName);
+
+        const ev = rawEvents.find((e) => {
+          const h = (e.homeTeam?.name || "").toLowerCase();
+          const a = (e.awayTeam?.name || "").toLowerCase();
+          return (
+            (h.includes(normHome) || normHome.includes(h)) &&
+            (a.includes(normAway) || normAway.includes(a))
+          );
         });
 
-        updatedCount++;
-        updatedMatches.push({
-          match: `${lm.homeName} ${homeScore} x ${awayScore} ${lm.awayName}`,
-          score: `${homeScore} x ${awayScore}`,
-          status: statusShort,
-        });
+        if (ev) {
+          const homeScore = ev.homeScore?.current ?? 0;
+          const awayScore = ev.awayScore?.current ?? 0;
+          const statusType = ev.status?.type; // "inprogress", "finished", "notstarted"
+          const statusDesc = (ev.status?.description || "").toLowerCase();
+          const minute = ev.statusTime?.minute;
+
+          let status: ValidStatus = "SCHEDULED";
+          let statusShort = "15:45";
+
+          if (statusType === "inprogress") {
+            if (statusDesc.includes("halftime") || statusDesc.includes("intervalo")) {
+              status = "HALFTIME";
+              statusShort = "INT";
+            } else if (statusDesc.includes("extra") || statusDesc.includes("prorrogação")) {
+              status = "EXTRA_TIME";
+              statusShort = "PR";
+            } else if (statusDesc.includes("penalt")) {
+              status = "PENALTY_SHOOTOUT";
+              statusShort = "PEN";
+            } else {
+              status = "IN_PLAY";
+              statusShort = minute ? `${minute}'` : "AO VIVO";
+            }
+          } else if (statusType === "finished") {
+            status = "FINISHED";
+            statusShort = "FIM";
+          } else if (statusType === "postponed") {
+            status = "POSTPONED";
+            statusShort = "ADIADO";
+          }
+
+          await ctx.runMutation(internal.syncSofascore.patchScore, {
+            matchId: lm.matchId,
+            homeScore,
+            awayScore,
+            status,
+            statusShort,
+            minute,
+          });
+
+          updatedCount++;
+          updatedMatches.push({
+            match: `${lm.homeName} ${homeScore} x ${awayScore} ${lm.awayName}`,
+            score: `${homeScore} x ${awayScore}`,
+            status: statusShort,
+          });
+        }
       }
     }
 
     return {
       success: true,
       updated: updatedCount,
-      totalEvents: events.length,
+      source,
+      totalEvents: rawEvents.length,
       updatedMatches,
     };
   },
