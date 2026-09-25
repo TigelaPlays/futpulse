@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
+import { getNationFlagUrl } from "../utils/flagsNationsAssets";
 
 const STADIUM_CITIES: Record<string, string> = {
   "Heriberto Hülse": "Criciúma (SC)",
@@ -77,6 +78,13 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
   }, [matchId, onClose]);
 
   if (!matchId || !match) return null;
+
+  const homeLogo = match.homeTeam?.name
+    ? getNationFlagUrl(match.homeTeam.name, match.homeTeam.logoUrl)
+    : match.homeTeam?.logoUrl;
+  const awayLogo = match.awayTeam?.name
+    ? getNationFlagUrl(match.awayTeam.name, match.awayTeam.logoUrl)
+    : match.awayTeam?.logoUrl;
 
   const isLive =
     match && ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status);
@@ -400,9 +408,9 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center text-center py-1 sm:py-2 px-1">
                   {/* Mandante */}
                   <div className="flex flex-col items-center justify-center gap-1.5 min-w-0">
-                    {match.homeTeam?.logoUrl ? (
+                    {homeLogo ? (
                       <img
-                        src={match.homeTeam.logoUrl}
+                        src={homeLogo}
                         alt={match.homeTeam?.name ?? "Mandante"}
                         className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
                       />
@@ -446,9 +454,9 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
 
                   {/* Visitante */}
                   <div className="flex flex-col items-center justify-center gap-1.5 min-w-0">
-                    {match.awayTeam?.logoUrl ? (
+                    {awayLogo ? (
                       <img
-                        src={match.awayTeam.logoUrl}
+                        src={awayLogo}
                         alt={match.awayTeam?.name ?? "Visitante"}
                         className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md transition-transform hover:scale-105"
                       />
@@ -780,9 +788,9 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                       {/* Mini Header dos Clubes */}
                       <div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 border-b border-slate-800/80 text-xs font-bold text-slate-300">
                         <div className="flex items-center gap-2 justify-start truncate min-w-0">
-                          {match.homeTeam?.logoUrl ? (
+                          {homeLogo ? (
                             <img
-                              src={match.homeTeam.logoUrl}
+                              src={homeLogo}
                               alt=""
                               className="w-4 h-4 object-contain shrink-0"
                             />
@@ -804,9 +812,9 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                           <span className="truncate text-slate-200">
                             {match.awayTeam?.name ?? "Visitante"}
                           </span>
-                          {match.awayTeam?.logoUrl ? (
+                          {awayLogo ? (
                             <img
-                              src={match.awayTeam.logoUrl}
+                              src={awayLogo}
                               alt=""
                               className="w-4 h-4 object-contain shrink-0"
                             />

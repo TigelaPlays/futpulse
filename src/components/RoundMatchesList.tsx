@@ -7,6 +7,7 @@ import { getNationFlagUrl } from "../utils/flagsNationsAssets";
 interface RoundMatchesListProps {
   leagueId: Id<"leagues">;
   round: string;
+  division?: string;
   onNavigateToMatches?: () => void;
   onSelectMatch?: (matchId: Id<"matches">) => void;
 }
@@ -150,13 +151,19 @@ function formatMatchHeader(match: any): { stadium: string; dateStr: string; week
 export function RoundMatchesList({
   leagueId,
   round,
+  division,
   onNavigateToMatches: _onNavigateToMatches,
   onSelectMatch,
 }: RoundMatchesListProps) {
   const matches = useQuery(api.matches.listMatchesByRound, {
     leagueId,
     round,
+    division,
   });
+
+  const displayMatches = matches?.filter(
+    (m) => !division || m.division === division || m.group?.startsWith(division)
+  );
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs animate-fade-in flex flex-col h-full">
@@ -168,12 +175,12 @@ export function RoundMatchesList({
           </div>
           <div>
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              {round}
+              {round} {division ? `• Liga ${division}` : ""}
             </h3>
             <p className="text-[11px] text-slate-500">
-              {matches === undefined
+              {displayMatches === undefined
                 ? "Carregando jogos..."
-                : `${matches.length} ${matches.length === 1 ? "partida" : "partidas"}`}
+                : `${displayMatches.length} ${displayMatches.length === 1 ? "partida" : "partidas"}`}
             </p>
           </div>
         </div>
@@ -181,23 +188,23 @@ export function RoundMatchesList({
 
       {/* Lista de Partidas com a estrutura oficial do Print */}
       <div className="divide-y divide-slate-100 flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar">
-        {matches === undefined ? (
+        {displayMatches === undefined ? (
           <div className="flex-1 flex items-center justify-center py-16 text-slate-500 gap-2">
             <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs">Carregando rodada...</span>
           </div>
-        ) : matches.length === 0 ? (
+        ) : displayMatches.length === 0 ? (
           <div className="flex-1 flex flex-col justify-center text-center py-14 px-4 space-y-2">
             <Clock className="w-7 h-7 text-slate-400 mx-auto" />
             <p className="text-xs font-semibold text-slate-700">
-              Nenhum jogo cadastrado para a {round}
+              Nenhum jogo cadastrado para a {round} {division ? `na Liga ${division}` : ""}
             </p>
             <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
               Esta rodada ainda não possui partidas registradas no banco do campeonato.
             </p>
           </div>
         ) : (
-          matches.map((m) => {
+          displayMatches.map((m) => {
             const isFinished = m.status === "FINISHED";
             const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
             const { stadium, dateStr, weekday, timeStr } = formatMatchHeader(m);

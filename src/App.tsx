@@ -9,6 +9,7 @@ import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
 import { playGoalBeep } from "./lib/sound";
+import { getNationFlagUrl } from "./utils/flagsNationsAssets";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
@@ -149,7 +150,9 @@ export default function App() {
             id: `${match._id}-${Date.now()}-${homeScored ? "H" : "A"}`,
             matchId: match._id,
             teamName: scoringTeam?.name ?? "Time",
-            teamLogo: scoringTeam?.logoUrl,
+            teamLogo: scoringTeam?.name
+              ? getNationFlagUrl(scoringTeam.name, scoringTeam.logoUrl)
+              : scoringTeam?.logoUrl,
             homeScore: match.homeScore,
             awayScore: match.awayScore,
             homeTeamName: match.homeTeam?.name ?? "Mandante",
@@ -231,6 +234,13 @@ export default function App() {
     const awayEvents = match.events?.filter((e: any) => e.teamId === match.awayTeamId) || [];
     const hasEvents = homeEvents.length > 0 || awayEvents.length > 0;
 
+    const homeLogo = match.homeTeam?.name
+      ? getNationFlagUrl(match.homeTeam.name, match.homeTeam.logoUrl)
+      : match.homeTeam?.logoUrl;
+    const awayLogo = match.awayTeam?.name
+      ? getNationFlagUrl(match.awayTeam.name, match.awayTeam.logoUrl)
+      : match.awayTeam?.logoUrl;
+
     return (
       <div
         key={isFavoriteBlock ? `fav-${match._id}` : match._id}
@@ -299,9 +309,9 @@ export default function App() {
               >
                 {match.homeTeam?.name}
               </span>
-              {match.homeTeam?.logoUrl ? (
+              {homeLogo ? (
                 <img
-                  src={match.homeTeam.logoUrl}
+                  src={homeLogo}
                   alt={match.homeTeam?.name ?? "Mandante"}
                   className="w-6 h-6 object-contain shrink-0"
                 />
@@ -335,9 +345,9 @@ export default function App() {
 
             {/* Visitante (50% do espaço, alinhado à esquerda) */}
             <div className="flex-1 flex items-center justify-start gap-2.5 min-w-0 text-left">
-              {match.awayTeam?.logoUrl ? (
+              {awayLogo ? (
                 <img
-                  src={match.awayTeam.logoUrl}
+                  src={awayLogo}
                   alt={match.awayTeam?.name ?? "Visitante"}
                   className="w-6 h-6 object-contain shrink-0"
                 />
@@ -493,9 +503,9 @@ export default function App() {
               >
                 {match.homeTeam?.name}
               </span>
-              {match.homeTeam?.logoUrl ? (
+              {homeLogo ? (
                 <img
-                  src={match.homeTeam.logoUrl}
+                  src={homeLogo}
                   alt=""
                   className="w-5 h-5 object-contain shrink-0"
                 />
@@ -529,9 +539,9 @@ export default function App() {
 
             {/* Visitante */}
             <div className="flex items-center justify-start gap-1.5 min-w-0 text-left">
-              {match.awayTeam?.logoUrl ? (
+              {awayLogo ? (
                 <img
-                  src={match.awayTeam.logoUrl}
+                  src={awayLogo}
                   alt=""
                   className="w-5 h-5 object-contain shrink-0"
                 />

@@ -110,6 +110,7 @@ export const listMatchesByRound = query({
   args: {
     leagueId: v.id("leagues"),
     round: v.union(v.number(), v.string()),
+    division: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const roundStr = String(args.round);
@@ -125,11 +126,19 @@ export const listMatchesByRound = query({
       .withIndex("by_league", (q) => q.eq("leagueId", args.leagueId))
       .collect();
 
-    const matches = allMatches.filter((m) =>
+    let matches = allMatches.filter((m) =>
       searchRounds.some(
         (sr) => m.round.trim().toLowerCase() === sr.trim().toLowerCase()
       )
     );
+
+    if (args.division) {
+      matches = matches.filter(
+        (m) =>
+          m.division === args.division ||
+          m.group?.startsWith(args.division!)
+      );
+    }
 
     return await Promise.all(
       matches.map(async (m) => {

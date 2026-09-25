@@ -46,6 +46,7 @@ export default defineSchema({
     round: v.string(),
     stage: v.optional(v.string()),
     group: v.optional(v.string()),
+    division: v.optional(v.string()),
     homeTeamId: v.id("teams"),
     awayTeamId: v.id("teams"),
     stadiumId: v.optional(v.id("stadiums")),
@@ -81,6 +82,7 @@ export default defineSchema({
     .index("by_league", ["leagueId"])
     .index("by_status", ["status"])
     .index("by_league_and_round", ["leagueId", "round"])
+    .index("by_league_and_division", ["leagueId", "division"])
     .index("by_startTime", ["startTime"]),
 
   // 5. Lances em Tempo Real

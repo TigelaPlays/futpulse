@@ -66,8 +66,25 @@ const DIVISIONS: { id: DivisionType; label: string; sublabel: string }[] = [
   { id: "D", label: "Liga D", sublabel: "Acesso à Liga C" },
 ];
 
-export function NationsLeagueStandings() {
-  const [selectedDivision, setSelectedDivision] = useState<DivisionType>("A");
+export interface NationsLeagueStandingsProps {
+  selectedDivision?: DivisionType;
+  onSelectDivision?: (division: DivisionType) => void;
+}
+
+export function NationsLeagueStandings({
+  selectedDivision: controlledDivision,
+  onSelectDivision,
+}: NationsLeagueStandingsProps = {}) {
+  const [internalDivision, setInternalDivision] = useState<DivisionType>("A");
+  const selectedDivision = controlledDivision ?? internalDivision;
+
+  const handleSelectDivision = (div: DivisionType) => {
+    if (onSelectDivision) {
+      onSelectDivision(div);
+    } else {
+      setInternalDivision(div);
+    }
+  };
 
   const standingsGrouped = useQuery(api.standings.getStandingsByDivision, {
     division: selectedDivision,
@@ -129,7 +146,7 @@ export function NationsLeagueStandings() {
               return (
                 <button
                   key={div.id}
-                  onClick={() => setSelectedDivision(div.id)}
+                  onClick={() => handleSelectDivision(div.id)}
                   className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isActive
                       ? "bg-white text-slate-900 shadow-xs"

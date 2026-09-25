@@ -9,6 +9,8 @@ interface StandingsTableProps {
   leagueId: Id<"leagues">;
   leagueName: string;
   currentRound: number;
+  selectedDivision?: "A" | "B" | "C" | "D";
+  onSelectDivision?: (division: "A" | "B" | "C" | "D") => void;
 }
 
 interface ZoneInfo {
@@ -83,6 +85,8 @@ export function StandingsTable({
   leagueId,
   leagueName,
   currentRound,
+  selectedDivision,
+  onSelectDivision,
 }: StandingsTableProps) {
   const [tableFilter, setTableFilter] = useState<"all" | "home" | "away">("all");
 
@@ -97,7 +101,12 @@ export function StandingsTable({
     leagueName.toLowerCase().includes("nations-league");
 
   if (isNationsLeague) {
-    return <NationsLeagueStandings />;
+    return (
+      <NationsLeagueStandings
+        selectedDivision={selectedDivision}
+        onSelectDivision={onSelectDivision}
+      />
+    );
   }
 
   const renderRankMovement = (rank: number, previousRank?: number) => {

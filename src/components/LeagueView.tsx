@@ -29,6 +29,12 @@ export function LeagueView({
 }: LeagueViewProps) {
   const isLibertadores = league.name.toLowerCase().includes("libertadores");
   const isCup = isLibertadores || league.name.toLowerCase().includes("copa");
+  const isNationsLeague =
+    league.name.toLowerCase().includes("nations league") ||
+    league.name.toLowerCase().includes("nations-league") ||
+    league.code === "UNL";
+
+  const [nationsLeagueDivision, setNationsLeagueDivision] = useState<"A" | "B" | "C" | "D">("A");
 
   const latestFinishedRound = useQuery(api.leagues.getLatestFinishedRound, {
     leagueId,
@@ -193,6 +199,8 @@ export function LeagueView({
             leagueId={leagueId}
             leagueName={league.name}
             currentRound={currentRound}
+            selectedDivision={isNationsLeague ? nationsLeagueDivision : undefined}
+            onSelectDivision={setNationsLeagueDivision}
           />
         </div>
 
@@ -205,6 +213,7 @@ export function LeagueView({
           <RoundMatchesList
             leagueId={leagueId}
             round={`Rodada ${currentRound}`}
+            division={isNationsLeague ? nationsLeagueDivision : undefined}
             onNavigateToMatches={onNavigateToMatches}
             onSelectMatch={onSelectMatch}
           />
