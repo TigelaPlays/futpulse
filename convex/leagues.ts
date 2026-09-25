@@ -248,10 +248,6 @@ export function computeStandingsData(
       if (rank <= 2) description = "Promoção";
       else if (rank <= 6) description = "Play-off para Promoção";
       else if (rank > totalTeams - 4) description = "Rebaixamento";
-    } else if (leagueName.toLowerCase().includes("champions")) {
-      if (rank <= 8) description = "Oitavas de Final";
-      else if (rank <= 24) description = "Play-offs das Oitavas";
-      else description = "Eliminado";
     } else {
       if (rank <= 4) description = "Fase de Grupos (Libertadores)";
       else if (rank <= 6) description = "Qualificação (Libertadores)";
@@ -454,3 +450,81 @@ export const getLatestFinishedRound = query({
     return maxRound;
   },
 });
+
+export const deleteChampionsLeague = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const leagues = await ctx.db.query("leagues").collect();
+    const uclLeagues = leagues.filter((l) =>
+      l.name.toLowerCase().includes("champions league")
+    );
+
+    let deletedMatchesCount = 0;
+    let deletedEventsCount = 0;
+    let deletedStatsCount = 0;
+    let deletedStandingsCount = 0;
+    let deletedTopScorersCount = 0;
+    let deletedLeaguesCount = 0;
+
+    for (const ucl of uclLeagues) {
+      const matches = await ctx.db
+        .query("matches")
+        .withIndex("by_league", (q) => q.eq("leagueId", ucl._id))
+        .collect();
+
+      for (const m of matches) {
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const ev of events) {
+          await ctx.db.delete(ev._id);
+          deletedEventsCount++;
+        }
+
+        const stats = await ctx.db
+          .query("matchStatistics")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const st of stats) {
+          await ctx.db.delete(st._id);
+          deletedStatsCount++;
+        }
+
+        await ctx.db.delete(m._id);
+        deletedMatchesCount++;
+      }
+
+      const standings = await ctx.db
+        .query("standings")
+        .withIndex("by_league", (q) => q.eq("leagueId", ucl._id))
+        .collect();
+      for (const st of standings) {
+        await ctx.db.delete(st._id);
+        deletedStandingsCount++;
+      }
+
+      const scorers = await ctx.db
+        .query("topScorers")
+        .withIndex("by_league", (q) => q.eq("leagueId", ucl._id))
+        .collect();
+      for (const sc of scorers) {
+        await ctx.db.delete(sc._id);
+        deletedTopScorersCount++;
+      }
+
+      await ctx.db.delete(ucl._id);
+      deletedLeaguesCount++;
+    }
+
+    return {
+      deletedLeaguesCount,
+      deletedMatchesCount,
+      deletedEventsCount,
+      deletedStatsCount,
+      deletedStandingsCount,
+      deletedTopScorersCount,
+    };
+  },
+});
+

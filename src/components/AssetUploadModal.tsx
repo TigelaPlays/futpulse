@@ -25,7 +25,6 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
     leagues: [
       { name: "Brasileirão Série A", currentUrl: "https://crests.football-data.org/bsa.png" },
       { name: "Brasileirão Série B", currentUrl: "https://media.api-sports.io/football/leagues/72.png" },
-      { name: "UEFA Champions League", currentUrl: "https://media.api-sports.io/football/leagues/2.png" },
     ],
     stadiums: [
       { name: "Allianz Parque", currentUrl: "" },
