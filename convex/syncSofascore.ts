@@ -171,9 +171,15 @@ export const syncLiveFromSofascore = action({
     if (events.length === 0) {
       source = "espn";
       try {
-        const espnUrl = args.targetDate
-          ? `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates=${args.targetDate.replace(/-/g, "")}`
-          : `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard`;
+        // Obter a data atual no formato YYYYMMDD (ex: 20260925) para não depender do fuso padrão da API
+        const now = new Date();
+        const yyyy = now.getUTCFullYear();
+        const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(now.getUTCDate()).padStart(2, "0");
+        const todayParam = `${yyyy}${mm}${dd}`;
+
+        const dateParam = args.targetDate ? args.targetDate.replace(/-/g, "") : todayParam;
+        const espnUrl = `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates=${dateParam}`;
 
         const espnRes = await fetch(espnUrl);
         if (espnRes.ok) {
