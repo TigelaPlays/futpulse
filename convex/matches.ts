@@ -140,7 +140,7 @@ export const listMatchesByRound = query({
       );
     }
 
-    return await Promise.all(
+    const hydrated = await Promise.all(
       matches.map(async (m) => {
         const [homeTeam, awayTeam, stadium, events] = await Promise.all([
           ctx.db.get(m.homeTeamId),
@@ -161,6 +161,8 @@ export const listMatchesByRound = query({
         };
       })
     );
+
+    return hydrated.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
   },
 });
 

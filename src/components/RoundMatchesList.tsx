@@ -161,9 +161,18 @@ export function RoundMatchesList({
     division,
   });
 
-  const displayMatches = matches?.filter(
-    (m) => !division || m.division === division || m.group?.startsWith(division)
-  );
+  const displayMatches = matches
+    ? [...matches]
+        .filter(
+          (m) => !division || m.division === division || m.group?.startsWith(division)
+        )
+        .sort((a, b) => {
+          const timeA = a.startTime ?? 0;
+          const timeB = b.startTime ?? 0;
+          if (timeA !== timeB) return timeA - timeB;
+          return (a.statusShort || "").localeCompare(b.statusShort || "");
+        })
+    : undefined;
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs animate-fade-in flex flex-col h-full">
