@@ -263,7 +263,10 @@ export const seedMatchesBCD = mutation({
         .first();
 
       const startTime = new Date(f.date).getTime();
-      const statusShort = f.date.slice(11, 16);
+      const utcHours = parseInt(f.date.slice(11, 13), 10);
+      const utcMins = f.date.slice(14, 16);
+      const brtHours = (utcHours - 3 + 24) % 24;
+      const statusShort = `${String(brtHours).padStart(2, "0")}:${utcMins}`;
 
       if (existing) {
         await ctx.db.patch(existing._id, {

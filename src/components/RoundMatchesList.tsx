@@ -8,6 +8,7 @@ interface RoundMatchesListProps {
   leagueId: Id<"leagues">;
   round: string;
   division?: string;
+  onSelectDivision?: (division: "A" | "B" | "C" | "D") => void;
   onNavigateToMatches?: () => void;
   onSelectMatch?: (matchId: Id<"matches">) => void;
 }
@@ -158,6 +159,7 @@ export function RoundMatchesList({
   leagueId,
   round,
   division,
+  onSelectDivision,
   onNavigateToMatches: _onNavigateToMatches,
   onSelectMatch,
 }: RoundMatchesListProps) {
@@ -166,6 +168,23 @@ export function RoundMatchesList({
     round,
     division,
   });
+
+  const getMatchTimeMinutes = (match: any): number => {
+    if (typeof match.statusShort === "string" && match.statusShort.includes(":")) {
+      const [h, m] = match.statusShort.split(":").map(Number);
+      if (!isNaN(h) && !isNaN(m)) return h * 60 + m;
+    }
+    const ts = typeof match.startTime === "number" && match.startTime > 0
+      ? match.startTime
+      : match.matchDate
+      ? new Date(match.matchDate).getTime()
+      : 0;
+    if (ts > 0) {
+      const d = new Date(ts);
+      return d.getHours() * 60 + d.getMinutes();
+    }
+    return 9999;
+  };
 
   const getMatchTimestamp = (match: any): number => {
     if (typeof match.startTime === "number" && match.startTime > 0) {
@@ -184,9 +203,17 @@ export function RoundMatchesList({
           (m) => !division || m.division === division || m.group?.startsWith(division)
         )
         .sort((a, b) => {
+          // 1. Ordem estritamente crescente de horário do dia (ex: 10:00 -> 13:00 -> 15:45)
+          const minA = getMatchTimeMinutes(a);
+          const minB = getMatchTimeMinutes(b);
+          if (minA !== minB) return minA - minB;
+
+          // 2. Desempate por timestamp completo da data
           const timeA = getMatchTimestamp(a);
           const timeB = getMatchTimestamp(b);
-          if (timeA !== timeB) return timeA - timeB; // Crescente: menor horário primeiro
+          if (timeA !== timeB) return timeA - timeB;
+
+          // 3. Desempate por grupo
           return (a.group || "").localeCompare(b.group || "");
         })
     : undefined;
@@ -211,6 +238,30 @@ export function RoundMatchesList({
           </div>
         </div>
       </div>
+
+      {/* Abas de Divisões para alternância direta (Liga A / B / C / D) */}
+      {onSelectDivision && (
+        <div className="px-2.5 py-1.5 bg-slate-100/90 border-b border-slate-200 flex items-center gap-1">
+          {(["A", "B", "C", "D"] as const).map((div) => {
+            const isActive = (division || "A") === div;
+            return (
+              <button
+                key={div}
+                type="button"
+                onClick={() => onSelectDivision(div)}
+                className={`flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                  isActive
+                    ? "bg-white text-slate-900 shadow-2xs border border-slate-200/80"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/60"
+                }`}
+                aria-pressed={isActive}
+              >
+                Liga {div}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Lista de Partidas com a estrutura oficial do Print */}
       <div className="divide-y divide-slate-100 flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar">

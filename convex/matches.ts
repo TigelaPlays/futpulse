@@ -163,19 +163,39 @@ export const listMatchesByRound = query({
     );
 
     return hydrated.sort((a, b) => {
-      const docA = a as any;
-      const docB = b as any;
+      const getMinutes = (m: any): number => {
+        if (typeof m.statusShort === "string" && m.statusShort.includes(":")) {
+          const [h, min] = m.statusShort.split(":").map(Number);
+          if (!isNaN(h) && !isNaN(min)) return h * 60 + min;
+        }
+        const ts = typeof m.startTime === "number" && m.startTime > 0
+          ? m.startTime
+          : (m as any).matchDate
+          ? new Date((m as any).matchDate).getTime()
+          : 0;
+        if (ts > 0) {
+          const d = new Date(ts);
+          return d.getUTCHours() * 60 + d.getUTCMinutes();
+        }
+        return 9999;
+      };
+
+      const minA = getMinutes(a);
+      const minB = getMinutes(b);
+      if (minA !== minB) return minA - minB;
+
       const timeA = typeof a.startTime === "number" && a.startTime > 0
         ? a.startTime
-        : docA.matchDate
-        ? new Date(docA.matchDate).getTime()
+        : (a as any).matchDate
+        ? new Date((a as any).matchDate).getTime()
         : 0;
       const timeB = typeof b.startTime === "number" && b.startTime > 0
         ? b.startTime
-        : docB.matchDate
-        ? new Date(docB.matchDate).getTime()
+        : (b as any).matchDate
+        ? new Date((b as any).matchDate).getTime()
         : 0;
       if (timeA !== timeB) return timeA - timeB;
+
       return (a.group || "").localeCompare(b.group || "");
     });
   },

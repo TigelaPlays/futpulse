@@ -79,11 +79,8 @@ export function NationsLeagueStandings({
   const selectedDivision = controlledDivision ?? internalDivision;
 
   const handleSelectDivision = (div: DivisionType) => {
-    if (onSelectDivision) {
-      onSelectDivision(div);
-    } else {
-      setInternalDivision(div);
-    }
+    setInternalDivision(div);
+    onSelectDivision?.(div);
   };
 
   const standingsGrouped = useQuery(api.standings.getStandingsByDivision, {

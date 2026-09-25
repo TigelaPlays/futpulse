@@ -214,6 +214,7 @@ export function LeagueView({
             leagueId={leagueId}
             round={`Rodada ${currentRound}`}
             division={isNationsLeague ? nationsLeagueDivision : undefined}
+            onSelectDivision={isNationsLeague ? setNationsLeagueDivision : undefined}
             onNavigateToMatches={onNavigateToMatches}
             onSelectMatch={onSelectMatch}
           />
