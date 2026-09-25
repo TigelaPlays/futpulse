@@ -169,8 +169,8 @@ export function RoundMatchesList({
         .sort((a, b) => {
           const timeA = a.startTime ?? 0;
           const timeB = b.startTime ?? 0;
-          if (timeA !== timeB) return timeA - timeB;
-          return (a.statusShort || "").localeCompare(b.statusShort || "");
+          if (timeA !== timeB) return timeB - timeA; // Ordem decrescente
+          return (b.statusShort || "").localeCompare(a.statusShort || "");
         })
     : undefined;
 
