@@ -83,7 +83,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_league_and_round", ["leagueId", "round"])
     .index("by_league_and_division", ["leagueId", "division"])
-    .index("by_startTime", ["startTime"]),
+    .index("by_startTime", ["startTime"])
+    .index("by_externalId", ["externalId"]),
 
   // 5. Lances em Tempo Real
   matchEvents: defineTable({

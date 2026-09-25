@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 export const listMatches = query({
@@ -273,5 +273,54 @@ export const getTopScorers = query({
 
     scorers.sort((a, b) => a.rank - b.rank);
     return scorers;
+  },
+});
+
+export const getByExternalId = internalQuery({
+  args: {
+    externalId: v.number(),
+    homeTeamName: v.optional(v.string()),
+    awayTeamName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Busca direta por externalId na partida
+    const match = await ctx.db
+      .query("matches")
+      .withIndex("by_externalId", (q) => q.eq("externalId", args.externalId))
+      .first();
+
+    if (match) return match;
+
+    // 2. Fallback: Se não encontrar por externalId, busca pelos nomes dos times/seleções
+    if (args.homeTeamName && args.awayTeamName) {
+      const homeNorm = args.homeTeamName.trim().toLowerCase();
+      const awayNorm = args.awayTeamName.trim().toLowerCase();
+
+      const allTeams = await ctx.db.query("teams").collect();
+      const homeTeam = allTeams.find(
+        (t) =>
+          t.name.trim().toLowerCase() === homeNorm ||
+          t.shortName?.trim().toLowerCase() === homeNorm
+      );
+      const awayTeam = allTeams.find(
+        (t) =>
+          t.name.trim().toLowerCase() === awayNorm ||
+          t.shortName?.trim().toLowerCase() === awayNorm
+      );
+
+      if (homeTeam && awayTeam) {
+        return await ctx.db
+          .query("matches")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("homeTeamId"), homeTeam._id),
+              q.eq(q.field("awayTeamId"), awayTeam._id)
+            )
+          )
+          .first();
+      }
+    }
+
+    return null;
   },
 });

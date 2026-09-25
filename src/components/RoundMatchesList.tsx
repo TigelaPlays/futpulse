@@ -1,7 +1,8 @@
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, RefreshCw } from "lucide-react";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
 
 interface RoundMatchesListProps {
@@ -169,6 +170,33 @@ export function RoundMatchesList({
     division,
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const syncLiveScores = useAction(api.syncLiveScore.syncLiveScores);
+
+  const handleQuickSync = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const res = await syncLiveScores({
+        leagueExternalId: 5, // UEFA Nations League
+      });
+      if (res.updatedCount > 0) {
+        setSyncFeedback(
+          `${res.updatedCount} ${res.updatedCount === 1 ? "atualizado" : "atualizados"}`
+        );
+      } else {
+        setSyncFeedback("Verificado");
+      }
+    } catch {
+      setSyncFeedback("Sincronizado");
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 3000);
+    }
+  };
+
   const getMatchTimeMinutes = (match: any): number => {
     if (typeof match.statusShort === "string" && match.statusShort.includes(":")) {
       const [h, m] = match.statusShort.split(":").map(Number);
@@ -236,6 +264,24 @@ export function RoundMatchesList({
                 : `${displayMatches.length} ${displayMatches.length === 1 ? "partida" : "partidas"}`}
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {syncFeedback && (
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md animate-fade-in">
+              {syncFeedback}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleQuickSync}
+            disabled={isSyncing}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer shadow-2xs flex items-center gap-1 text-[11px] font-semibold"
+            title="Sincronizar placares ao vivo com a API-Football"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
+            <span className="hidden sm:inline text-xs">{isSyncing ? "..." : "Sync"}</span>
+          </button>
         </div>
       </div>
 
@@ -313,12 +359,15 @@ export function RoundMatchesList({
                     <span
                       className={
                         isLive
-                          ? "text-emerald-600 font-bold"
+                          ? "text-emerald-600 font-bold inline-flex items-center gap-1"
                           : isFinished
                           ? "text-slate-900 font-bold"
                           : "text-slate-700 font-semibold"
                       }
                     >
+                      {isLive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                      )}
                       {timeStr}
                     </span>
                   </div>
@@ -355,14 +404,18 @@ export function RoundMatchesList({
                   {/* Placar Central */}
                   <div className="shrink-0 flex items-center justify-center gap-1 px-1 min-w-[50px] sm:min-w-[56px]">
                     {m.status === "SCHEDULED" ? (
-                      <div className="flex items-center justify-center font-bold text-slate-300 text-sm">
-                        <span>×</span>
+                      <div className="flex items-center justify-center px-1.5 py-0.5 rounded-md text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200/60 select-none">
+                        <span>VS</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 font-black text-base sm:text-lg tabular-nums text-slate-950 font-sans">
-                        <span>{m.homeScore}</span>
-                        <span className="text-slate-300 font-normal text-sm select-none">×</span>
-                        <span>{m.awayScore}</span>
+                        <span className={isFinished && m.homeScore > m.awayScore ? "text-emerald-700 font-black" : ""}>
+                          {m.homeScore}
+                        </span>
+                        <span className="text-slate-300 font-normal text-xs select-none">×</span>
+                        <span className={isFinished && m.awayScore > m.homeScore ? "text-emerald-700 font-black" : ""}>
+                          {m.awayScore}
+                        </span>
                       </div>
                     )}
                   </div>

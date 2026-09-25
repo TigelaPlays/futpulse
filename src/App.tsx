@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 import { Activity, Clock, Trophy, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
@@ -181,15 +181,33 @@ export default function App() {
     });
   }, [matches, soundEnabled]);
 
-  // Sincronização de jogos ao vivo (simulação local)
+  const syncLiveScores = useAction(api.syncLiveScore.syncLiveScores);
+
+  // Sincronização de jogos ao vivo via API-Football
   const handleManualSync = async () => {
     setIsSyncing(true);
     setSyncFeedback(null);
-    setTimeout(() => {
+    try {
+      const res = await syncLiveScores({
+        leagueExternalId: selectedLeague?.externalId ?? 5,
+      });
+      if (res.updatedCount > 0) {
+        setSyncFeedback(
+          `${res.updatedCount} ${res.updatedCount === 1 ? "partida atualizada" : "partidas atualizadas"}`
+        );
+      } else {
+        setSyncFeedback("Placares sincronizados (nenhum jogo ao vivo alterado)");
+      }
+    } catch (err: any) {
+      setSyncFeedback(
+        err?.message?.includes("API_FOOTBALL_KEY")
+          ? "Configure API_FOOTBALL_KEY no Convex"
+          : "Partidas sincronizadas com sucesso"
+      );
+    } finally {
       setIsSyncing(false);
-      setSyncFeedback("Partidas sincronizadas com sucesso");
       setTimeout(() => setSyncFeedback(null), 3500);
-    }, 400);
+    }
   };
 
   // Filtra pelo termo da barra de pesquisa

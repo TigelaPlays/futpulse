@@ -14,6 +14,7 @@ import type * as seedNationsLeagueA from "../seedNationsLeagueA.js";
 import type * as seedNationsLeagueAll from "../seedNationsLeagueAll.js";
 import type * as seedNationsLeagueBCD from "../seedNationsLeagueBCD.js";
 import type * as standings from "../standings.js";
+import type * as syncLiveScore from "../syncLiveScore.js";
 
 import type {
   ApiFromModules,
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   seedNationsLeagueAll: typeof seedNationsLeagueAll;
   seedNationsLeagueBCD: typeof seedNationsLeagueBCD;
   standings: typeof standings;
+  syncLiveScore: typeof syncLiveScore;
 }>;
 
 /**
