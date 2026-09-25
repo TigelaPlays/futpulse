@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as bindExternalIds from "../bindExternalIds.js";
 import type * as leagues from "../leagues.js";
 import type * as matches from "../matches.js";
 import type * as seedNationsLeagueA from "../seedNationsLeagueA.js";
@@ -24,6 +25,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  bindExternalIds: typeof bindExternalIds;
   leagues: typeof leagues;
   matches: typeof matches;
   seedNationsLeagueA: typeof seedNationsLeagueA;

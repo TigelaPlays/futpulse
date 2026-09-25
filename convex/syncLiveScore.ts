@@ -58,6 +58,7 @@ export const syncLiveScores = action({
   args: {
     leagueExternalId: v.optional(v.number()), // ID da liga na API-Football (ex: 5 para UNL)
     fixtureId: v.optional(v.number()), // Fixture específico opcional
+    season: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const apiKey = process.env.API_FOOTBALL_KEY;
@@ -70,7 +71,8 @@ export const syncLiveScores = action({
       url = `https://v3.football.api-sports.io/fixtures?id=${args.fixtureId}`;
     } else {
       const leagueId = args.leagueExternalId ?? 5; // Default: UEFA Nations League (5)
-      url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=2026&live=all`;
+      const season = args.season ?? 2024; // Padrão plano Free: 2024
+      url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}&live=all`;
     }
 
     const response = await fetch(url, {
