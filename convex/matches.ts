@@ -162,7 +162,22 @@ export const listMatchesByRound = query({
       })
     );
 
-    return hydrated.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
+    return hydrated.sort((a, b) => {
+      const docA = a as any;
+      const docB = b as any;
+      const timeA = typeof a.startTime === "number" && a.startTime > 0
+        ? a.startTime
+        : docA.matchDate
+        ? new Date(docA.matchDate).getTime()
+        : 0;
+      const timeB = typeof b.startTime === "number" && b.startTime > 0
+        ? b.startTime
+        : docB.matchDate
+        ? new Date(docB.matchDate).getTime()
+        : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return (a.group || "").localeCompare(b.group || "");
+    });
   },
 });
 

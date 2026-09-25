@@ -119,7 +119,13 @@ function getStadiumLabel(match: any): string {
 
 function formatMatchHeader(match: any): { stadium: string; dateStr: string; weekday: string; timeStr: string } {
   const stadium = getStadiumLabel(match);
-  const dateObj = new Date(match.startTime);
+  const timestamp =
+    typeof match.startTime === "number" && match.startTime > 0
+      ? match.startTime
+      : match.matchDate
+      ? new Date(match.matchDate).getTime()
+      : 0;
+  const dateObj = timestamp > 0 ? new Date(timestamp) : new Date();
   const now = new Date();
 
   const isToday =
@@ -161,16 +167,27 @@ export function RoundMatchesList({
     division,
   });
 
+  const getMatchTimestamp = (match: any): number => {
+    if (typeof match.startTime === "number" && match.startTime > 0) {
+      return match.startTime;
+    }
+    if (match.matchDate) {
+      const parsed = new Date(match.matchDate).getTime();
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 0;
+  };
+
   const displayMatches = matches
     ? [...matches]
         .filter(
           (m) => !division || m.division === division || m.group?.startsWith(division)
         )
         .sort((a, b) => {
-          const timeA = a.startTime ?? 0;
-          const timeB = b.startTime ?? 0;
-          if (timeA !== timeB) return timeA - timeB; // Ordem crescente (menor horário primeiro)
-          return (a.statusShort || "").localeCompare(b.statusShort || "");
+          const timeA = getMatchTimestamp(a);
+          const timeB = getMatchTimestamp(b);
+          if (timeA !== timeB) return timeA - timeB; // Crescente: menor horário primeiro
+          return (a.group || "").localeCompare(b.group || "");
         })
     : undefined;
 
