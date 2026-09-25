@@ -215,9 +215,7 @@ export const getTopScorers = query({
 
     if (!leagueId) {
       const allLeagues = await ctx.db.query("leagues").collect();
-      const found = allLeagues.find((l) => l.name.toLowerCase().includes("série b"));
-      if (found) leagueId = found._id;
-      else if (allLeagues.length > 0) leagueId = allLeagues[0]._id;
+      if (allLeagues.length > 0) leagueId = allLeagues[0]._id;
     }
 
     if (!leagueId) return [];

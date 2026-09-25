@@ -107,7 +107,7 @@ export function computeStandingsData(
   allTeamIds: Id<"teams">[],
   teamDocMap: Map<string, Doc<"teams">>,
   filter: "all" | "home" | "away" = "all",
-  leagueName = ""
+  _leagueName = ""
 ) {
   const statsMap = new Map<string, TeamStatAccumulator>();
 
@@ -234,26 +234,15 @@ export function computeStandingsData(
     }
   }
 
-  const isSerieB =
-    leagueName.toLowerCase().includes("série b") ||
-    leagueName.toLowerCase().includes("serie b");
-
   const totalTeams = list.length;
 
   return list.map((item, index) => {
     const rank = index + 1;
     let description: string | undefined = undefined;
-
-    if (isSerieB) {
-      if (rank <= 2) description = "Promoção";
-      else if (rank <= 6) description = "Play-off para Promoção";
-      else if (rank > totalTeams - 4) description = "Rebaixamento";
-    } else {
-      if (rank <= 4) description = "Fase de Grupos (Libertadores)";
-      else if (rank <= 6) description = "Qualificação (Libertadores)";
-      else if (rank <= 12) description = "Copa Sul-Americana";
-      else if (rank > totalTeams - 4) description = "Rebaixamento";
-    }
+    if (rank <= 4) description = "Fase de Grupos (Libertadores)";
+    else if (rank <= 6) description = "Qualificação (Libertadores)";
+    else if (rank <= 12) description = "Copa Sul-Americana";
+    else if (rank > totalTeams - 4) description = "Rebaixamento";
 
     return {
       _id: `dynamic-${item.teamId}-${filter}`,
@@ -527,4 +516,83 @@ export const deleteChampionsLeague = mutation({
     };
   },
 });
+
+export const deleteSerieB = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const leagues = await ctx.db.query("leagues").collect();
+    const serieBLeagues = leagues.filter((l) => {
+      const name = l.name.toLowerCase();
+      return name.includes("série b") || name.includes("serie b");
+    });
+
+    let deletedMatchesCount = 0;
+    let deletedEventsCount = 0;
+    let deletedStatsCount = 0;
+    let deletedStandingsCount = 0;
+    let deletedTopScorersCount = 0;
+    let deletedLeaguesCount = 0;
+
+    for (const lg of serieBLeagues) {
+      const matches = await ctx.db
+        .query("matches")
+        .withIndex("by_league", (q) => q.eq("leagueId", lg._id))
+        .collect();
+
+      for (const m of matches) {
+        const events = await ctx.db
+          .query("matchEvents")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const ev of events) {
+          await ctx.db.delete(ev._id);
+          deletedEventsCount++;
+        }
+
+        const stats = await ctx.db
+          .query("matchStatistics")
+          .withIndex("by_match", (q) => q.eq("matchId", m._id))
+          .collect();
+        for (const st of stats) {
+          await ctx.db.delete(st._id);
+          deletedStatsCount++;
+        }
+
+        await ctx.db.delete(m._id);
+        deletedMatchesCount++;
+      }
+
+      const standings = await ctx.db
+        .query("standings")
+        .withIndex("by_league", (q) => q.eq("leagueId", lg._id))
+        .collect();
+      for (const st of standings) {
+        await ctx.db.delete(st._id);
+        deletedStandingsCount++;
+      }
+
+      const scorers = await ctx.db
+        .query("topScorers")
+        .withIndex("by_league", (q) => q.eq("leagueId", lg._id))
+        .collect();
+      for (const sc of scorers) {
+        await ctx.db.delete(sc._id);
+        deletedTopScorersCount++;
+      }
+
+      await ctx.db.delete(lg._id);
+      deletedLeaguesCount++;
+    }
+
+    return {
+      deletedLeaguesCount,
+      deletedMatchesCount,
+      deletedEventsCount,
+      deletedStatsCount,
+      deletedStandingsCount,
+      deletedTopScorersCount,
+    };
+  },
+});
+
 

@@ -38,7 +38,7 @@ export function TopScorersWidget({ leagueId }: TopScorersWidgetProps) {
               </span>
             </div>
             <p className="text-[11px] text-slate-500">
-              Ranking oficial de artilheiros do Brasileirão Série B 2026
+              Ranking oficial de artilheiros da competição
             </p>
           </div>
         </div>

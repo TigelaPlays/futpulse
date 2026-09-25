@@ -46,32 +46,6 @@ function getZoneInfo(
     return { borderColor: "border-l-transparent" };
   }
 
-  const isSerieB =
-    leagueName.toLowerCase().includes("série b") ||
-    leagueName.toLowerCase().includes("serie b");
-
-  if (isSerieB) {
-    if (rank <= 2) {
-      return {
-        label: rank === 1 ? "Promoção (Série A)" : undefined,
-        borderColor: "border-l-emerald-600",
-      };
-    }
-    if (rank <= 6) {
-      return {
-        label: rank === 3 ? "Play-off para Promoção" : undefined,
-        borderColor: "border-l-teal-400",
-      };
-    }
-    if (rank > totalTeams - 4) {
-      return {
-        label: rank === totalTeams - 3 ? "Rebaixamento (Série C)" : undefined,
-        borderColor: "border-l-rose-600",
-      };
-    }
-    return { borderColor: "border-l-transparent" };
-  }
-
   // Série A e ligas gerais
   const desc = description?.toLowerCase() || "";
   if (desc.includes("libertadores") || rank <= 4) {
@@ -125,10 +99,6 @@ export function StandingsTable({
   if (isNationsLeague) {
     return <NationsLeagueStandings />;
   }
-
-  const isSerieB =
-    leagueName.toLowerCase().includes("série b") ||
-    leagueName.toLowerCase().includes("serie b");
 
   const renderRankMovement = (rank: number, previousRank?: number) => {
     if (previousRank === undefined || rank === previousRank) {
@@ -421,41 +391,22 @@ export function StandingsTable({
       {/* Legenda de Zonas */}
       {standings && standings.length > 0 && (
         <div className="p-3.5 bg-slate-50/90 border-t border-slate-200 flex flex-wrap items-center gap-5 text-[11px] text-slate-600 font-medium">
-          {isSerieB ? (
-            <>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600 shadow-2xs" />
-                <span>Promoção (Série A)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-teal-400 shadow-2xs" />
-                <span>Play-off para Promoção</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-rose-600 shadow-2xs" />
-                <span>Rebaixamento (Série C)</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600 shadow-2xs" />
-                <span>Fase de Grupos (Libertadores)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-teal-400 shadow-2xs" />
-                <span>Qualificação / Pré-Libertadores</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-sky-500 shadow-2xs" />
-                <span>Copa Sul-Americana</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-rose-600 shadow-2xs" />
-                <span>Zona de Rebaixamento</span>
-              </div>
-            </>
-          )}
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600 shadow-2xs" />
+            <span>Fase de Grupos (Libertadores)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-xs bg-teal-400 shadow-2xs" />
+            <span>Qualificação / Pré-Libertadores</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-xs bg-sky-500 shadow-2xs" />
+            <span>Copa Sul-Americana</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-xs bg-rose-600 shadow-2xs" />
+            <span>Zona de Rebaixamento</span>
+          </div>
         </div>
       )}
     </div>

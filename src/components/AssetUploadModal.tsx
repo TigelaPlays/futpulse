@@ -24,7 +24,6 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
     ],
     leagues: [
       { name: "Brasileirão Série A", currentUrl: "https://crests.football-data.org/bsa.png" },
-      { name: "Brasileirão Série B", currentUrl: "https://media.api-sports.io/football/leagues/72.png" },
     ],
     stadiums: [
       { name: "Allianz Parque", currentUrl: "" },
@@ -145,7 +144,7 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
                 type="text"
                 value={targetName}
                 onChange={(e) => setTargetName(e.target.value)}
-                placeholder={`Digite ou selecione (ex: ${category === "teams" ? "Vila Nova" : category === "leagues" ? "Brasileirão Série B" : "Maracanã"})...`}
+                placeholder={`Digite ou selecione (ex: ${category === "teams" ? "Palmeiras" : category === "leagues" ? "Brasileirão Série A" : "Maracanã"})...`}
                 className="w-full bg-white border border-slate-200 focus:border-emerald-500 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
               />
 
