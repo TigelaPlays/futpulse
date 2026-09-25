@@ -162,7 +162,7 @@ export const listMatchesByRound = query({
       })
     );
 
-    return hydrated.sort((a, b) => (b.startTime ?? 0) - (a.startTime ?? 0));
+    return hydrated.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
   },
 });
 
