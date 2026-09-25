@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 import { StandingsTable } from "./StandingsTable";
 import { NationsLeagueStandings } from "./NationsLeagueStandings";
 import { RoundMatchesList } from "./RoundMatchesList";
 import { ChevronLeft, ChevronRight, Trophy, Calendar } from "lucide-react";
 
 interface LeagueViewProps {
-  leagueId: Id<"leagues">;
+  leagueId: string;
   league: {
-    _id?: Id<"leagues">;
+    _id?: string;
     name: string;
     code?: string;
     country?: string;
@@ -19,7 +16,7 @@ interface LeagueViewProps {
     priority?: number;
   };
   onNavigateToMatches?: () => void;
-  onSelectMatch?: (matchId: Id<"matches">) => void;
+  onSelectMatch?: (matchId: string) => void;
 }
 
 export function LeagueView({
@@ -28,25 +25,6 @@ export function LeagueView({
   onNavigateToMatches,
   onSelectMatch,
 }: LeagueViewProps) {
-  // Busca dinamicamente a última rodada com jogos finalizados da liga
-  const latestFinishedRound = useQuery(api.leagues.getLatestFinishedRound, {
-    leagueId,
-  });
-
-  const [selectedRound, setSelectedRound] = useState<number | null>(null);
-  const [prevLeagueId, setPrevLeagueId] = useState(leagueId);
-
-  // Se trocar de campeonato, reseta a escolha manual para abrir na última rodada da nova liga
-  if (prevLeagueId !== leagueId) {
-    setPrevLeagueId(leagueId);
-    setSelectedRound(null);
-  }
-
-  // A rodada ativa é a selecionada pelo usuário ou, por padrão, a última finalizada
-  const currentRound = selectedRound ?? latestFinishedRound;
-
-  const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
-
   const isUCL = league.name.toLowerCase().includes("champions");
   const isLibertadores = league.name.toLowerCase().includes("libertadores");
   const isNationsLeague =
@@ -54,6 +32,21 @@ export function LeagueView({
     league.name.toLowerCase().includes("nations-league") ||
     league.code === "UNL";
   const isCup = isUCL || isLibertadores || isNationsLeague || league.name.toLowerCase().includes("copa");
+
+  const defaultRound = isNationsLeague ? 4 : isUCL ? 2 : isCup ? 1 : 28;
+  const [selectedRound, setSelectedRound] = useState<number | null>(null);
+  const [prevLeagueId, setPrevLeagueId] = useState(leagueId);
+
+  // Se trocar de campeonato, reseta a escolha manual para abrir na rodada padrão
+  if (prevLeagueId !== leagueId) {
+    setPrevLeagueId(leagueId);
+    setSelectedRound(null);
+  }
+
+  // A rodada ativa é a selecionada pelo usuário ou, por padrão, a rodada mock ativa
+  const currentRound = selectedRound ?? defaultRound;
+
+  const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
 
   const minRound = 1;
   const maxRound = isUCL ? 8 : isLibertadores ? 6 : isNationsLeague ? 6 : isCup ? 8 : 38;

@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 import {
   Play,
   Pause,
@@ -12,10 +9,11 @@ import {
   Activity,
   Zap,
 } from "lucide-react";
+import { MOCK_MATCHES } from "../data/mockData";
 
 interface SimulationControllerProps {
-  initialMatchId?: Id<"matches"> | null;
-  onSelectMatch?: (matchId: Id<"matches">) => void;
+  initialMatchId?: string | null;
+  onSelectMatch?: (matchId: string) => void;
 }
 
 export function SimulationController({
@@ -23,11 +21,13 @@ export function SimulationController({
   onSelectMatch,
 }: SimulationControllerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [userSelectedMatchId, setUserSelectedMatchId] = useState<Id<"matches"> | null>(null);
+  const [userSelectedMatchId, setUserSelectedMatchId] = useState<string | null>(null);
   const [prevInitialId, setPrevInitialId] = useState(initialMatchId);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(5);
   const [isOperating, setIsOperating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Sincroniza se o usuário abrir um modal de partida no App
   if (initialMatchId && initialMatchId !== prevInitialId) {
@@ -36,77 +36,69 @@ export function SimulationController({
   }
 
   // Carrega todas as partidas para preencher o dropdown
-  const allMatches = useQuery(api.matches.listMatches, {});
+  const allMatches = MOCK_MATCHES;
 
   // Filtra partidas ativas ou agendadas prioritariamente
   const candidateMatches =
-    allMatches?.filter((m) =>
+    allMatches.filter((m) =>
       ["SCHEDULED", "LIVE", "IN_PLAY", "PAUSED", "HALFTIME"].includes(m.status)
-    ) || allMatches || [];
+    ) || allMatches;
 
   const effectiveMatchId =
     userSelectedMatchId || (candidateMatches.length > 0 ? candidateMatches[0]._id : null);
 
-  // Consulta o status dinâmico da simulação para a partida selecionada
-  const simStatus = useQuery(
-    api.simulation.getSimulationStatus,
-    effectiveMatchId ? { matchId: effectiveMatchId } : "skip"
-  );
-
-  // Mutations da simulação
-  const startSimulation = useMutation(api.simulation.startSimulation);
-  const pauseSimulation = useMutation(api.simulation.pauseSimulation);
-  const resetSimulation = useMutation(api.simulation.resetSimulation);
-
-  const selectedMatch = allMatches?.find((m) => m._id === effectiveMatchId);
+  const selectedMatch = allMatches.find((m) => m._id === effectiveMatchId);
 
   const handleStartOrResume = async () => {
     if (!effectiveMatchId) return;
     setIsOperating(true);
     setStatusMessage(null);
-    try {
-      await startSimulation({
-        matchId: effectiveMatchId,
-        speedMultiplier,
-      });
-      setStatusMessage("Simulação iniciada!");
+    setTimeout(() => {
+      setIsSimulating(true);
+      setIsPaused(false);
+      setStatusMessage("Simulação iniciada em modo local!");
       if (onSelectMatch) onSelectMatch(effectiveMatchId);
-    } catch (err: any) {
-      setStatusMessage(`Erro: ${err?.message || "falha ao iniciar"}`);
-    } finally {
       setIsOperating(false);
-    }
+    }, 200);
   };
 
   const handlePause = async () => {
     if (!effectiveMatchId) return;
     setIsOperating(true);
-    try {
-      await pauseSimulation({ matchId: effectiveMatchId });
+    setTimeout(() => {
+      setIsPaused(true);
       setStatusMessage("Simulação pausada.");
-    } catch (err: any) {
-      setStatusMessage(`Erro: ${err?.message || "falha ao pausar"}`);
-    } finally {
       setIsOperating(false);
-    }
+    }, 200);
   };
 
   const handleReset = async () => {
     if (!effectiveMatchId) return;
     setIsOperating(true);
-    try {
-      await resetSimulation({ matchId: effectiveMatchId });
-      setStatusMessage("Partida resetada para 0x0.");
-    } catch (err: any) {
-      setStatusMessage(`Erro: ${err?.message || "falha ao resetar"}`);
-    } finally {
+    setTimeout(() => {
+      setIsSimulating(false);
+      setIsPaused(false);
+      setStatusMessage("Partida resetada.");
       setIsOperating(false);
-    }
+    }, 200);
   };
 
-  const isLive = simStatus?.isSimulating || ["LIVE", "IN_PLAY"].includes(simStatus?.status || "");
-  const isPaused = simStatus?.isPaused || simStatus?.status === "PAUSED";
-  const isFinished = simStatus?.status === "FINISHED";
+  const isLive = isSimulating && !isPaused;
+  const isFinished = false;
+
+  const simStatus = {
+    isSimulating,
+    isPaused,
+    status: isSimulating ? (isPaused ? "PAUSED" : "IN_PLAY") : "SCHEDULED",
+    statusShort: isSimulating ? (isPaused ? "INT" : "AO VIVO") : (selectedMatch?.statusShort || "AGD"),
+    minute: isSimulating ? 72 : selectedMatch?.minute ?? 0,
+    homeScore: selectedMatch?.homeScore ?? 0,
+    awayScore: selectedMatch?.awayScore ?? 0,
+    speedMultiplier,
+    eventsCount: selectedMatch?.events?.length ?? 0,
+    stepMinutes: 1,
+    runId: "local_sim",
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-50 font-sans">
@@ -176,7 +168,7 @@ export function SimulationController({
             <select
               value={effectiveMatchId || ""}
               onChange={(e) => {
-                const id = e.target.value as Id<"matches">;
+                const id = e.target.value;
                 setUserSelectedMatchId(id);
                 if (onSelectMatch) onSelectMatch(id);
               }}

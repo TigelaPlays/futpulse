@@ -1,7 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useAction } from "convex/react";
-import { api } from "../convex/_generated/api";
-import type { Id } from "../convex/_generated/dataModel";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Activity, Clock, Trophy, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
@@ -9,6 +6,7 @@ import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
 import { playGoalBeep } from "./lib/sound";
+import { MOCK_LEAGUES, MOCK_MATCHES } from "./data/mockData";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
@@ -27,9 +25,9 @@ function formatQuickDateLabel(offset: number): string {
 
 export default function App() {
   const [filter, setFilter] = useState<FilterType>("ALL");
-  const [selectedLeagueId, setSelectedLeagueId] = useState<Id<"leagues"> | null>(null);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [selectedDateOffset, setSelectedDateOffset] = useState<number | null>(0); // 0 = Hoje
-  const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isBetaBannerVisible, setIsBetaBannerVisible] = useState<boolean>(() => {
     try {
@@ -92,48 +90,42 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const leagues = useQuery(api.leagues.listLeagues);
+  const leagues = MOCK_LEAGUES;
 
-  // Intervalo de tempo para o filtro por dia (00:00:00 às 23:59:59)
-  const dateRange = (() => {
-    if (selectedDateOffset === null) return null;
-    const d = new Date();
-    d.setDate(d.getDate() + selectedDateOffset);
-    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
-    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
-    return { start, end };
-  })();
+  const matches = useMemo(() => {
+    let list = MOCK_MATCHES;
+    if (selectedLeagueId) {
+      list = list.filter((m) => m.leagueId === selectedLeagueId);
+    }
+    if (filter === "LIVE") {
+      list = list.filter((m) =>
+        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
+      );
+    } else if (filter === "FINISHED") {
+      list = list.filter((m) => m.status === "FINISHED");
+    } else if (filter === "SCHEDULED") {
+      list = list.filter((m) => m.status === "SCHEDULED");
+    }
+    return list;
+  }, [selectedLeagueId, filter]);
 
-  const matches = useQuery(api.matches.listMatches, {
-    statusFilter: filter,
-    leagueId: selectedLeagueId ?? undefined,
-    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
-    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
-  });
-
-  const getDateIsoForOffset = (offset: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().split("T")[0];
-  };
-  const allMatchesForCounts = useQuery(api.matches.listMatches, {
-    statusFilter: "ALL",
-    leagueId: selectedLeagueId ?? undefined,
-    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
-    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
-  });
+  const allMatchesForCounts = useMemo(() => {
+    if (selectedLeagueId) {
+      return MOCK_MATCHES.filter((m) => m.leagueId === selectedLeagueId);
+    }
+    return MOCK_MATCHES;
+  }, [selectedLeagueId]);
 
   const matchCounts = {
-    ALL: allMatchesForCounts?.length ?? 0,
-    LIVE:
-      allMatchesForCounts?.filter((m) =>
-        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
-      ).length ?? 0,
-    FINISHED: allMatchesForCounts?.filter((m) => m.status === "FINISHED").length ?? 0,
-    SCHEDULED: allMatchesForCounts?.filter((m) => m.status === "SCHEDULED").length ?? 0,
+    ALL: allMatchesForCounts.length,
+    LIVE: allMatchesForCounts.filter((m) =>
+      ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
+    ).length,
+    FINISHED: allMatchesForCounts.filter((m) => m.status === "FINISHED").length,
+    SCHEDULED: allMatchesForCounts.filter((m) => m.status === "SCHEDULED").length,
   };
 
-  const selectedLeague = leagues?.find((l) => l._id === selectedLeagueId);
+  const selectedLeague = leagues.find((l) => l._id === selectedLeagueId);
 
   // Detecta quando o placar muda para disparar o Toast de Gol e o Som
   useEffect(() => {
@@ -181,11 +173,19 @@ export default function App() {
     });
   }, [matches, soundEnabled]);
 
-  const syncLiveMatches = useAction(api.apiFootball.syncLiveMatchesAction);
-  const syncDailyFixtures = useAction(api.ingestion.syncDailyFixtures);
+  // Sincronização de jogos ao vivo (simulação local)
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    setTimeout(() => {
+      setIsSyncing(false);
+      setSyncFeedback("Partidas sincronizadas com sucesso");
+      setTimeout(() => setSyncFeedback(null), 3500);
+    }, 400);
+  };
 
   // Filtra pelo termo da barra de pesquisa
-  const filteredMatches = matches?.filter((m) => {
+  const filteredMatches = matches.filter((m) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     const home = m.homeTeam?.name?.toLowerCase() || "";
@@ -195,7 +195,7 @@ export default function App() {
   });
 
   // Agrupa jogos filtrados por campeonato
-  const groupedMatches = filteredMatches?.reduce((acc, match) => {
+  const groupedMatches = filteredMatches.reduce((acc, match) => {
     const leagueName = match.league?.name ?? "Outros";
     if (!acc[leagueName]) {
       acc[leagueName] = {
@@ -205,70 +205,12 @@ export default function App() {
     }
     acc[leagueName].matches.push(match);
     return acc;
-  }, {} as Record<string, { league: any; matches: NonNullable<typeof matches> }>);
+  }, {} as Record<string, { league: any; matches: typeof matches }>);
 
   // Partidas Favoritas filtradas pela busca
-  const favoriteMatches = (filteredMatches || []).filter((m) =>
+  const favoriteMatches = filteredMatches.filter((m) =>
     favoriteMatchIds.includes(m._id)
   );
-
-  // Sincronização de jogos ao vivo
-  const handleManualSync = async () => {
-    try {
-      setIsSyncing(true);
-      setSyncFeedback(null);
-      const result = await syncLiveMatches({ force: true });
-      if ("fixturesProcessed" in result && result.success) {
-        setSyncFeedback(`${result.fixturesProcessed} partidas ao vivo atualizadas`);
-      } else if ("skipped" in result && result.skipped) {
-        setSyncFeedback("Sem partidas ao vivo pendentes");
-      } else if ("blocked" in result && result.blocked) {
-        setSyncFeedback("Cota diária da API atingida");
-      } else if (result.success) {
-        setSyncFeedback("Partidas sincronizadas com sucesso");
-      } else {
-        setSyncFeedback("Falha na sincronização");
-      }
-    } catch (err) {
-      console.error("Erro ao sincronizar dados:", err);
-      setSyncFeedback("Erro ao conectar");
-    } finally {
-      setIsSyncing(false);
-      setTimeout(() => setSyncFeedback(null), 3500);
-    }
-  };
-
-  // Sincronização de jogos do dia
-  const handleSyncDaily = useCallback(async (dateOverride?: string) => {
-    try {
-      setIsSyncing(true);
-      setSyncFeedback(null);
-      const targetDate = dateOverride ?? getDateIsoForOffset(selectedDateOffset ?? 0);
-      const result = await syncDailyFixtures({ date: targetDate });
-      if (result.success) {
-        setSyncFeedback(`${result.syncedCount ?? 0} jogos de ${targetDate} sincronizados`);
-      } else {
-        setSyncFeedback("Falha na sincronização");
-      }
-    } catch (err) {
-      console.error("Erro ao sincronizar grade diária:", err);
-      setSyncFeedback("Erro ao conectar");
-    } finally {
-      setIsSyncing(false);
-      setTimeout(() => setSyncFeedback(null), 3500);
-    }
-  }, [selectedDateOffset, syncDailyFixtures]);
-
-  useEffect(() => {
-    if (selectedLeagueId !== null || selectedDateOffset === null) return;
-
-    const targetDate = getDateIsoForOffset(selectedDateOffset);
-    const timer = window.setTimeout(() => {
-      void handleSyncDaily(targetDate);
-    }, 150);
-
-    return () => window.clearTimeout(timer);
-  }, [selectedDateOffset, selectedLeagueId, handleSyncDaily]);
 
   const renderMatchRow = (match: any, isFavoriteBlock = false) => {
     const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
@@ -745,13 +687,11 @@ export default function App() {
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
               <span>{isSyncing ? "..." : "Sincronizar"}</span>
             </button>
-
             <button
               onClick={() => {
                 setSelectedLeagueId(null);
                 setSelectedDateOffset(0);
                 setFilter("ALL");
-                void handleSyncDaily(getDateIsoForOffset(0));
               }}
               disabled={isSyncing}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${

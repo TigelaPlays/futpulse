@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery, useAction } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
+import { getMockMatchById } from "../data/mockData";
 
 const STADIUM_CITIES: Record<string, string> = {
   "Heriberto Hülse": "Criciúma (SC)",
@@ -49,7 +47,7 @@ function getStadiumDisplayLocation(stadium?: { name?: string; city?: string } | 
 }
 
 interface MatchDetailsModalProps {
-  matchId: Id<"matches"> | null;
+  matchId: string | null;
   onClose: () => void;
 }
 
@@ -60,13 +58,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
   const [eventsFeedback, setEventsFeedback] = useState<string | null>(null);
   const [statsFeedback, setStatsFeedback] = useState<string | null>(null);
 
-  const syncMatchEvents = useAction(api.ingestion.syncMatchEvents);
-  const syncMatchStatistics = useAction(api.ingestion.syncMatchStatistics);
-
-  const match = useQuery(
-    api.matches.getMatchDetails,
-    matchId ? { matchId } : "skip"
-  );
+  const match = matchId ? getMockMatchById(matchId) : null;
 
   // Fecha o modal ao pressionar Escape
   useEffect(() => {
@@ -80,49 +72,31 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [matchId, onClose]);
 
-  if (!matchId) return null;
+  if (!matchId || !match) return null;
 
   const isLive =
     match && ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status);
 
   const handleSyncEvents = async () => {
     if (!matchId) return;
-    try {
-      setIsSyncingEvents(true);
-      setEventsFeedback(null);
-      const result = await syncMatchEvents({ matchId });
-      if (result.success) {
-        setEventsFeedback(`${result.eventCount ?? 0} lances`);
-      } else {
-        setEventsFeedback("Sem novos lances");
-      }
-    } catch (err) {
-      console.error("Erro ao sincronizar eventos:", err);
-      setEventsFeedback("Erro ao sincronizar");
-    } finally {
+    setIsSyncingEvents(true);
+    setEventsFeedback(null);
+    setTimeout(() => {
       setIsSyncingEvents(false);
+      setEventsFeedback(`${match.events?.length ?? 0} lances`);
       setTimeout(() => setEventsFeedback(null), 3000);
-    }
+    }, 350);
   };
 
   const handleSyncStats = async () => {
     if (!matchId) return;
-    try {
-      setIsSyncingStats(true);
-      setStatsFeedback(null);
-      const result = await syncMatchStatistics({ matchId });
-      if (result.success) {
-        setStatsFeedback("Atualizado");
-      } else {
-        setStatsFeedback(result.reason === "INSUFFICIENT_DATA" ? "Sem dados na API" : "Falha");
-      }
-    } catch (err) {
-      console.error("Erro ao sincronizar estatísticas:", err);
-      setStatsFeedback("Erro");
-    } finally {
+    setIsSyncingStats(true);
+    setStatsFeedback(null);
+    setTimeout(() => {
       setIsSyncingStats(false);
+      setStatsFeedback("Atualizado");
       setTimeout(() => setStatsFeedback(null), 3000);
-    }
+    }, 350);
   };
 
   const getStatusText = () => {
@@ -575,7 +549,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                   </div>
                 </div>
 
-                {match.events.length === 0 ? (
+                {(!match.events || match.events.length === 0) ? (
                   <div className="text-center py-6 px-4 text-xs text-slate-600 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                     <p className="font-bold text-slate-800 text-sm">
                       Súmula simplificada: {match.homeTeam?.name ?? "Mandante"} {match.homeScore} × {match.awayScore} {match.awayTeam?.name ?? "Visitante"}
@@ -602,7 +576,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                       <div className="absolute left-1/2 top-0 bottom-0 w-0.5 -translate-x-1/2 bg-slate-200" />
 
                       <div className="space-y-4">
-                        {match.events.map((event, idx) => {
+                        {(match.events || []).map((event, idx) => {
                           const isHomeTeam = event.teamId === match.homeTeamId;
                           const meta = getTimelineEventMeta(event);
                           const minuteStr = `${event.minute}${event.extraMinute ? `+${event.extraMinute}` : ""}'`;

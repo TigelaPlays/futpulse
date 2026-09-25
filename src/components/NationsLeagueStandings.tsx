@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { Trophy, Shield, Info, Layers } from "lucide-react";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
+import { MOCK_NATIONS_LEAGUE_STANDINGS } from "../data/mockData";
 
 type DivisionType = "A" | "B" | "C" | "D";
 
@@ -69,10 +68,10 @@ const DIVISIONS: { id: DivisionType; label: string; sublabel: string }[] = [
 export function NationsLeagueStandings() {
   const [selectedDivision, setSelectedDivision] = useState<DivisionType>("A");
 
-  // Consulta reativa no Convex por divisão
-  const standingsGrouped = useQuery(api.standings.getStandingsByDivision, {
-    division: selectedDivision,
-  });
+  const standingsGrouped = useMemo(
+    () => MOCK_NATIONS_LEAGUE_STANDINGS[selectedDivision] || {},
+    [selectedDivision]
+  );
 
   // Extrai as zonas ativas para montar a legenda dinâmica da divisão
   const activeZones = useMemo(() => {
@@ -232,7 +231,7 @@ export function NationsLeagueStandings() {
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                       {teams.map((row, index) => {
                         const rank = index + 1;
-                        const zoneStyle = ZONE_CONFIG[row.zone] || ZONE_CONFIG.NONE;
+                        const zoneStyle = (row.zone && ZONE_CONFIG[row.zone]) || ZONE_CONFIG.NONE;
                         const goalDiff = row.goalDifference;
                         const formattedSG = goalDiff > 0 ? `+${goalDiff}` : `${goalDiff}`;
 

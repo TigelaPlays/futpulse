@@ -4,13 +4,9 @@ import App from './App.tsx'
 import './index.css'
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL as string
+const convexUrl = (import.meta.env.VITE_CONVEX_URL as string) || "https://placeholder.convex.cloud";
 
-if (!convexUrl) {
-  throw new Error("VITE_CONVEX_URL não está configurada no arquivo .env.local")
-}
-
-const convex = new ConvexReactClient(convexUrl)
+const convex = new ConvexReactClient(convexUrl);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
