@@ -127,14 +127,11 @@ export default defineSchema({
     awayPassAccuracy: v.optional(v.number()),
   }).index("by_match", ["matchId"]),
 
-  // 7. Classificação (Geral e Nations League)
+  // 7. Classificação
   standings: defineTable({
     leagueId: v.optional(v.string()),
-    division: v.optional(v.union(v.literal("A"), v.literal("B"), v.literal("C"), v.literal("D"))),
-    group: v.optional(v.string()),
     teamId: v.optional(v.id("teams")),
     teamName: v.string(),
-    teamFlag: v.optional(v.string()),
     points: v.number(),
     played: v.number(),
     won: v.number(),
@@ -144,21 +141,9 @@ export default defineSchema({
     goalsAgainst: v.number(),
     goalDifference: v.number(),
     form: v.optional(v.union(v.string(), v.array(v.string()))),
-    zone: v.optional(
-      v.union(
-        v.literal("QUARTER_FINALS"),
-        v.literal("PROMOTION"),
-        v.literal("PROMOTION_PLAYOFF"),
-        v.literal("RELEGATION_PLAYOFF"),
-        v.literal("RELEGATION"),
-        v.literal("NONE")
-      )
-    ),
     rank: v.optional(v.number()),
     description: v.optional(v.string()),
-  })
-    .index("by_division", ["division"])
-    .index("by_league", ["leagueId"]),
+  }).index("by_league", ["leagueId"]),
 
   // 8. Artilheiros
   topScorers: defineTable({

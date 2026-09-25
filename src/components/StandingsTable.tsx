@@ -3,7 +3,6 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Trophy } from "lucide-react";
-import { NationsLeagueStandings } from "./NationsLeagueStandings";
 
 interface StandingsTableProps {
   leagueId: Id<"leagues">;
@@ -91,14 +90,6 @@ export function StandingsTable({
     upToRound: currentRound,
     filter: tableFilter,
   });
-
-  const isNationsLeague =
-    leagueName.toLowerCase().includes("nations league") ||
-    leagueName.toLowerCase().includes("nations-league");
-
-  if (isNationsLeague) {
-    return <NationsLeagueStandings />;
-  }
 
   const renderRankMovement = (rank: number, previousRank?: number) => {
     if (previousRank === undefined || rank === previousRank) {
