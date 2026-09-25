@@ -133,6 +133,7 @@ export const seedLigaA = mutation({
         group: "A2",
         date: "2026-09-24T18:45:00Z",
         venue: "Johan Cruijff ArenA, Amsterdã (Países Baixos)",
+        stadiumFile: "Johan Cruyff Arena.jpg",
       },
       {
         home: "Sérvia",
@@ -140,6 +141,7 @@ export const seedLigaA = mutation({
         group: "A2",
         date: "2026-09-24T18:45:00Z",
         venue: "Rajko Mitić Stadium, Belgrado (Sérvia)",
+        stadiumFile: "Stadion Rajko Mitić.jpg",
       },
       // Grupo A4 - 24/09/2026
       {
@@ -148,6 +150,7 @@ export const seedLigaA = mutation({
         group: "A4",
         date: "2026-09-24T18:45:00Z",
         venue: "Ullevaal Stadion, Oslo (Noruega)",
+        stadiumFile: "Ullevaal Stadion.jpg",
       },
       {
         home: "Portugal",
@@ -155,6 +158,7 @@ export const seedLigaA = mutation({
         group: "A4",
         date: "2026-09-24T18:45:00Z",
         venue: "Estádio José Alvalade, Lisboa (Portugal)",
+        stadiumFile: "José Alvalade.jpg",
       },
       // Grupo A1 - 25/09/2026
       {
@@ -163,6 +167,7 @@ export const seedLigaA = mutation({
         group: "A1",
         date: "2026-09-25T18:45:00Z",
         venue: "Stadio Olimpico, Roma (Itália)",
+        stadiumFile: "Stadio Olimpico di Roma.jpg",
       },
       {
         home: "Turquia",
@@ -170,6 +175,7 @@ export const seedLigaA = mutation({
         group: "A1",
         date: "2026-09-25T18:45:00Z",
         venue: "Kocaeli Stadyumu, Kocaeli (Turquia)",
+        stadiumFile: "Kocaeli Stadyumu.jpg",
       },
       // Grupo A3 - 26/09/2026
       {
@@ -178,6 +184,7 @@ export const seedLigaA = mutation({
         group: "A3",
         date: "2026-09-26T18:45:00Z",
         venue: "Wembley Stadium, Londres (Inglaterra)",
+        stadiumFile: "Wembley Stadium.jpg",
       },
       {
         home: "Tchéquia",
@@ -185,22 +192,49 @@ export const seedLigaA = mutation({
         group: "A3",
         date: "2026-09-26T18:45:00Z",
         venue: "Fortuna Arena, Praga (Tchéquia)",
+        stadiumFile: "Fortuna Arena.jpg",
       },
     ];
 
     for (const m of scheduledMatches) {
+      const homeTeamId = teamMap[m.home];
+      const venueParts = m.venue.split(",");
+      const stadiumName = venueParts[0].trim();
+      const cityCountry = venueParts[1] ? venueParts[1].trim() : "";
+
+      let stadiumDoc = await ctx.db
+        .query("stadiums")
+        .filter((q) => q.eq(q.field("name"), stadiumName))
+        .first();
+
+      if (!stadiumDoc) {
+        const stadiumId = await ctx.db.insert("stadiums", {
+          name: stadiumName,
+          city: cityCountry,
+          imageUrl: `/assets/stadiums_nations/${m.stadiumFile}`,
+          teamId: homeTeamId,
+        });
+        stadiumDoc = await ctx.db.get(stadiumId);
+      } else {
+        await ctx.db.patch(stadiumDoc._id, {
+          imageUrl: `/assets/stadiums_nations/${m.stadiumFile}`,
+          teamId: homeTeamId,
+        });
+      }
+
       await ctx.db.insert("matches", {
         leagueId: league._id,
         round: "Rodada 1",
         stage: "Fase de Grupos",
         group: m.group,
-        homeTeamId: teamMap[m.home],
+        homeTeamId,
         awayTeamId: teamMap[m.away],
         homeScore: 0,
         awayScore: 0,
         status: "SCHEDULED",
         statusShort: "15:45",
         startTime: new Date(m.date).getTime(),
+        stadiumId: stadiumDoc?._id,
       });
     }
 
