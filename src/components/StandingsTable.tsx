@@ -1,10 +1,12 @@
 import { useState, Fragment } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Trophy } from "lucide-react";
 import { NationsLeagueStandings } from "./NationsLeagueStandings";
-import { MOCK_STANDINGS } from "../data/mockData";
 
 interface StandingsTableProps {
-  leagueId: string;
+  leagueId: Id<"leagues">;
   leagueName: string;
   currentRound: number;
 }
@@ -127,13 +129,17 @@ function getZoneInfo(
 }
 
 export function StandingsTable({
-  leagueId: _leagueId,
+  leagueId,
   leagueName,
   currentRound,
 }: StandingsTableProps) {
   const [tableFilter, setTableFilter] = useState<"all" | "home" | "away">("all");
 
-  const standings = MOCK_STANDINGS;
+  const standings = useQuery(api.leagues.getStandingsByRound, {
+    leagueId,
+    upToRound: currentRound,
+    filter: tableFilter,
+  });
 
   const isNationsLeague =
     leagueName.toLowerCase().includes("nations league") ||

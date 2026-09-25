@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
-import { getMockMatchById } from "../data/mockData";
 
 const STADIUM_CITIES: Record<string, string> = {
   "Heriberto Hülse": "Criciúma (SC)",
@@ -47,7 +49,7 @@ function getStadiumDisplayLocation(stadium?: { name?: string; city?: string } | 
 }
 
 interface MatchDetailsModalProps {
-  matchId: string | null;
+  matchId: Id<"matches"> | null;
   onClose: () => void;
 }
 
@@ -58,7 +60,9 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
   const [eventsFeedback, setEventsFeedback] = useState<string | null>(null);
   const [statsFeedback, setStatsFeedback] = useState<string | null>(null);
 
-  const match = matchId ? getMockMatchById(matchId) : null;
+  const match = useQuery(api.matches.getMatchDetails, {
+    matchId: matchId ?? undefined,
+  });
 
   // Fecha o modal ao pressionar Escape
   useEffect(() => {

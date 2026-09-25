@@ -1,13 +1,16 @@
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { StandingsTable } from "./StandingsTable";
 import { NationsLeagueStandings } from "./NationsLeagueStandings";
 import { RoundMatchesList } from "./RoundMatchesList";
 import { ChevronLeft, ChevronRight, Trophy, Calendar } from "lucide-react";
 
 interface LeagueViewProps {
-  leagueId: string;
+  leagueId: Id<"leagues">;
   league: {
-    _id?: string;
+    _id?: Id<"leagues">;
     name: string;
     code?: string;
     country?: string;
@@ -16,7 +19,7 @@ interface LeagueViewProps {
     priority?: number;
   };
   onNavigateToMatches?: () => void;
-  onSelectMatch?: (matchId: string) => void;
+  onSelectMatch?: (matchId: Id<"matches">) => void;
 }
 
 export function LeagueView({
@@ -33,7 +36,10 @@ export function LeagueView({
     league.code === "UNL";
   const isCup = isUCL || isLibertadores || isNationsLeague || league.name.toLowerCase().includes("copa");
 
-  const defaultRound = isNationsLeague ? 4 : isUCL ? 2 : isCup ? 1 : 28;
+  const latestFinishedRound = useQuery(api.leagues.getLatestFinishedRound, {
+    leagueId,
+  });
+
   const [selectedRound, setSelectedRound] = useState<number | null>(null);
   const [prevLeagueId, setPrevLeagueId] = useState(leagueId);
 
@@ -43,8 +49,8 @@ export function LeagueView({
     setSelectedRound(null);
   }
 
-  // A rodada ativa é a selecionada pelo usuário ou, por padrão, a rodada mock ativa
-  const currentRound = selectedRound ?? defaultRound;
+  // A rodada ativa é a selecionada pelo usuário ou, por padrão, a última finalizada
+  const currentRound = selectedRound ?? latestFinishedRound ?? 1;
 
   const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
 

@@ -1,14 +1,18 @@
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Award, ChevronDown, ChevronUp, Flame } from "lucide-react";
-import { MOCK_TOP_SCORERS } from "../data/mockData";
 
 interface TopScorersWidgetProps {
-  leagueId?: string | null;
+  leagueId?: Id<"leagues"> | null;
 }
 
-export function TopScorersWidget({ leagueId: _leagueId }: TopScorersWidgetProps) {
+export function TopScorersWidget({ leagueId }: TopScorersWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const topScorers = MOCK_TOP_SCORERS;
+  const topScorers = useQuery(api.matches.getTopScorers, {
+    leagueId: leagueId ?? undefined,
+  });
 
   if (!topScorers || topScorers.length === 0) {
     return null;

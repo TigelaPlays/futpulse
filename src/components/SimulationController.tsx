@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
   Play,
   Pause,
@@ -9,11 +12,10 @@ import {
   Activity,
   Zap,
 } from "lucide-react";
-import { MOCK_MATCHES } from "../data/mockData";
 
 interface SimulationControllerProps {
-  initialMatchId?: string | null;
-  onSelectMatch?: (matchId: string) => void;
+  initialMatchId?: Id<"matches"> | null;
+  onSelectMatch?: (matchId: Id<"matches">) => void;
 }
 
 export function SimulationController({
@@ -21,7 +23,7 @@ export function SimulationController({
   onSelectMatch,
 }: SimulationControllerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [userSelectedMatchId, setUserSelectedMatchId] = useState<string | null>(null);
+  const [userSelectedMatchId, setUserSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [prevInitialId, setPrevInitialId] = useState(initialMatchId);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(5);
   const [isOperating, setIsOperating] = useState(false);
@@ -35,8 +37,12 @@ export function SimulationController({
     setUserSelectedMatchId(initialMatchId);
   }
 
-  // Carrega todas as partidas para preencher o dropdown
-  const allMatches = MOCK_MATCHES;
+  // Carrega todas as partidas do Convex para preencher o dropdown
+  const allMatches = useQuery(api.matches.listMatches, { statusFilter: "ALL" }) ?? [];
+
+  if (allMatches.length === 0) {
+    return null;
+  }
 
   // Filtra partidas ativas ou agendadas prioritariamente
   const candidateMatches =
@@ -168,7 +174,7 @@ export function SimulationController({
             <select
               value={effectiveMatchId || ""}
               onChange={(e) => {
-                const id = e.target.value;
+                const id = e.target.value as Id<"matches">;
                 setUserSelectedMatchId(id);
                 if (onSelectMatch) onSelectMatch(id);
               }}

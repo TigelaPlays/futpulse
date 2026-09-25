@@ -1,13 +1,14 @@
-import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Calendar, Clock } from "lucide-react";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
-import { MOCK_MATCHES } from "../data/mockData";
 
 interface RoundMatchesListProps {
-  leagueId: string;
+  leagueId: Id<"leagues">;
   round: string;
   onNavigateToMatches?: () => void;
-  onSelectMatch?: (matchId: string) => void;
+  onSelectMatch?: (matchId: Id<"matches">) => void;
 }
 
 const WEEKDAYS = [
@@ -152,10 +153,10 @@ export function RoundMatchesList({
   onNavigateToMatches: _onNavigateToMatches,
   onSelectMatch,
 }: RoundMatchesListProps) {
-  const matches = useMemo(() => {
-    const list = MOCK_MATCHES.filter((m) => m.leagueId === leagueId);
-    return list.length > 0 ? list : MOCK_MATCHES;
-  }, [leagueId]);
+  const matches = useQuery(api.matches.listMatchesByRound, {
+    leagueId,
+    round,
+  });
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs animate-fade-in flex flex-col h-full">

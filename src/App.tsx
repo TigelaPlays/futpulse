@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+import type { Id } from "../convex/_generated/dataModel";
 import { Activity, Clock, Trophy, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
@@ -6,7 +9,6 @@ import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
 import { playGoalBeep } from "./lib/sound";
-import { MOCK_LEAGUES, MOCK_MATCHES } from "./data/mockData";
 
 type FilterType = "ALL" | "LIVE" | "FINISHED" | "SCHEDULED";
 
@@ -25,9 +27,9 @@ function formatQuickDateLabel(offset: number): string {
 
 export default function App() {
   const [filter, setFilter] = useState<FilterType>("ALL");
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<Id<"leagues"> | null>(null);
   const [selectedDateOffset, setSelectedDateOffset] = useState<number | null>(0); // 0 = Hoje
-  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isBetaBannerVisible, setIsBetaBannerVisible] = useState<boolean>(() => {
     try {
@@ -90,39 +92,42 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const leagues = MOCK_LEAGUES;
+  const leagues = useQuery(api.leagues.listLeagues) ?? [];
 
-  const matches = useMemo(() => {
-    let list = MOCK_MATCHES;
-    if (selectedLeagueId) {
-      list = list.filter((m) => m.leagueId === selectedLeagueId);
-    }
-    if (filter === "LIVE") {
-      list = list.filter((m) =>
-        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
-      );
-    } else if (filter === "FINISHED") {
-      list = list.filter((m) => m.status === "FINISHED");
-    } else if (filter === "SCHEDULED") {
-      list = list.filter((m) => m.status === "SCHEDULED");
-    }
-    return list;
-  }, [selectedLeagueId, filter]);
+  // Intervalo de tempo para o filtro por dia (00:00:00 às 23:59:59)
+  const dateRange = useMemo(() => {
+    if (selectedDateOffset === null) return null;
+    const d = new Date();
+    d.setDate(d.getDate() + selectedDateOffset);
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    return { start, end };
+  }, [selectedDateOffset]);
 
-  const allMatchesForCounts = useMemo(() => {
-    if (selectedLeagueId) {
-      return MOCK_MATCHES.filter((m) => m.leagueId === selectedLeagueId);
-    }
-    return MOCK_MATCHES;
-  }, [selectedLeagueId]);
+  const matches = useQuery(api.matches.listMatches, {
+    statusFilter: filter,
+    leagueId: selectedLeagueId ?? undefined,
+    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
+    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
+  });
+
+  const allMatchesForCounts = useQuery(api.matches.listMatches, {
+    statusFilter: "ALL",
+    leagueId: selectedLeagueId ?? undefined,
+    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
+    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
+  });
 
   const matchCounts = {
-    ALL: allMatchesForCounts.length,
-    LIVE: allMatchesForCounts.filter((m) =>
-      ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status)
-    ).length,
-    FINISHED: allMatchesForCounts.filter((m) => m.status === "FINISHED").length,
-    SCHEDULED: allMatchesForCounts.filter((m) => m.status === "SCHEDULED").length,
+    ALL: allMatchesForCounts?.length ?? 0,
+    LIVE:
+      allMatchesForCounts?.filter((m) =>
+        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
+          m.status
+        )
+      ).length ?? 0,
+    FINISHED: allMatchesForCounts?.filter((m) => m.status === "FINISHED").length ?? 0,
+    SCHEDULED: allMatchesForCounts?.filter((m) => m.status === "SCHEDULED").length ?? 0,
   };
 
   const selectedLeague = leagues.find((l) => l._id === selectedLeagueId);
@@ -185,7 +190,7 @@ export default function App() {
   };
 
   // Filtra pelo termo da barra de pesquisa
-  const filteredMatches = matches.filter((m) => {
+  const filteredMatches = (matches ?? []).filter((m) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     const home = m.homeTeam?.name?.toLowerCase() || "";
@@ -197,15 +202,17 @@ export default function App() {
   // Agrupa jogos filtrados por campeonato
   const groupedMatches = filteredMatches.reduce((acc, match) => {
     const leagueName = match.league?.name ?? "Outros";
-    if (!acc[leagueName]) {
-      acc[leagueName] = {
+    let entry = acc[leagueName];
+    if (!entry) {
+      entry = {
         league: match.league,
         matches: [],
       };
+      acc[leagueName] = entry;
     }
-    acc[leagueName].matches.push(match);
+    entry.matches.push(match);
     return acc;
-  }, {} as Record<string, { league: any; matches: typeof matches }>);
+  }, {} as Record<string, { league: any; matches: any[] }>);
 
   // Partidas Favoritas filtradas pela busca
   const favoriteMatches = filteredMatches.filter((m) =>
@@ -1025,7 +1032,7 @@ export default function App() {
 
                   {/* Lista de Partidas */}
                   <div className="divide-y divide-slate-100">
-                    {group.matches.map((match: any) => renderMatchRow(match, false))}
+                    {group.matches?.map((match: any) => renderMatchRow(match, false))}
                   </div>
                 </div>
               ))
