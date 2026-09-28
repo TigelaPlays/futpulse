@@ -82,16 +82,7 @@ function normalize(name: string): string {
 
 export const getScheduledMatches = internalQuery({
   handler: async (ctx) => {
-    let unlLeague = await ctx.db
-      .query("leagues")
-      .filter((q) => q.eq(q.field("code"), "UNL"))
-      .first();
-
-    const matchesQuery = unlLeague
-      ? ctx.db.query("matches").withIndex("by_league", (q) => q.eq("leagueId", unlLeague._id))
-      : ctx.db.query("matches");
-
-    const matches = await matchesQuery.collect();
+    const matches = await ctx.db.query("matches").collect();
     const list = [];
     for (const m of matches) {
       const home = await ctx.db.get(m.homeTeamId);

@@ -1,0 +1,44 @@
+name: Sincronizacao Sofascore FutPulse
+
+on:
+  workflow_dispatch:
+    inputs:
+      once:
+        description: 'Executar apenas uma rodada pontual (--once)?'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Executa a cada 30 minutos das 12:00 às 23:59 UTC (tardes da UEFA e noites do futebol brasileiro)
+    - cron: '*/30 12-23 * * *'
+    # Executa nas primeiras horas UTC (pós-jogos e partidas noturnas no Brasil)
+    - cron: '0 0-2 * * *'
+
+jobs:
+  sync:
+    name: Sincronizar Jogos Ao Vivo
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Executar Sincronizador Sofascore
+        env:
+          CONVEX_URL: ${{ secrets.CONVEX_URL || 'https://kindly-hamster-661.convex.cloud' }}
+        run: |
+          if [ "${{ github.event.inputs.once }}" = "true" ]; then
+            node scripts/cron-sync-sofascore.js --once
+          else
+            node scripts/cron-sync-sofascore.js
+          fi
