@@ -4,7 +4,8 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { StandingsTable } from "./StandingsTable";
 import { RoundMatchesList } from "./RoundMatchesList";
-import { ChevronLeft, ChevronRight, Trophy, Calendar } from "lucide-react";
+import { TopScorersWidget } from "./TopScorersWidget";
+import { ChevronLeft, ChevronRight, Trophy, Calendar, Award } from "lucide-react";
 
 interface LeagueViewProps {
   leagueId: Id<"leagues">;
@@ -52,7 +53,8 @@ export function LeagueView({
   // A rodada ativa é a selecionada pelo usuário ou, por padrão, a última finalizada
   const currentRound = selectedRound ?? latestFinishedRound ?? 1;
 
-  const [mobileTab, setMobileTab] = useState<"standings" | "matches">("standings");
+  const [mobileTab, setMobileTab] = useState<"standings" | "matches" | "scorers">("standings");
+  const [desktopMainTab, setDesktopMainTab] = useState<"standings" | "scorers">("standings");
 
   const minRound = 1;
   const maxRound = isLibertadores ? 6 : isCup ? 8 : 38;
@@ -161,11 +163,11 @@ export function LeagueView({
         </div>
       </div>
 
-      {/* Alternador Mobile e Tablet (< lg): [ Classificação ] [ Jogos da Rodada ] */}
-      <div className="lg:hidden flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200 gap-1">
+      {/* Alternador Mobile e Tablet (< lg): [ Classificação ] [ Jogos da Rodada ] [ Artilharia ] */}
+      <div className="lg:hidden flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200 gap-1 overflow-x-auto scrollbar-none touch-pan-x">
         <button
           onClick={() => setMobileTab("standings")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+          className={`flex-1 min-w-[105px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
             mobileTab === "standings"
               ? "bg-white text-slate-950 font-bold shadow-xs"
               : "text-slate-600 hover:text-slate-900"
@@ -176,37 +178,100 @@ export function LeagueView({
         </button>
         <button
           onClick={() => setMobileTab("matches")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+          className={`flex-1 min-w-[125px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
             mobileTab === "matches"
               ? "bg-white text-slate-950 font-bold shadow-xs"
               : "text-slate-600 hover:text-slate-900"
           }`}
         >
           <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Jogos da Rodada ({currentRound})</span>
+          <span>Jogos ({currentRound})</span>
+        </button>
+        <button
+          onClick={() => setMobileTab("scorers")}
+          className={`flex-1 min-w-[105px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
+            mobileTab === "scorers"
+              ? "bg-white text-slate-950 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Award className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Artilharia</span>
         </button>
       </div>
 
       {/* Grid Split Lado a Lado (Desktop) - Perfeitamente Simétrico */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 lg:gap-6 items-stretch">
-        {/* Coluna Principal: Tabela de Classificação */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 lg:gap-6 items-start">
+        {/* Coluna Principal: Tabela de Classificação OU Artilharia */}
         <div
-          className={`h-full min-w-0 ${
-            mobileTab === "standings" ? "block" : "hidden lg:block"
+          className={`min-w-0 ${
+            mobileTab === "standings" || mobileTab === "scorers" ? "block" : "hidden lg:block"
           }`}
         >
-          <StandingsTable
-            leagueId={leagueId}
-            leagueName={league.name}
-            currentRound={currentRound}
-            selectedDivision={isNationsLeague ? nationsLeagueDivision : undefined}
-            onSelectDivision={setNationsLeagueDivision}
-          />
+          {/* Seletor de Abas Desktop */}
+          <div className="hidden lg:flex items-center gap-2 mb-3 bg-white p-1.5 rounded-xl border border-slate-200/90 shadow-2xs w-fit">
+            <button
+              onClick={() => setDesktopMainTab("standings")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                desktopMainTab === "standings"
+                  ? "bg-emerald-600 text-white font-bold shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Classificação</span>
+            </button>
+            <button
+              onClick={() => setDesktopMainTab("scorers")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                desktopMainTab === "scorers"
+                  ? "bg-emerald-600 text-white font-bold shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Artilharia</span>
+            </button>
+          </div>
+
+          {/* Conteúdo Desktop e Mobile */}
+          <div className="lg:block">
+            {/* Visualização Mobile: condicionada ao mobileTab */}
+            <div className="lg:hidden">
+              {mobileTab === "standings" && (
+                <StandingsTable
+                  leagueId={leagueId}
+                  leagueName={league.name}
+                  currentRound={currentRound}
+                  selectedDivision={isNationsLeague ? nationsLeagueDivision : undefined}
+                  onSelectDivision={setNationsLeagueDivision}
+                />
+              )}
+              {mobileTab === "scorers" && (
+                <TopScorersWidget leagueId={leagueId} />
+              )}
+            </div>
+
+            {/* Visualização Desktop: condicionada ao desktopMainTab */}
+            <div className="hidden lg:block">
+              {desktopMainTab === "standings" ? (
+                <StandingsTable
+                  leagueId={leagueId}
+                  leagueName={league.name}
+                  currentRound={currentRound}
+                  selectedDivision={isNationsLeague ? nationsLeagueDivision : undefined}
+                  onSelectDivision={setNationsLeagueDivision}
+                />
+              ) : (
+                <TopScorersWidget leagueId={leagueId} />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Coluna Lateral: Jogos da Rodada */}
         <div
-          className={`h-full min-w-0 ${
+          className={`min-w-0 ${
             mobileTab === "matches" ? "block" : "hidden lg:block"
           }`}
         >

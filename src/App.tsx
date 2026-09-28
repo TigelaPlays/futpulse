@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import { Activity, Clock, Trophy, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X } from "lucide-react";
+import { Activity, Clock, Trophy, RefreshCw, CalendarDays, Search, Volume2, VolumeX, Star, Upload, ChevronLeft, ChevronRight, AlertTriangle, X, FlaskConical } from "lucide-react";
 import { MatchDetailsModal } from "./components/MatchDetailsModal";
 import { LiveMatchClock } from "./components/LiveMatchClock";
 import { GoalToastContainer, type GoalAlert } from "./components/GoalToast";
 import { LeagueView } from "./components/LeagueView";
 import { AssetUploadModal } from "./components/AssetUploadModal";
+import { SimulationController } from "./components/SimulationController";
 import { playGoalBeep } from "./lib/sound";
 import { getNationFlagUrl } from "./utils/flagsNationsAssets";
 
@@ -32,6 +33,7 @@ export default function App() {
   const [selectedDateOffset, setSelectedDateOffset] = useState<number | null>(0); // 0 = Hoje
   const [selectedMatchId, setSelectedMatchId] = useState<Id<"matches"> | null>(null);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [isSimDrawerOpen, setIsSimDrawerOpen] = useState(false);
   const [isBetaBannerVisible, setIsBetaBannerVisible] = useState<boolean>(() => {
     try {
       const dismissed = window.localStorage.getItem("futpulse_dismiss_beta_banner");
@@ -684,6 +686,12 @@ export default function App() {
         onClose={() => setIsAssetModalOpen(false)}
       />
 
+      <SimulationController
+        isOpen={isSimDrawerOpen}
+        onClose={() => setIsSimDrawerOpen(false)}
+        onSelectMatch={setSelectedMatchId}
+      />
+
       {/* Header Fixo com Efeito Vidro Claro Esportivo */}
       <header className="border-b border-slate-200/90 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 py-3 shadow-xs transition-all">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
@@ -748,6 +756,16 @@ export default function App() {
             >
               <Upload className="w-3.5 h-3.5 text-emerald-600" />
               <span className="hidden sm:inline">Escudos</span>
+            </button>
+
+            {/* Botão de Simulação / Painel Dev */}
+            <button
+              onClick={() => setIsSimDrawerOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border-slate-200 active:scale-95 shadow-2xs"
+              title="Simulação / Painel Dev"
+            >
+              <FlaskConical className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Simulador</span>
             </button>
 
             {/* Botão de Som */}

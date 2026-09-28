@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
+import { LiveMatchClock } from "./LiveMatchClock";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
 
 const STADIUM_CITIES: Record<string, string> = {
@@ -429,17 +430,26 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                     <div className="bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl font-mono font-bold text-xl sm:text-3xl text-white shadow-lg tracking-wider whitespace-nowrap">
                       {match.status === "SCHEDULED" ? "VS" : `${match.homeScore} - ${match.awayScore}`}
                     </div>
-                    <span
-                      className={`text-[9px] sm:text-[11px] mt-1.5 sm:mt-2 font-bold uppercase tracking-wider px-2 sm:px-3 py-0.5 rounded-full whitespace-nowrap shadow-xs ${
-                        isLive
-                          ? "bg-rose-500/25 text-rose-300 border border-rose-500/40 animate-pulse"
-                          : match.status === "FINISHED"
-                          ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/30"
-                          : "bg-white/10 text-slate-300 border border-white/10"
-                      }`}
-                    >
-                      {getStatusText()}
-                    </span>
+                    {isLive ? (
+                      <div className="mt-1.5 sm:mt-2 scale-90 sm:scale-100">
+                        <LiveMatchClock
+                          initialMinute={match.minute}
+                          status={match.status}
+                          statusShort={match.statusShort || "2T"}
+                          updatedAt={match.elapsedSecondsUpdatedAt ?? match._creationTime}
+                        />
+                      </div>
+                    ) : (
+                      <span
+                        className={`text-[9px] sm:text-[11px] mt-1.5 sm:mt-2 font-bold uppercase tracking-wider px-2 sm:px-3 py-0.5 rounded-full whitespace-nowrap shadow-xs ${
+                          match.status === "FINISHED"
+                            ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/30"
+                            : "bg-white/10 text-slate-300 border border-white/10"
+                        }`}
+                      >
+                        {getStatusText()}
+                      </span>
+                    )}
                     {match.homeHalftimeScore !== undefined && match.awayHalftimeScore !== undefined && (
                       <span className="text-[10px] text-slate-300/80 mt-1 font-medium whitespace-nowrap">
                         (HT {match.homeHalftimeScore} - {match.awayHalftimeScore})

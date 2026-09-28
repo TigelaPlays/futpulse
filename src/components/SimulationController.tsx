@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import {
@@ -7,169 +7,142 @@ import {
   Pause,
   RotateCcw,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   Activity,
   Zap,
+  X,
+  FlaskConical,
+  CheckCircle2,
+  ShieldAlert,
 } from "lucide-react";
 
 interface SimulationControllerProps {
+  isOpen: boolean;
+  onClose: () => void;
   initialMatchId?: Id<"matches"> | null;
   onSelectMatch?: (matchId: Id<"matches">) => void;
 }
 
 export function SimulationController({
+  isOpen,
+  onClose,
   initialMatchId,
   onSelectMatch,
 }: SimulationControllerProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [userSelectedMatchId, setUserSelectedMatchId] = useState<Id<"matches"> | null>(null);
-  const [prevInitialId, setPrevInitialId] = useState(initialMatchId);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(5);
   const [isOperating, setIsOperating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
 
-  // Sincroniza se o usuário abrir um modal de partida no App
-  if (initialMatchId && initialMatchId !== prevInitialId) {
-    setPrevInitialId(initialMatchId);
-    setUserSelectedMatchId(initialMatchId);
-  }
+  // Fecha no Esc
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
-  // Carrega todas as partidas do Convex para preencher o dropdown
+  // Carrega todas as partidas do Convex
   const allMatches = useQuery(api.matches.listMatches, { statusFilter: "ALL" }) ?? [];
 
-  if (allMatches.length === 0) {
-    return null;
-  }
+  const simulateEventMutation = useMutation(api.matches.simulateMatchEvent);
 
-  // Filtra partidas ativas ou agendadas prioritariamente
-  const candidateMatches =
-    allMatches.filter((m) =>
-      ["SCHEDULED", "LIVE", "IN_PLAY", "PAUSED", "HALFTIME"].includes(m.status)
-    ) || allMatches;
+  if (!isOpen) return null;
 
   const effectiveMatchId =
-    userSelectedMatchId || (candidateMatches.length > 0 ? candidateMatches[0]._id : null);
+    userSelectedMatchId ?? initialMatchId ?? (allMatches.length > 0 ? allMatches[0]._id : null);
 
   const selectedMatch = allMatches.find((m) => m._id === effectiveMatchId);
 
-  const handleStartOrResume = async () => {
+  const handleAction = async (
+    action:
+      | "GOAL_HOME"
+      | "GOAL_AWAY"
+      | "RED_CARD_HOME"
+      | "RED_CARD_AWAY"
+      | "START_LIVE"
+      | "PAUSE"
+      | "FINISH"
+      | "RESET",
+    customPlayerName?: string
+  ) => {
     if (!effectiveMatchId) return;
     setIsOperating(true);
     setStatusMessage(null);
-    setTimeout(() => {
-      setIsSimulating(true);
-      setIsPaused(false);
-      setStatusMessage("Simulação iniciada em modo local!");
-      if (onSelectMatch) onSelectMatch(effectiveMatchId);
+    try {
+      await simulateEventMutation({
+        matchId: effectiveMatchId,
+        action,
+        playerName: customPlayerName,
+      });
+
+      const msgMap: Record<string, string> = {
+        GOAL_HOME: "Gol do mandante registrado! Placar atualizado.",
+        GOAL_AWAY: "Gol do visitante registrado! Placar atualizado.",
+        RED_CARD_HOME: "Cartão vermelho para o mandante adicionado!",
+        RED_CARD_AWAY: "Cartão vermelho para o visitante adicionado!",
+        START_LIVE: "Partida iniciada como AO VIVO!",
+        PAUSE: "Partida pausada (Intervalo / HT).",
+        FINISH: "Partida finalizada (Fim de Jogo).",
+        RESET: "Partida resetada para 0x0.",
+      };
+
+      setStatusMessage(msgMap[action] || "Ação executada com sucesso!");
+    } catch (err: any) {
+      setStatusMessage(`Erro: ${err?.message || "Falha na simulação"}`);
+    } finally {
       setIsOperating(false);
-    }, 200);
+      setTimeout(() => setStatusMessage(null), 3500);
+    }
   };
 
-  const handlePause = async () => {
-    if (!effectiveMatchId) return;
-    setIsOperating(true);
-    setTimeout(() => {
-      setIsPaused(true);
-      setStatusMessage("Simulação pausada.");
-      setIsOperating(false);
-    }, 200);
-  };
-
-  const handleReset = async () => {
-    if (!effectiveMatchId) return;
-    setIsOperating(true);
-    setTimeout(() => {
-      setIsSimulating(false);
-      setIsPaused(false);
-      setStatusMessage("Partida resetada.");
-      setIsOperating(false);
-    }, 200);
-  };
-
-  const isLive = isSimulating && !isPaused;
-  const isFinished = false;
-
-  const simStatus = {
-    isSimulating,
-    isPaused,
-    status: isSimulating ? (isPaused ? "PAUSED" : "IN_PLAY") : "SCHEDULED",
-    statusShort: isSimulating ? (isPaused ? "INT" : "AO VIVO") : (selectedMatch?.statusShort || "AGD"),
-    minute: isSimulating ? 72 : selectedMatch?.minute ?? 0,
-    homeScore: selectedMatch?.homeScore ?? 0,
-    awayScore: selectedMatch?.awayScore ?? 0,
-    speedMultiplier,
-    eventsCount: selectedMatch?.events?.length ?? 0,
-    stepMinutes: 1,
-    runId: "local_sim",
-  };
+  const isLive = selectedMatch && ["IN_PLAY", "LIVE"].includes(selectedMatch.status);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 font-sans">
-      {/* Botão Retrátil (Pill Flutuante) quando fechado */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-900/95 hover:bg-slate-900 text-white text-xs font-semibold shadow-xl border border-slate-700/80 backdrop-blur-md transition-all hover:scale-105 active:scale-95 group cursor-pointer"
-          title="Abrir Controle de Simulação"
-        >
-          <span className="relative flex h-2.5 w-2.5">
-            {isLive ? (
-              <>
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-              </>
-            ) : (
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-400" />
-            )}
-          </span>
+    <div className="fixed inset-0 z-50 flex justify-end font-sans animate-fade-in">
+      {/* Fundo Escurecido com Blur */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+      />
 
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400 group-hover:text-indigo-300" />
-          <span>Simulador TCC</span>
-
-          {isLive && simStatus && (
-            <span className="ml-1 px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-mono">
-              {simStatus.minute}' ({simStatus.homeScore}×{simStatus.awayScore})
-            </span>
-          )}
-
-          <ChevronUp className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" />
-        </button>
-      )}
-
-      {/* Painel Expandido */}
-      {isOpen && (
-        <div className="w-84 sm:w-92 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          {/* Cabeçalho */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
-                  Motor de Simulação
-                </h4>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                  Reatividade em Tempo Real • Convex
-                </p>
-              </div>
+      {/* Gaveta Lateral (Slide Drawer à Direita) */}
+      <div className="relative w-full sm:w-[440px] bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 z-10 overflow-y-auto animate-in slide-in-from-right duration-200">
+        {/* Cabeçalho da Gaveta */}
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <FlaskConical className="w-5 h-5" />
             </div>
-
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
+            <div>
+              <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
+                Painel Dev & Simulador
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                  Ao Vivo
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Dispare gols e eventos reativos em tempo real
+              </p>
+            </div>
           </div>
 
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Fechar (Esc)"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Conteúdo do Painel */}
+        <div className="p-4 sm:p-5 space-y-5 flex-1">
           {/* Seletor de Partida */}
-          <div className="mt-3">
-            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Partida Alvo:
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Partida para Simulação:
             </label>
             <select
               value={effectiveMatchId || ""}
@@ -178,81 +151,194 @@ export function SimulationController({
                 setUserSelectedMatchId(id);
                 if (onSelectMatch) onSelectMatch(id);
               }}
-              className="w-full text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
             >
-              {candidateMatches.map((m) => (
+              {allMatches.map((m) => (
                 <option key={m._id} value={m._id}>
-                  {m.league?.code ? `[${m.league.code}] ` : ""}
-                  {m.homeTeam?.name || "Mandante"} × {m.awayTeam?.name || "Visitante"} (
-                  {m.statusShort || m.status})
+                  {m.homeTeam?.name || "Mandante"} {m.homeScore} × {m.awayScore} {m.awayTeam?.name || "Visitante"} ({m.statusShort || m.status})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Placar e Status em Tempo Real */}
+          {/* Card da Partida Selecionada */}
           {selectedMatch && (
-            <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
-                  {selectedMatch.homeTeam?.name || "Mandante"}
-                </span>
-
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xs font-mono font-bold text-sm text-slate-900 dark:text-white">
-                  <span>{simStatus?.homeScore ?? selectedMatch.homeScore}</span>
-                  <span className="text-slate-400 text-xs">×</span>
-                  <span>{simStatus?.awayScore ?? selectedMatch.awayScore}</span>
-                </div>
-
-                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[100px] text-right">
-                  {selectedMatch.awayTeam?.name || "Visitante"}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 border-b border-slate-200 pb-2">
+                <span>{selectedMatch.league?.name || "Campeonato"}</span>
+                <span className="font-mono text-emerald-700 font-bold">
+                  {selectedMatch.round}
                 </span>
               </div>
 
-              {/* Informações da Fase e Minuto */}
-              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/40">
-                <div className="flex items-center gap-1.5">
-                  <Activity className="w-3 h-3 text-indigo-500" />
+              {/* Placar e Clubes */}
+              <div className="flex items-center justify-between gap-2">
+                {/* Mandante */}
+                <div className="flex-1 text-center space-y-1">
+                  {selectedMatch.homeTeam?.logoUrl && (
+                    <img
+                      src={selectedMatch.homeTeam.logoUrl}
+                      alt=""
+                      className="w-8 h-8 object-contain mx-auto"
+                    />
+                  )}
+                  <span className="text-xs font-bold text-slate-900 block truncate">
+                    {selectedMatch.homeTeam?.name}
+                  </span>
+                </div>
+
+                {/* Placar */}
+                <div className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-xs font-mono font-extrabold text-xl text-slate-900 flex items-center gap-1.5">
+                  <span>{selectedMatch.homeScore}</span>
+                  <span className="text-slate-400 text-sm">×</span>
+                  <span>{selectedMatch.awayScore}</span>
+                </div>
+
+                {/* Visitante */}
+                <div className="flex-1 text-center space-y-1">
+                  {selectedMatch.awayTeam?.logoUrl && (
+                    <img
+                      src={selectedMatch.awayTeam.logoUrl}
+                      alt=""
+                      className="w-8 h-8 object-contain mx-auto"
+                    />
+                  )}
+                  <span className="text-xs font-bold text-slate-900 block truncate">
+                    {selectedMatch.awayTeam?.name}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status e Minuto */}
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200">
+                <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+                  <Activity className="w-3.5 h-3.5 text-emerald-600" />
                   <span>
-                    Minuto:{" "}
-                    <strong className="text-slate-700 dark:text-slate-300 font-mono">
-                      {simStatus?.minute ?? selectedMatch.minute ?? 0}'
-                    </strong>
+                    Minuto: <strong className="font-mono text-slate-900">{selectedMatch.minute ?? 0}'</strong>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isLive
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/60"
-                        : isPaused
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 border border-amber-300 dark:border-amber-700/60"
-                        : isFinished
-                        ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
-                    }`}
-                  >
-                    {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                    {simStatus?.statusShort || selectedMatch.statusShort || selectedMatch.status}
-                  </span>
-                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                    isLive
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                      : selectedMatch.status === "FINISHED"
+                      ? "bg-slate-200 text-slate-700"
+                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
+                >
+                  {isLive && "🔴 "}
+                  {selectedMatch.statusShort || selectedMatch.status}
+                </span>
               </div>
-
-              {simStatus?.eventsCount !== undefined && simStatus.eventsCount > 0 && (
-                <div className="mt-1 text-[10px] text-slate-400 text-right">
-                  {simStatus.eventsCount} lances registrados
-                </div>
-              )}
             </div>
           )}
 
-          {/* Seletor de Velocidade */}
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                <Zap className="w-3 h-3 text-amber-500" />
-                Velocidade do Relógio:
+          {/* Feedback de Ação */}
+          {statusMessage && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium flex items-center gap-2 animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{statusMessage}</span>
+            </div>
+          )}
+
+          {/* Controles de Lances em Tempo Real (Disparadores de Eventos) */}
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              Disparadores de Gols (Testa Som & Toasts):
+            </h4>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleAction("GOAL_HOME", `${selectedMatch?.homeTeam?.name || "Mandante"} Atacante`)}
+                disabled={isOperating}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              >
+                <span>⚽ + Gol Mandante</span>
+              </button>
+
+              <button
+                onClick={() => handleAction("GOAL_AWAY", `${selectedMatch?.awayTeam?.name || "Visitante"} Atacante`)}
+                disabled={isOperating}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              >
+                <span>⚽ + Gol Visitante</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => handleAction("RED_CARD_HOME")}
+                disabled={isOperating}
+                className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs transition-all cursor-pointer"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>🟥 Vermelho Mandante</span>
+              </button>
+
+              <button
+                onClick={() => handleAction("RED_CARD_AWAY")}
+                disabled={isOperating}
+                className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs transition-all cursor-pointer"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>🟥 Vermelho Visitante</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Gerenciamento do Status da Partida */}
+          <div className="space-y-2.5 pt-2 border-t border-slate-200">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Controle de Status do Jogo:
+            </h4>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleAction("START_LIVE")}
+                disabled={isOperating || isLive}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-semibold text-xs shadow-2xs transition-all cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current text-emerald-400" />
+                <span>Iniciar Ao Vivo</span>
+              </button>
+
+              <button
+                onClick={() => handleAction("PAUSE")}
+                disabled={isOperating}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-semibold text-xs shadow-2xs transition-all cursor-pointer"
+              >
+                <Pause className="w-3.5 h-3.5 fill-current" />
+                <span>Pausar (Intervalo)</span>
+              </button>
+
+              <button
+                onClick={() => handleAction("FINISH")}
+                disabled={isOperating || selectedMatch?.status === "FINISHED"}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-semibold text-xs transition-all cursor-pointer"
+              >
+                <span>Fim de Jogo (FT)</span>
+              </button>
+
+              <button
+                onClick={() => handleAction("RESET")}
+                disabled={isOperating}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs transition-all cursor-pointer"
+                title="Zera o placar e retorna para AGENDADO"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Resetar (0×0)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Velocidade de Simulação */}
+          <div className="pt-2 border-t border-slate-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                Velocidade do Relógio Simulado:
               </span>
               <span className="text-[10px] font-mono text-slate-400">
                 {speedMultiplier}x acelerado
@@ -264,10 +350,10 @@ export function SimulationController({
                 <button
                   key={speed}
                   onClick={() => setSpeedMultiplier(speed)}
-                  className={`py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer border ${
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border ${
                     speedMultiplier === speed
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
-                      : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                      : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
                   }`}
                 >
                   {speed}x
@@ -275,46 +361,15 @@ export function SimulationController({
               ))}
             </div>
           </div>
-
-          {/* Botões de Ação */}
-          <div className="mt-3.5 grid grid-cols-3 gap-2">
-            <button
-              onClick={handleStartOrResume}
-              disabled={isOperating}
-              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>{isPaused ? "Retomar" : isLive ? "Reiniciar" : "Iniciar"}</span>
-            </button>
-
-            <button
-              onClick={handlePause}
-              disabled={isOperating || !isLive}
-              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-white font-bold text-xs shadow-sm shadow-amber-500/20 transition-all cursor-pointer"
-            >
-              <Pause className="w-3.5 h-3.5 fill-current" />
-              <span>Pausar</span>
-            </button>
-
-            <button
-              onClick={handleReset}
-              disabled={isOperating}
-              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer"
-              title="Resetar para 0x0 e estado agendado"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Resetar</span>
-            </button>
-          </div>
-
-          {/* Mensagem de Feedback */}
-          {statusMessage && (
-            <div className="mt-2 text-[10px] text-center text-slate-500 dark:text-slate-400 italic">
-              {statusMessage}
-            </div>
-          )}
         </div>
-      )}
+
+        {/* Rodapé da Gaveta */}
+        <div className="p-3 bg-slate-50 border-t border-slate-200 text-center">
+          <p className="text-[11px] text-slate-500">
+            Pressione <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[10px]">Esc</kbd> ou clique fora para fechar.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

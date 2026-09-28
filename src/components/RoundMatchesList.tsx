@@ -359,14 +359,14 @@ export function RoundMatchesList({
                     <span
                       className={
                         isLive
-                          ? "text-emerald-600 font-bold inline-flex items-center gap-1"
+                          ? "text-rose-600 bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded font-bold text-[10px] inline-flex items-center gap-1 shadow-2xs"
                           : isFinished
                           ? "text-slate-900 font-bold"
                           : "text-slate-700 font-semibold"
                       }
                     >
                       {isLive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" />
                       )}
                       {timeStr}
                     </span>

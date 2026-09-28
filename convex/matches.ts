@@ -500,3 +500,111 @@ export const saveMatchDetailsFromSofascore = mutation({
     };
   },
 });
+
+export const simulateMatchEvent = mutation({
+  args: {
+    matchId: v.id("matches"),
+    action: v.union(
+      v.literal("GOAL_HOME"),
+      v.literal("GOAL_AWAY"),
+      v.literal("RED_CARD_HOME"),
+      v.literal("RED_CARD_AWAY"),
+      v.literal("START_LIVE"),
+      v.literal("PAUSE"),
+      v.literal("FINISH"),
+      v.literal("RESET")
+    ),
+    playerName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const match = await ctx.db.get(args.matchId);
+    if (!match) throw new Error("Partida não encontrada");
+
+    const minute = match.minute ? Math.min(90, match.minute + 3) : 12;
+
+    if (args.action === "GOAL_HOME") {
+      const newScore = match.homeScore + 1;
+      await ctx.db.patch(match._id, {
+        homeScore: newScore,
+        status: "IN_PLAY",
+        statusShort: "2T",
+        minute,
+        elapsedSecondsUpdatedAt: Date.now(),
+      });
+      await ctx.db.insert("matchEvents", {
+        matchId: match._id,
+        minute,
+        teamId: match.homeTeamId,
+        playerName: args.playerName || "Atacante Mandante",
+        type: "GOAL",
+      });
+    } else if (args.action === "GOAL_AWAY") {
+      const newScore = match.awayScore + 1;
+      await ctx.db.patch(match._id, {
+        awayScore: newScore,
+        status: "IN_PLAY",
+        statusShort: "2T",
+        minute,
+        elapsedSecondsUpdatedAt: Date.now(),
+      });
+      await ctx.db.insert("matchEvents", {
+        matchId: match._id,
+        minute,
+        teamId: match.awayTeamId,
+        playerName: args.playerName || "Atacante Visitante",
+        type: "GOAL",
+      });
+    } else if (args.action === "RED_CARD_HOME") {
+      await ctx.db.insert("matchEvents", {
+        matchId: match._id,
+        minute,
+        teamId: match.homeTeamId,
+        playerName: args.playerName || "Zagueiro Mandante",
+        type: "RED_CARD",
+        detail: "Falta tática",
+      });
+    } else if (args.action === "RED_CARD_AWAY") {
+      await ctx.db.insert("matchEvents", {
+        matchId: match._id,
+        minute,
+        teamId: match.awayTeamId,
+        playerName: args.playerName || "Zagueiro Visitante",
+        type: "RED_CARD",
+        detail: "Falta tática",
+      });
+    } else if (args.action === "START_LIVE") {
+      await ctx.db.patch(match._id, {
+        status: "IN_PLAY",
+        statusShort: "AO VIVO",
+        minute: match.minute || 1,
+        elapsedSecondsUpdatedAt: Date.now(),
+      });
+    } else if (args.action === "PAUSE") {
+      await ctx.db.patch(match._id, {
+        status: "PAUSED",
+        statusShort: "HT",
+      });
+    } else if (args.action === "FINISH") {
+      await ctx.db.patch(match._id, {
+        status: "FINISHED",
+        statusShort: "FT",
+        minute: 90,
+      });
+    } else if (args.action === "RESET") {
+      await ctx.db.patch(match._id, {
+        homeScore: 0,
+        awayScore: 0,
+        status: "SCHEDULED",
+        statusShort: "16:00",
+        minute: undefined,
+      });
+      const events = await ctx.db
+        .query("matchEvents")
+        .withIndex("by_match", (q) => q.eq("matchId", match._id))
+        .collect();
+      for (const ev of events) await ctx.db.delete(ev._id);
+    }
+
+    return { success: true, action: args.action };
+  },
+});
