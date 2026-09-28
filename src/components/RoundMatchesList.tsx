@@ -173,19 +173,17 @@ export function RoundMatchesList({
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
-  const syncLiveScores = useAction(api.syncLiveScore.syncLiveScores);
+  const syncLiveScores = useAction(api.syncSofascore.syncLiveFromSofascore);
 
   const handleQuickSync = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSyncing(true);
     setSyncFeedback(null);
     try {
-      const res = await syncLiveScores({
-        leagueExternalId: 5, // UEFA Nations League
-      });
-      if (res.updatedCount > 0) {
+      const res = await syncLiveScores({});
+      if (res.updated > 0) {
         setSyncFeedback(
-          `${res.updatedCount} ${res.updatedCount === 1 ? "atualizado" : "atualizados"}`
+          `${res.updated} ${res.updated === 1 ? "atualizado" : "atualizados"}`
         );
       } else {
         setSyncFeedback("Verificado");
@@ -278,7 +276,7 @@ export function RoundMatchesList({
             onClick={handleQuickSync}
             disabled={isSyncing}
             className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer shadow-2xs flex items-center gap-1 text-[11px] font-semibold"
-            title="Sincronizar placares ao vivo com a API-Football"
+            title="Sincronizar placares ao vivo com o Sofascore"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-emerald-600" : ""}`} />
             <span className="hidden sm:inline text-xs">{isSyncing ? "..." : "Sync"}</span>

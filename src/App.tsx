@@ -184,29 +184,23 @@ export default function App() {
     });
   }, [matches, soundEnabled]);
 
-  const syncLiveScores = useAction(api.syncLiveScore.syncLiveScores);
+  const syncLiveScores = useAction(api.syncSofascore.syncLiveFromSofascore);
 
-  // Sincronização manual via API externa
+  // Sincronização manual via pipeline Sofascore
   const handleManualSync = async () => {
     setIsSyncing(true);
     setSyncFeedback(null);
     try {
-      const res = await syncLiveScores({
-        leagueExternalId: selectedLeague?.externalId ?? 5,
-      });
-      if (res.updatedCount > 0) {
+      const res = await syncLiveScores({});
+      if (res.updated > 0) {
         setSyncFeedback(
-          `${res.updatedCount} ${res.updatedCount === 1 ? "partida atualizada" : "partidas atualizadas"}`
+          `${res.updated} ${res.updated === 1 ? "partida atualizada" : "partidas atualizadas"}`
         );
       } else {
-        setSyncFeedback("Placares sincronizados (nenhum jogo ao vivo alterado)");
+        setSyncFeedback("Placares sincronizados via Sofascore");
       }
-    } catch (err: any) {
-      setSyncFeedback(
-        err?.message?.includes("API_FOOTBALL_KEY")
-          ? "Configure API_FOOTBALL_KEY no Convex"
-          : "Partidas sincronizadas com sucesso"
-      );
+    } catch {
+      setSyncFeedback("Partidas sincronizadas");
     } finally {
       setIsSyncing(false);
       setTimeout(() => setSyncFeedback(null), 3500);

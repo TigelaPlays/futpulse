@@ -9,7 +9,6 @@
  */
 
 import type * as assets from "../assets.js";
-import type * as bindExternalIds from "../bindExternalIds.js";
 import type * as crons from "../crons.js";
 import type * as leagues from "../leagues.js";
 import type * as matches from "../matches.js";
@@ -19,7 +18,6 @@ import type * as seedNationsLeagueAll from "../seedNationsLeagueAll.js";
 import type * as seedNationsLeagueBCD from "../seedNationsLeagueBCD.js";
 import type * as stadiumAliases from "../stadiumAliases.js";
 import type * as standings from "../standings.js";
-import type * as syncLiveScore from "../syncLiveScore.js";
 import type * as syncSofascore from "../syncSofascore.js";
 import type * as teamAliases from "../teamAliases.js";
 import type * as testScore from "../testScore.js";
@@ -32,7 +30,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   assets: typeof assets;
-  bindExternalIds: typeof bindExternalIds;
   crons: typeof crons;
   leagues: typeof leagues;
   matches: typeof matches;
@@ -42,7 +39,6 @@ declare const fullApi: ApiFromModules<{
   seedNationsLeagueBCD: typeof seedNationsLeagueBCD;
   stadiumAliases: typeof stadiumAliases;
   standings: typeof standings;
-  syncLiveScore: typeof syncLiveScore;
   syncSofascore: typeof syncSofascore;
   teamAliases: typeof teamAliases;
   testScore: typeof testScore;

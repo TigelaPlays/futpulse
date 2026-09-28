@@ -17,10 +17,10 @@ export function AssetUploadModal({ isOpen, onClose }: AssetUploadModalProps) {
 
   const targets = {
     teams: [
-      { name: "Palmeiras", currentUrl: "https://media.api-sports.io/football/teams/121.png" },
-      { name: "Flamengo", currentUrl: "https://media.api-sports.io/football/teams/127.png" },
-      { name: "São Paulo", currentUrl: "https://media.api-sports.io/football/teams/126.png" },
-      { name: "Corinthians", currentUrl: "https://media.api-sports.io/football/teams/131.png" },
+      { name: "Palmeiras", currentUrl: "https://img.sofascore.com/api/v1/team/1963/image" },
+      { name: "Flamengo", currentUrl: "https://img.sofascore.com/api/v1/team/5981/image" },
+      { name: "São Paulo", currentUrl: "https://img.sofascore.com/api/v1/team/1981/image" },
+      { name: "Corinthians", currentUrl: "https://img.sofascore.com/api/v1/team/1957/image" },
     ],
     leagues: [
       { name: "Brasileirão Série A", currentUrl: "https://crests.football-data.org/bsa.png" },
