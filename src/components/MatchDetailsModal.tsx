@@ -5,50 +5,8 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { X, Clock, RefreshCw, Trophy, BarChart2, AlertCircle, MapPin, Calendar } from "lucide-react";
 import { LiveMatchClock } from "./LiveMatchClock";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
+import { getStadiumInfo } from "../utils/stadiumDetails";
 
-const STADIUM_CITIES: Record<string, string> = {
-  "Heriberto Hülse": "Criciúma (SC)",
-  "Arena Pantanal": "Cuiabá (MT)",
-  "Independência": "Belo Horizonte (MG)",
-  "Arena Independência": "Belo Horizonte (MG)",
-  "Alfredo Jaconi": "Caxias do Sul (RS)",
-  "Antônio Accioly": "Goiânia (GO)",
-  "Ressacada": "Florianópolis (SC)",
-  "Estádio da Ressacada": "Florianópolis (SC)",
-  "Hailé Pinheiro (Serrinha)": "Goiânia (GO)",
-  "Estádio da Serrinha": "Goiânia (GO)",
-  "Serrinha": "Goiânia (GO)",
-  "Aflitos": "Recife (PE)",
-  "Estádio dos Aflitos": "Recife (PE)",
-  "Jorge Ismael de Biasi": "Novo Horizonte (SP)",
-  "Germano Krüger": "Ponta Grossa (PR)",
-  "Castelão": "Fortaleza (CE)",
-  "Castelão (CE)": "Fortaleza (CE)",
-  "Arena Castelão": "Fortaleza (CE)",
-  "Estádio do Café": "Londrina (PR)",
-  "VGD": "Londrina (PR)",
-  "Arena Sicredi": "São João del-Rei (MG)",
-  "OBA": "Goiânia (GO)",
-  "Onésio Brasileiro Alvarenga": "Goiânia (GO)",
-  "Primeiro de Maio": "São Bernardo do Campo (SP)",
-  "Rei Pelé": "Maceió (AL)",
-  "Rei Pelé (AL)": "Maceió (AL)",
-  "Santa Cruz": "Ribeirão Preto (SP)",
-  "Arena Nicnet (Santa Cruz)": "Ribeirão Preto (SP)",
-  "Arena Nicnet": "Ribeirão Preto (SP)",
-  "Ilha do Retiro": "Recife (PE)",
-  "Moisés Lucarelli": "Campinas (SP)",
-};
-
-function getStadiumDisplayLocation(stadium?: { name?: string; city?: string } | null): string {
-  if (!stadium?.name) return "";
-  const knownCity = STADIUM_CITIES[stadium.name];
-  if (knownCity) return `${stadium.name} • ${knownCity}`;
-  if (stadium.city && stadium.city.toLowerCase() !== "brasil") {
-    return `${stadium.name} • ${stadium.city}`;
-  }
-  return stadium.name;
-}
 
 interface MatchDetailsModalProps {
   matchId: Id<"matches"> | null;
@@ -86,6 +44,8 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
   const awayLogo = match.awayTeam?.name
     ? getNationFlagUrl(match.awayTeam.name, match.awayTeam.logoUrl)
     : match.awayTeam?.logoUrl;
+
+  const stadiumInfo = getStadiumInfo(match);
 
   const isLive =
     match && ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(match.status);
@@ -355,24 +315,34 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
         ) : (
           <>
             {/* Header Hero com Foto Panorâmica do Estádio */}
-            <div className="relative overflow-hidden bg-[#161b22] text-white shrink-0 min-h-[180px] sm:min-h-[200px]">
+            <div className="relative overflow-hidden bg-[#161b22] text-white shrink-0 min-h-[220px] sm:min-h-[240px]">
               {/* Foto Panorâmica de Fundo do Estádio (se disponível) */}
-              {match.stadium?.imageUrl && (
+              {stadiumInfo?.imageUrl && (
                 <img
-                  src={match.stadium.imageUrl}
-                  alt={match.stadium.name}
-                  className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+                  src={stadiumInfo.imageUrl}
+                  alt={stadiumInfo.name}
+                  className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-700 hover:scale-110"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
               )}
 
-              {/* Camada de Sobreposição Degradê Escura para Garantir Contraste */}
-              <div
-                className={`absolute inset-0 ${
-                  match.stadium?.imageUrl
-                    ? "bg-gradient-to-b from-black/85 via-black/70 to-[#161b22]"
-                    : "bg-gradient-to-b from-[#0f141c] via-[#161b22] to-[#161b22]"
-                }`}
-              />
+              {/* Camadas Refinadas de Iluminação e Degradês para Máxima Visibilidade e Contraste */}
+              {stadiumInfo?.imageUrl ? (
+                <>
+                  {/* 1. Camada escura geral com opacidade suave (~35-40%) mantendo a arena vívida e visível */}
+                  <div className="absolute inset-0 bg-black/40" />
+
+                  {/* 2. Gradiente direcional suave: sombra no topo e base para leitura perfeita */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/25 to-black/90 pointer-events-none" />
+
+                  {/* 3. Vinheta radial suave que foca e ilumina a parte central do estádio */}
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/15 to-black/60 pointer-events-none" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0f141c] via-[#161b22] to-[#161b22]" />
+              )}
 
               {/* Conteúdo do Header Hero */}
               <div className="relative z-10 px-4 pt-3 pb-3.5 sm:px-5 sm:pt-4 sm:pb-4 space-y-2.5 sm:space-y-3.5">
@@ -380,7 +350,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
                     {match.league?.logoUrl ? (
-                      <div className="w-5 h-5 rounded-full bg-white/10 backdrop-blur-xs p-0.5 flex items-center justify-center border border-white/20 shrink-0">
+                      <div className="w-5 h-5 rounded-full bg-white/10 backdrop-blur-xs p-0.5 flex items-center justify-center border border-white/20 shrink-0 shadow-xs">
                         <img
                           src={match.league.logoUrl}
                           alt={match.league.name ?? "Liga"}
@@ -390,7 +360,7 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                     ) : (
                       <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
                     )}
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200 truncate">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-200 truncate drop-shadow-sm">
                       {match.league?.name ?? "Detalhes da Partida"}
                       {match.round ? ` • ${match.round}` : ""}
                     </span>
@@ -420,14 +390,14 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                         {match.homeTeam?.name?.charAt(0) ?? "M"}
                       </div>
                     )}
-                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[105px] sm:max-w-[130px] text-center">
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] line-clamp-1 max-w-[105px] sm:max-w-[130px] text-center">
                       {match.homeTeam?.name ?? "Mandante"}
                     </span>
                   </div>
 
                   {/* Placar Central */}
                   <div className="flex flex-col items-center justify-center px-1.5 sm:px-4 shrink-0">
-                    <div className="bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl font-mono font-bold text-xl sm:text-3xl text-white shadow-lg tracking-wider whitespace-nowrap">
+                    <div className="bg-black/50 backdrop-blur-md border border-white/20 px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl font-mono font-bold text-xl sm:text-3xl text-white shadow-xl tracking-wider whitespace-nowrap">
                       {match.status === "SCHEDULED" ? "VS" : `${match.homeScore} - ${match.awayScore}`}
                     </div>
                     {isLive ? (
@@ -475,16 +445,16 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                         {match.awayTeam?.name?.charAt(0) ?? "V"}
                       </div>
                     )}
-                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs line-clamp-1 max-w-[105px] sm:max-w-[130px] text-center">
+                    <span className="font-bold text-xs sm:text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] line-clamp-1 max-w-[105px] sm:max-w-[130px] text-center">
                       {match.awayTeam?.name ?? "Visitante"}
                     </span>
                   </div>
                 </div>
 
-                {/* Linha Inferior do Hero: Badges de Data/Horário e Estádio */}
+                {/* Linha Inferior do Hero: Badges com Efeito Glassmorphism de Data/Horário e Estádio */}
                 <div className="flex flex-wrap items-center justify-center gap-2 pt-2.5 border-t border-white/10 text-xs text-slate-200">
                   {match.startTime && (
-                    <div className="flex items-center gap-1.5 font-medium bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/10">
+                    <div className="inline-flex items-center gap-1.5 font-medium backdrop-blur-md bg-black/50 border border-white/10 px-3 py-1.5 rounded-full text-slate-200 shadow-md">
                       <Calendar className="w-3.5 h-3.5 text-slate-300 shrink-0" />
                       <span>
                         {new Date(match.startTime).toLocaleDateString("pt-BR", {
@@ -502,12 +472,22 @@ export function MatchDetailsModal({ matchId, onClose }: MatchDetailsModalProps) 
                     </div>
                   )}
 
-                  {match.stadium && (
-                    <div className="flex items-center gap-1.5 font-medium bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-emerald-500/30 text-emerald-300">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span className="text-white font-medium">
-                        {getStadiumDisplayLocation(match.stadium)}
+                  {stadiumInfo && (
+                    <div className="inline-flex items-center gap-2 font-medium backdrop-blur-md bg-black/50 border border-white/10 px-3 py-1.5 rounded-full shadow-md text-xs text-white">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 drop-shadow-xs" />
+                      <span className="font-medium text-white tracking-wide">
+                        {stadiumInfo.name}
                       </span>
+                      {(stadiumInfo.city || stadiumInfo.capacity) && (
+                        <span className="text-slate-300 text-[11px] font-normal flex items-center gap-1.5 border-l border-white/20 pl-2">
+                          {stadiumInfo.city && <span>{stadiumInfo.city}</span>}
+                          {stadiumInfo.capacity && (
+                            <span className="text-slate-400 text-[10px]">
+                              {stadiumInfo.city ? "•" : ""} {stadiumInfo.capacity.toLocaleString("pt-BR")} lug.
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

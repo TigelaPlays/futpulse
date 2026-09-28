@@ -62,6 +62,14 @@ export const listMatches = query({
             .collect(),
         ]);
 
+        let resolvedStadium = stadium;
+        if (!resolvedStadium && match.homeTeamId) {
+          resolvedStadium = await ctx.db
+            .query("stadiums")
+            .withIndex("by_team", (q) => q.eq("teamId", match.homeTeamId))
+            .first();
+        }
+
         events.sort((a, b) => a.minute - b.minute);
 
         return {
@@ -69,7 +77,7 @@ export const listMatches = query({
           homeTeam,
           awayTeam,
           league,
-          stadium,
+          stadium: resolvedStadium,
           events: events.filter((e) =>
             ["GOAL", "RED_CARD", "YELLOW_CARD"].includes(e.type)
           ),
@@ -152,11 +160,19 @@ export const listMatchesByRound = query({
             .collect(),
         ]);
 
+        let resolvedStadium = stadium;
+        if (!resolvedStadium && m.homeTeamId) {
+          resolvedStadium = await ctx.db
+            .query("stadiums")
+            .withIndex("by_team", (q) => q.eq("teamId", m.homeTeamId))
+            .first();
+        }
+
         return {
           ...m,
           homeTeam,
           awayTeam,
-          stadium,
+          stadium: resolvedStadium,
           events,
         };
       })

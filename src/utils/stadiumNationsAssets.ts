@@ -76,3 +76,17 @@ export function getStadiumImageUrl(stadiumName?: string, fallbackUrl = "/assets/
 
   return `/assets/stadiums_nations/${encodeURIComponent(fileName)}`;
 }
+
+/**
+ * Retorna o caminho da imagem do estádio de seleções caso exista um alias mapeado, ou null
+ */
+export function getNationStadiumImageUrl(stadiumName?: string): string | null {
+  if (!stadiumName) return null;
+  const cleanName = stadiumName.split(",")[0].trim().toLowerCase();
+  const fileName = STADIUM_ALIASES[cleanName] || STADIUM_ALIASES[stadiumName.trim().toLowerCase()];
+  if (fileName) {
+    return `/assets/stadiums_nations/${encodeURIComponent(fileName)}`;
+  }
+  return null;
+}
+

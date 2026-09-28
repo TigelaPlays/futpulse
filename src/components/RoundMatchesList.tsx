@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { Calendar, Clock, RefreshCw } from "lucide-react";
+import { Calendar, Clock, RefreshCw, MapPin } from "lucide-react";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
+import { getStadiumInfo } from "../utils/stadiumDetails";
 
 interface RoundMatchesListProps {
   leagueId: Id<"leagues">;
@@ -330,7 +331,8 @@ export function RoundMatchesList({
           displayMatches.map((m) => {
             const isFinished = m.status === "FINISHED";
             const isLive = ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(m.status);
-            const { stadium, dateStr, weekday, timeStr } = formatMatchHeader(m);
+            const { dateStr, weekday, timeStr } = formatMatchHeader(m);
+            const stadiumInfo = getStadiumInfo(m);
             const homeCode = getTeamCode(m.homeTeam);
             const awayCode = getTeamCode(m.awayTeam);
             const homeLogo = m.homeTeam?.name ? getNationFlagUrl(m.homeTeam.name, m.homeTeam.logoUrl) : m.homeTeam?.logoUrl;
@@ -342,11 +344,9 @@ export function RoundMatchesList({
                 onClick={() => onSelectMatch?.(m._id)}
                 className="px-3.5 py-2.5 sm:py-3 hover:bg-slate-50/90 transition-colors bg-white flex-1 flex flex-col justify-center space-y-1.5 cursor-pointer group"
               >
-                {/* Cabeçalho do Card: Estádio em cima, Data/Hora embaixo */}
-                <div className="text-center space-y-0.5">
-                  <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase truncate px-2 font-mono">
-                    {stadium}
-                  </div>
+                {/* Cabeçalho do Card: Data/Hora em cima, Estádio limpo embaixo */}
+                <div className="text-center space-y-1">
+                  {/* Linha de Data e Horário / Status */}
                   <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-600">
                     <span className="font-semibold text-slate-700">{dateStr}</span>
                     {weekday && (
@@ -371,6 +371,29 @@ export function RoundMatchesList({
                       {timeStr}
                     </span>
                   </div>
+
+                  {/* Informação da Arena Abaixo da Data/Horário */}
+                  {stadiumInfo && (
+                    <div className="flex items-center justify-center text-[10px] sm:text-[11px] text-slate-500">
+                      <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200/60 max-w-[90%] shadow-2xs">
+                        {stadiumInfo.imageUrl ? (
+                          <img
+                            src={stadiumInfo.imageUrl}
+                            alt={stadiumInfo.name}
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full object-cover border border-slate-200 shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                        )}
+                        <span className="font-medium text-slate-700 truncate max-w-[180px] sm:max-w-[240px]">
+                          {stadiumInfo.name}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Confronto: [Time/CODE] [Escudo]  1 × 0  [Escudo] [Time/CODE] */}

@@ -1,7 +1,8 @@
 import type { Id } from "../../convex/_generated/dataModel";
-import { Star, Clock } from "lucide-react";
+import { Star, Clock, MapPin } from "lucide-react";
 import { LiveMatchClock } from "./LiveMatchClock";
 import { getNationFlagUrl } from "../utils/flagsNationsAssets";
+import { getStadiumInfo } from "../utils/stadiumDetails";
 
 export interface MatchRowProps {
   match: any;
@@ -18,6 +19,8 @@ export function MatchRow({
   onToggleFavorite,
   onSelectMatch,
 }: MatchRowProps) {
+  const stadiumInfo = getStadiumInfo(match);
+
   const isLive = [
     "IN_PLAY",
     "LIVE",
@@ -94,81 +97,109 @@ export function MatchRow({
         </div>
 
         {/* Zona Central (1fr): Confronto 100% Centralizado matematicamente */}
-        <div className="flex items-center justify-center w-full max-w-xl mx-auto min-w-0 px-2">
-          {/* Mandante (50% do espaço, alinhado à direita) */}
-          <div className="flex-1 flex items-center justify-end gap-2.5 min-w-0 text-right">
-            <span
-              className={`text-sm truncate transition-colors ${
-                homeWon
-                  ? "font-bold text-slate-950"
-                  : isFinished
-                  ? "font-normal text-slate-500"
-                  : "font-semibold text-slate-800"
-              }`}
-              title={match.homeTeam?.name}
-            >
-              {match.homeTeam?.name}
-            </span>
-            {homeLogo ? (
-              <img
-                src={homeLogo}
-                alt={match.homeTeam?.name ?? "Mandante"}
-                className="w-6 h-6 object-contain shrink-0"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
-                {match.homeTeam?.name?.charAt(0) ?? "M"}
-              </div>
-            )}
-          </div>
-
-          {/* Placar Central (Largura Fixa de 80px para ancorar a simetria de todas as linhas) */}
-          <div className="w-20 shrink-0 flex justify-center items-center px-1">
-            {match.status === "SCHEDULED" ? (
-              <span className="text-[11px] text-slate-500 font-bold tracking-widest px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
-                VS
-              </span>
-            ) : (
-              <div
-                className={`w-16 py-0.5 rounded-lg font-mono tabular-nums font-bold text-sm flex items-center justify-center gap-1 shadow-2xs border transition-all ${
-                  isLive
-                    ? "bg-emerald-600 border-emerald-700 text-white shadow-xs"
-                    : "bg-slate-100 border-slate-200 text-slate-900"
+        <div className="flex flex-col items-center justify-center w-full max-w-xl mx-auto min-w-0 px-2">
+          <div className="flex items-center justify-center w-full min-w-0">
+            {/* Mandante (50% do espaço, alinhado à direita) */}
+            <div className="flex-1 flex items-center justify-end gap-2.5 min-w-0 text-right">
+              <span
+                className={`text-sm truncate transition-colors ${
+                  homeWon
+                    ? "font-bold text-slate-950"
+                    : isFinished
+                    ? "font-normal text-slate-500"
+                    : "font-semibold text-slate-800"
                 }`}
+                title={match.homeTeam?.name}
               >
-                <span>{match.homeScore}</span>
-                <span className={`${isLive ? "text-emerald-200" : "text-slate-400"} font-sans text-xs`}>-</span>
-                <span>{match.awayScore}</span>
-              </div>
-            )}
+                {match.homeTeam?.name}
+              </span>
+              {homeLogo ? (
+                <img
+                  src={homeLogo}
+                  alt={match.homeTeam?.name ?? "Mandante"}
+                  className="w-6 h-6 object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                  {match.homeTeam?.name?.charAt(0) ?? "M"}
+                </div>
+              )}
+            </div>
+
+            {/* Placar Central (Largura Fixa de 80px para ancorar a simetria de todas as linhas) */}
+            <div className="w-20 shrink-0 flex justify-center items-center px-1">
+              {match.status === "SCHEDULED" ? (
+                <span className="text-[11px] text-slate-500 font-bold tracking-widest px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
+                  VS
+                </span>
+              ) : (
+                <div
+                  className={`w-16 py-0.5 rounded-lg font-mono tabular-nums font-bold text-sm flex items-center justify-center gap-1 shadow-2xs border transition-all ${
+                    isLive
+                      ? "bg-emerald-600 border-emerald-700 text-white shadow-xs"
+                      : "bg-slate-100 border-slate-200 text-slate-900"
+                  }`}
+                >
+                  <span>{match.homeScore}</span>
+                  <span className={`${isLive ? "text-emerald-200" : "text-slate-400"} font-sans text-xs`}>-</span>
+                  <span>{match.awayScore}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Visitante (50% do espaço, alinhado à esquerda) */}
+            <div className="flex-1 flex items-center justify-start gap-2.5 min-w-0 text-left">
+              {awayLogo ? (
+                <img
+                  src={awayLogo}
+                  alt={match.awayTeam?.name ?? "Visitante"}
+                  className="w-6 h-6 object-contain shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                  {match.awayTeam?.name?.charAt(0) ?? "V"}
+                </div>
+              )}
+              <span
+                className={`text-sm truncate transition-colors ${
+                  awayWon
+                    ? "font-bold text-slate-950"
+                    : isFinished
+                    ? "font-normal text-slate-500"
+                    : "font-semibold text-slate-800"
+                }`}
+                title={match.awayTeam?.name}
+              >
+                {match.awayTeam?.name}
+              </span>
+            </div>
           </div>
 
-          {/* Visitante (50% do espaço, alinhado à esquerda) */}
-          <div className="flex-1 flex items-center justify-start gap-2.5 min-w-0 text-left">
-            {awayLogo ? (
-              <img
-                src={awayLogo}
-                alt={match.awayTeam?.name ?? "Visitante"}
-                className="w-6 h-6 object-contain shrink-0"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
-                {match.awayTeam?.name?.charAt(0) ?? "V"}
-              </div>
-            )}
-            <span
-              className={`text-sm truncate transition-colors ${
-                awayWon
-                  ? "font-bold text-slate-950"
-                  : isFinished
-                  ? "font-normal text-slate-500"
-                  : "font-semibold text-slate-800"
-              }`}
-              title={match.awayTeam?.name}
-            >
-              {match.awayTeam?.name}
-            </span>
-          </div>
+          {/* Destaque Visual do Estádio na Coluna Central */}
+          {stadiumInfo && (
+            <div className="mt-1 flex items-center justify-center gap-1.5 text-slate-500">
+              {stadiumInfo.imageUrl ? (
+                <img
+                  src={stadiumInfo.imageUrl}
+                  alt={stadiumInfo.name}
+                  className="w-5 h-5 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              )}
+              <span className="text-[11px] font-medium text-slate-600 truncate max-w-[280px]">
+                {stadiumInfo.name}
+              </span>
+              {stadiumInfo.city && (
+                <span className="text-[10px] text-slate-400 font-normal truncate hidden lg:inline">
+                  • {stadiumInfo.city}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Asa Direita (140px): Rótulo de Rodada ou Liga para manter equilíbrio */}
@@ -364,6 +395,34 @@ export function MatchRow({
             </span>
           </div>
         </div>
+
+        {/* Destaque Visual do Estádio no Card Mobile */}
+        {stadiumInfo && (
+          <div className="flex items-center justify-center pt-0.5">
+            <div className="inline-flex items-center gap-1.5 bg-slate-50/90 px-2.5 py-0.5 rounded-full border border-slate-200/70 max-w-full shadow-2xs">
+              {stadiumInfo.imageUrl ? (
+                <img
+                  src={stadiumInfo.imageUrl}
+                  alt={stadiumInfo.name}
+                  className="w-4 h-4 rounded-full object-cover border border-slate-200 shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+              )}
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-700 truncate max-w-[200px] sm:max-w-xs">
+                {stadiumInfo.name}
+              </span>
+              {stadiumInfo.city && (
+                <span className="text-[9px] text-slate-400 truncate hidden xs:inline shrink-0">
+                  • {stadiumInfo.city}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Eventos da Partida Mobile: Lado a Lado preservando os times */}
         {hasEvents && (
