@@ -23,8 +23,12 @@ export const listMatches = query({
           .collect()
       : await ctx.db.query("matches").collect();
 
-    // Filtro de data
-    if (args.startTimestamp !== undefined && args.endTimestamp !== undefined) {
+    // Filtro de data: IGNORADO quando o filtro for LIVE para garantir exibição em tempo real
+    if (
+      args.statusFilter !== "LIVE" &&
+      args.startTimestamp !== undefined &&
+      args.endTimestamp !== undefined
+    ) {
       matches = matches.filter(
         (m) => m.startTime >= args.startTimestamp! && m.startTime <= args.endTimestamp!
       );

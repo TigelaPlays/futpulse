@@ -266,6 +266,27 @@ async function runSyncRound(convexMatches) {
           } catch (err) {
             console.warn(`[LIVE SYNC] [${getTimestamp()}] Falha ao salvar partida ${targetMatch._id}: ${err.message}`);
           }
+        } else if (status === "IN_PLAY" || status === "HALFTIME") {
+          try {
+            const created = await client.mutation(api.syncSofascore.createOrUpdateLiveMatch, {
+              homeTeamName: homeName,
+              awayTeamName: awayName,
+              homeScore,
+              awayScore,
+              status,
+              statusShort,
+              minute,
+              leagueCode: "UNL",
+            });
+            if (created) {
+              updatedCount++;
+              console.log(
+                `[LIVE SYNC] [${getTimestamp()}] 🆕 Nova partida ao vivo criada automaticamente: ${homeName} ${homeScore} x ${awayScore} ${awayName} [${statusShort}]`
+              );
+            }
+          } catch {
+            // Ignora se não pertencer aos times cadastrados
+          }
         }
       }
     } else {
@@ -308,6 +329,27 @@ async function runSyncRound(convexMatches) {
             );
           } catch (err) {
             console.warn(`[LIVE SYNC] [${getTimestamp()}] Falha ao salvar partida ${targetMatch._id}: ${err.message}`);
+          }
+        } else if (status === "IN_PLAY" || status === "HALFTIME") {
+          try {
+            const created = await client.mutation(api.syncSofascore.createOrUpdateLiveMatch, {
+              homeTeamName: evHome,
+              awayTeamName: evAway,
+              homeScore,
+              awayScore,
+              status,
+              statusShort,
+              minute,
+              leagueCode: "UNL",
+            });
+            if (created) {
+              updatedCount++;
+              console.log(
+                `[LIVE SYNC] [${getTimestamp()}] 🆕 Nova partida ao vivo criada automaticamente: ${evHome} ${homeScore} x ${awayScore} ${evAway} [${statusShort}]`
+              );
+            }
+          } catch {
+            // Ignora se não pertencer aos times cadastrados
           }
         }
       }

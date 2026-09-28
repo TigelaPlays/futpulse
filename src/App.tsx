@@ -111,11 +111,13 @@ export default function App() {
     return { start, end };
   }, [selectedDateOffset]);
 
+  const isLiveFilter = filter === "LIVE";
+
   const matches = useQuery(api.matches.listMatches, {
     statusFilter: filter,
     leagueId: selectedLeagueId ?? undefined,
-    startTimestamp: selectedLeagueId ? undefined : dateRange?.start,
-    endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
+    startTimestamp: isLiveFilter || selectedLeagueId ? undefined : dateRange?.start,
+    endTimestamp: isLiveFilter || selectedLeagueId ? undefined : dateRange?.end,
   });
 
   const allMatchesForCounts = useQuery(api.matches.listMatches, {
@@ -125,14 +127,15 @@ export default function App() {
     endTimestamp: selectedLeagueId ? undefined : dateRange?.end,
   });
 
+  // Query global de jogos ao vivo (independente da data selecionada no carrossel)
+  const allLiveMatches = useQuery(api.matches.listMatches, {
+    statusFilter: "LIVE",
+    leagueId: selectedLeagueId ?? undefined,
+  });
+
   const matchCounts = {
     ALL: allMatchesForCounts?.length ?? 0,
-    LIVE:
-      allMatchesForCounts?.filter((m) =>
-        ["IN_PLAY", "LIVE", "HALFTIME", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(
-          m.status
-        )
-      ).length ?? 0,
+    LIVE: allLiveMatches?.length ?? 0,
     FINISHED: allMatchesForCounts?.filter((m) => m.status === "FINISHED").length ?? 0,
     SCHEDULED: allMatchesForCounts?.filter((m) => m.status === "SCHEDULED").length ?? 0,
   };
@@ -354,7 +357,9 @@ export default function App() {
               <div className="text-center py-16 px-4 bg-white border border-slate-200 rounded-xl text-slate-500 shadow-xs space-y-2">
                 <CalendarDays className="w-8 h-8 text-slate-400 mx-auto" />
                 <p className="font-semibold text-slate-800 text-sm">
-                  {selectedDateOffset === 0
+                  {filter === "LIVE"
+                    ? "Nenhuma partida ao vivo no momento"
+                    : selectedDateOffset === 0
                     ? "Nenhum jogo agendado para hoje"
                     : selectedDateOffset !== null
                     ? `Nenhum jogo agendado para ${formatQuickDateLabel(selectedDateOffset)}`

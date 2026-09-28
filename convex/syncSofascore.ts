@@ -1,6 +1,7 @@
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { resolveTeamByAlias } from "./teamAliases";
 
 // Mapeamento de nomes em português para os nomes do Sofascore e ESPN (inglês)
 const TEAM_NAME_MAP: Record<string, string> = {
@@ -136,6 +137,266 @@ export const patchScore = internalMutation({
   },
 });
 
+export function resolveTeamFromList(rawName: string, allTeams: any[]) {
+  if (!rawName) return null;
+  const clean = rawName.trim().toLowerCase();
+  const norm = normalize(clean);
+
+  // 1. Match direto por nome, shortName ou nome normalizado
+  let found = allTeams.find((t) => {
+    const tClean = t.name.trim().toLowerCase();
+    const tNorm = normalize(tClean);
+    return (
+      tClean === clean ||
+      tNorm === norm ||
+      tNorm === clean ||
+      tClean === norm ||
+      t.shortName?.trim().toLowerCase() === clean
+    );
+  });
+  if (found) return found;
+
+  // 2. Substring match
+  found = allTeams.find((t) => {
+    const tClean = t.name.trim().toLowerCase();
+    const tNorm = normalize(tClean);
+    return (
+      (clean.length >= 4 && tClean.includes(clean)) ||
+      (tClean.length >= 4 && clean.includes(tClean)) ||
+      (norm.length >= 4 && tNorm.includes(norm)) ||
+      (tNorm.length >= 4 && norm.includes(tNorm))
+    );
+  });
+  if (found) return found;
+
+  // 3. Fallback resolveTeamByAlias
+  const aliasMatch = resolveTeamByAlias(rawName, allTeams);
+  if (aliasMatch) return aliasMatch.team;
+
+  return null;
+}
+
+export const findOrCreateLiveMatch = internalMutation({
+  args: {
+    homeTeamName: v.string(),
+    awayTeamName: v.string(),
+    homeScore: v.number(),
+    awayScore: v.number(),
+    status: v.union(
+      v.literal("SCHEDULED"),
+      v.literal("IN_PLAY"),
+      v.literal("LIVE"),
+      v.literal("HALFTIME"),
+      v.literal("PAUSED"),
+      v.literal("EXTRA_TIME"),
+      v.literal("PENALTY_SHOOTOUT"),
+      v.literal("FINISHED"),
+      v.literal("POSTPONED")
+    ),
+    statusShort: v.optional(v.string()),
+    minute: v.optional(v.number()),
+    leagueCode: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const allTeams = await ctx.db.query("teams").collect();
+    const homeTeam = resolveTeamFromList(args.homeTeamName, allTeams);
+    const awayTeam = resolveTeamFromList(args.awayTeamName, allTeams);
+
+    if (!homeTeam || !awayTeam) {
+      return {
+        success: false,
+        reason: `Times não encontrados: ${args.homeTeamName} ou ${args.awayTeamName}`,
+      };
+    }
+
+    const existingMatch = await ctx.db
+      .query("matches")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("homeTeamId"), homeTeam._id),
+          q.eq(q.field("awayTeamId"), awayTeam._id)
+        )
+      )
+      .first();
+
+    const patchData: Record<string, any> = {
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      status: args.status,
+    };
+    if (args.minute !== undefined) patchData.minute = args.minute;
+    if (args.statusShort) patchData.statusShort = args.statusShort;
+    if (args.status === "IN_PLAY" || args.status === "LIVE") {
+      patchData.elapsedSecondsUpdatedAt = Date.now();
+    }
+
+    if (existingMatch) {
+      await ctx.db.patch(existingMatch._id, patchData);
+      return {
+        success: true,
+        matchId: existingMatch._id,
+        created: false,
+        homeTeam: homeTeam.name,
+        awayTeam: awayTeam.name,
+      };
+    }
+
+    let targetLeague = null;
+    if (args.leagueCode) {
+      targetLeague = await ctx.db
+        .query("leagues")
+        .filter((q) => q.eq(q.field("code"), args.leagueCode))
+        .first();
+    }
+    if (!targetLeague) {
+      targetLeague = await ctx.db
+        .query("leagues")
+        .filter((q) => q.eq(q.field("code"), "UNL"))
+        .first();
+    }
+    if (!targetLeague) {
+      targetLeague = await ctx.db.query("leagues").first();
+    }
+    if (!targetLeague) {
+      return { success: false, reason: "Nenhuma liga encontrada" };
+    }
+
+    const stadium = await ctx.db
+      .query("stadiums")
+      .withIndex("by_team", (q) => q.eq("teamId", homeTeam._id))
+      .first();
+
+    const minuteVal = args.minute ?? 1;
+    const newMatchId = await ctx.db.insert("matches", {
+      leagueId: targetLeague._id,
+      round: "Rodada 1",
+      division: "A",
+      stage: "Fase de Grupos",
+      homeTeamId: homeTeam._id,
+      awayTeamId: awayTeam._id,
+      stadiumId: stadium?._id,
+      status: args.status,
+      statusShort: args.statusShort || `${minuteVal}'`,
+      minute: minuteVal,
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      startTime: Date.now() - minuteVal * 60 * 1000,
+      elapsedSecondsUpdatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      matchId: newMatchId,
+      created: true,
+      homeTeam: homeTeam.name,
+      awayTeam: awayTeam.name,
+    };
+  },
+});
+
+export const createOrUpdateLiveMatch = mutation({
+  args: {
+    homeTeamName: v.string(),
+    awayTeamName: v.string(),
+    homeScore: v.number(),
+    awayScore: v.number(),
+    status: v.union(
+      v.literal("SCHEDULED"),
+      v.literal("IN_PLAY"),
+      v.literal("LIVE"),
+      v.literal("HALFTIME"),
+      v.literal("PAUSED"),
+      v.literal("EXTRA_TIME"),
+      v.literal("PENALTY_SHOOTOUT"),
+      v.literal("FINISHED"),
+      v.literal("POSTPONED")
+    ),
+    statusShort: v.optional(v.string()),
+    minute: v.optional(v.number()),
+    leagueCode: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const allTeams = await ctx.db.query("teams").collect();
+    const homeTeam = resolveTeamFromList(args.homeTeamName, allTeams);
+    const awayTeam = resolveTeamFromList(args.awayTeamName, allTeams);
+
+    if (!homeTeam || !awayTeam) {
+      throw new Error(`Times não encontrados: ${args.homeTeamName} ou ${args.awayTeamName}`);
+    }
+
+    const existingMatch = await ctx.db
+      .query("matches")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("homeTeamId"), homeTeam._id),
+          q.eq(q.field("awayTeamId"), awayTeam._id)
+        )
+      )
+      .first();
+
+    const patchData: Record<string, any> = {
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      status: args.status,
+    };
+    if (args.minute !== undefined) patchData.minute = args.minute;
+    if (args.statusShort) patchData.statusShort = args.statusShort;
+    if (args.status === "IN_PLAY" || args.status === "LIVE") {
+      patchData.elapsedSecondsUpdatedAt = Date.now();
+    }
+
+    if (existingMatch) {
+      await ctx.db.patch(existingMatch._id, patchData);
+      return { matchId: existingMatch._id, created: false };
+    }
+
+    let targetLeague = null;
+    if (args.leagueCode) {
+      targetLeague = await ctx.db
+        .query("leagues")
+        .filter((q) => q.eq(q.field("code"), args.leagueCode))
+        .first();
+    }
+    if (!targetLeague) {
+      targetLeague = await ctx.db
+        .query("leagues")
+        .filter((q) => q.eq(q.field("code"), "UNL"))
+        .first();
+    }
+    if (!targetLeague) {
+      targetLeague = await ctx.db.query("leagues").first();
+    }
+    if (!targetLeague) {
+      throw new Error("Nenhuma liga encontrada no banco");
+    }
+
+    const stadium = await ctx.db
+      .query("stadiums")
+      .withIndex("by_team", (q) => q.eq("teamId", homeTeam._id))
+      .first();
+
+    const minuteVal = args.minute ?? 82;
+    const newMatchId = await ctx.db.insert("matches", {
+      leagueId: targetLeague._id,
+      round: "Rodada 1",
+      division: "A",
+      stage: "Fase de Grupos",
+      homeTeamId: homeTeam._id,
+      awayTeamId: awayTeam._id,
+      stadiumId: stadium?._id,
+      status: args.status,
+      statusShort: args.statusShort || `${minuteVal}'`,
+      minute: minuteVal,
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      startTime: Date.now() - minuteVal * 60 * 1000,
+      elapsedSecondsUpdatedAt: Date.now(),
+    });
+
+    return { matchId: newMatchId, created: true };
+  },
+});
+
 export const syncLiveFromSofascore = action({
   args: {
     targetDate: v.optional(v.string()), // ex: "2026-09-25" ou vazio para jogos ao vivo agora
@@ -255,6 +516,7 @@ export const syncLiveFromSofascore = action({
         }
 
         // Localiza no banco de dados local
+        let matchedLocal = false;
         for (const lm of localMatches) {
           const normLocalHome = normalize(lm.homeName);
           const normLocalAway = normalize(lm.awayName);
@@ -263,6 +525,7 @@ export const syncLiveFromSofascore = action({
           const matchAway = espnAwayName.includes(normLocalAway) || normLocalAway.includes(espnAwayName);
 
           if (matchHome && matchAway) {
+            matchedLocal = true;
             await ctx.runMutation(internal.syncSofascore.patchScore, {
               matchId: lm.matchId,
               homeScore,
@@ -280,54 +543,76 @@ export const syncLiveFromSofascore = action({
             break;
           }
         }
+
+        // Se estiver ao vivo na ESPN e não existir no banco, cria automaticamente
+        if (!matchedLocal && (status === "IN_PLAY" || status === "HALFTIME")) {
+          const createRes: any = await ctx.runMutation(internal.syncSofascore.findOrCreateLiveMatch, {
+            homeTeamName: espnHomeName,
+            awayTeamName: espnAwayName,
+            homeScore,
+            awayScore,
+            status,
+            minute,
+            statusShort,
+            leagueCode: "UNL",
+          });
+          if (createRes?.success) {
+            updatedCount++;
+            updatedMatches.push({
+              match: `${createRes.homeTeam} ${homeScore} x ${awayScore} ${createRes.awayTeam}`,
+              score: `${homeScore} x ${awayScore}`,
+              status: statusShort,
+            });
+          }
+        }
       }
     } else {
       // 3B. Processamento padrão Sofascore
-      for (const lm of localMatches) {
-        const normHome = normalize(lm.homeName);
-        const normAway = normalize(lm.awayName);
+      for (const ev of rawEvents) {
+        const evHome = (ev.homeTeam?.name || "").toLowerCase();
+        const evAway = (ev.awayTeam?.name || "").toLowerCase();
 
-        const ev = rawEvents.find((e) => {
-          const h = (e.homeTeam?.name || "").toLowerCase();
-          const a = (e.awayTeam?.name || "").toLowerCase();
+        const homeScore = ev.homeScore?.current ?? 0;
+        const awayScore = ev.awayScore?.current ?? 0;
+        const statusType = ev.status?.type; // "inprogress", "finished", "notstarted"
+        const statusDesc = (ev.status?.description || "").toLowerCase();
+        const minute = ev.statusTime?.minute;
+
+        let status: ValidStatus = "SCHEDULED";
+        let statusShort = "15:45";
+
+        if (statusType === "inprogress") {
+          if (statusDesc.includes("halftime") || statusDesc.includes("intervalo")) {
+            status = "HALFTIME";
+            statusShort = "INT";
+          } else if (statusDesc.includes("extra") || statusDesc.includes("prorrogação")) {
+            status = "EXTRA_TIME";
+            statusShort = "PR";
+          } else if (statusDesc.includes("penalt")) {
+            status = "PENALTY_SHOOTOUT";
+            statusShort = "PEN";
+          } else {
+            status = "IN_PLAY";
+            statusShort = minute ? `${minute}'` : "AO VIVO";
+          }
+        } else if (statusType === "finished") {
+          status = "FINISHED";
+          statusShort = "FIM";
+        } else if (statusType === "postponed") {
+          status = "POSTPONED";
+          statusShort = "ADIADO";
+        }
+
+        const lm = localMatches.find((m: any) => {
+          const normH = normalize(m.homeName);
+          const normA = normalize(m.awayName);
           return (
-            (h.includes(normHome) || normHome.includes(h)) &&
-            (a.includes(normAway) || normAway.includes(a))
+            (evHome.includes(normH) || normH.includes(evHome)) &&
+            (evAway.includes(normA) || normA.includes(evAway))
           );
         });
 
-        if (ev) {
-          const homeScore = ev.homeScore?.current ?? 0;
-          const awayScore = ev.awayScore?.current ?? 0;
-          const statusType = ev.status?.type; // "inprogress", "finished", "notstarted"
-          const statusDesc = (ev.status?.description || "").toLowerCase();
-          const minute = ev.statusTime?.minute;
-
-          let status: ValidStatus = "SCHEDULED";
-          let statusShort = "15:45";
-
-          if (statusType === "inprogress") {
-            if (statusDesc.includes("halftime") || statusDesc.includes("intervalo")) {
-              status = "HALFTIME";
-              statusShort = "INT";
-            } else if (statusDesc.includes("extra") || statusDesc.includes("prorrogação")) {
-              status = "EXTRA_TIME";
-              statusShort = "PR";
-            } else if (statusDesc.includes("penalt")) {
-              status = "PENALTY_SHOOTOUT";
-              statusShort = "PEN";
-            } else {
-              status = "IN_PLAY";
-              statusShort = minute ? `${minute}'` : "AO VIVO";
-            }
-          } else if (statusType === "finished") {
-            status = "FINISHED";
-            statusShort = "FIM";
-          } else if (statusType === "postponed") {
-            status = "POSTPONED";
-            statusShort = "ADIADO";
-          }
-
+        if (lm) {
           await ctx.runMutation(internal.syncSofascore.patchScore, {
             matchId: lm.matchId,
             homeScore,
@@ -343,6 +628,26 @@ export const syncLiveFromSofascore = action({
             score: `${homeScore} x ${awayScore}`,
             status: statusShort,
           });
+        } else if (status === "IN_PLAY" || status === "HALFTIME" || status === "EXTRA_TIME" || status === "PENALTY_SHOOTOUT") {
+          // Se estiver ao vivo no Sofascore e não existir no banco, cria automaticamente
+          const createRes: any = await ctx.runMutation(internal.syncSofascore.findOrCreateLiveMatch, {
+            homeTeamName: ev.homeTeam?.name || "",
+            awayTeamName: ev.awayTeam?.name || "",
+            homeScore,
+            awayScore,
+            status,
+            minute,
+            statusShort,
+            leagueCode: "UNL",
+          });
+          if (createRes?.success) {
+            updatedCount++;
+            updatedMatches.push({
+              match: `${createRes.homeTeam} ${homeScore} x ${awayScore} ${createRes.awayTeam}`,
+              score: `${homeScore} x ${awayScore}`,
+              status: statusShort,
+            });
+          }
         }
       }
     }
