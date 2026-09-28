@@ -26,6 +26,7 @@ export default defineSchema({
     code: v.optional(v.string()),
     logoUrl: v.string(),
     customLogoStorageId: v.optional(v.id("_storage")),
+    storageId: v.optional(v.id("_storage")),
     externalId: v.optional(v.number()),
   }).index("by_externalId", ["externalId"]),
 
