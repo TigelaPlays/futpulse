@@ -5,6 +5,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { StandingsTable } from "./StandingsTable";
 import { RoundMatchesList } from "./RoundMatchesList";
 import { TopScorersWidget } from "./TopScorersWidget";
+import { NationsLeagueStandings } from "./NationsLeagueStandings";
 import { ChevronLeft, ChevronRight, Trophy, Calendar, Award } from "lucide-react";
 
 interface LeagueViewProps {
@@ -57,15 +58,19 @@ export function LeagueView({
   const [desktopMainTab, setDesktopMainTab] = useState<"standings" | "scorers">("standings");
 
   const minRound = 1;
-  const maxRound = isLibertadores ? 6 : isCup ? 8 : 38;
+  const maxRound = isNationsLeague ? 6 : isLibertadores ? 6 : isCup ? 8 : 38;
 
-  const stageSubtitle = isLibertadores
+  const stageSubtitle = isNationsLeague
+    ? "Fase de Grupos (6 Rodadas) • Divisões A, B, C e D"
+    : isLibertadores
     ? "Fase de Grupos (6 Rodadas) • Mata-Mata"
     : isCup
     ? "Torneio de Copa"
     : `${maxRound} Rodadas`;
 
-  const roundDisplay = isLibertadores
+  const roundDisplay = isNationsLeague
+    ? `Fase de Grupos • Rodada ${currentRound}`
+    : isLibertadores
     ? `Fase de Grupos • Rodada ${currentRound}`
     : `Rodada ${currentRound}`;
 
@@ -239,13 +244,19 @@ export function LeagueView({
             {/* Visualização Mobile: condicionada ao mobileTab */}
             <div className="lg:hidden">
               {mobileTab === "standings" && (
-                <StandingsTable
-                  leagueId={leagueId}
-                  leagueName={league.name}
-                  currentRound={currentRound}
-                  selectedDivision={isNationsLeague ? nationsLeagueDivision : undefined}
-                  onSelectDivision={setNationsLeagueDivision}
-                />
+                isNationsLeague ? (
+                  <NationsLeagueStandings
+                    selectedDivision={nationsLeagueDivision}
+                    onSelectDivision={setNationsLeagueDivision}
+                  />
+                ) : (
+                  <StandingsTable
+                    leagueId={leagueId}
+                    leagueName={league.name}
+                    currentRound={currentRound}
+                    selectedDivision={undefined}
+                  />
+                )
               )}
               {mobileTab === "scorers" && (
                 <TopScorersWidget leagueId={leagueId} />
@@ -255,13 +266,19 @@ export function LeagueView({
             {/* Visualização Desktop: condicionada ao desktopMainTab */}
             <div className="hidden lg:block">
               {desktopMainTab === "standings" ? (
-                <StandingsTable
-                  leagueId={leagueId}
-                  leagueName={league.name}
-                  currentRound={currentRound}
-                  selectedDivision={isNationsLeague ? nationsLeagueDivision : undefined}
-                  onSelectDivision={setNationsLeagueDivision}
-                />
+                isNationsLeague ? (
+                  <NationsLeagueStandings
+                    selectedDivision={nationsLeagueDivision}
+                    onSelectDivision={setNationsLeagueDivision}
+                  />
+                ) : (
+                  <StandingsTable
+                    leagueId={leagueId}
+                    leagueName={league.name}
+                    currentRound={currentRound}
+                    selectedDivision={undefined}
+                  />
+                )
               ) : (
                 <TopScorersWidget leagueId={leagueId} />
               )}

@@ -542,3 +542,5 @@ export const runSeed = mutation({
     };
   },
 });
+
+export { seedNationsLeague } from "./seedNations";

@@ -13,6 +13,7 @@ import type * as crons from "../crons.js";
 import type * as leagues from "../leagues.js";
 import type * as matches from "../matches.js";
 import type * as seed from "../seed.js";
+import type * as seedNations from "../seedNations.js";
 import type * as seedNationsLeagueA from "../seedNationsLeagueA.js";
 import type * as seedNationsLeagueAll from "../seedNationsLeagueAll.js";
 import type * as seedNationsLeagueBCD from "../seedNationsLeagueBCD.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   leagues: typeof leagues;
   matches: typeof matches;
   seed: typeof seed;
+  seedNations: typeof seedNations;
   seedNationsLeagueA: typeof seedNationsLeagueA;
   seedNationsLeagueAll: typeof seedNationsLeagueAll;
   seedNationsLeagueBCD: typeof seedNationsLeagueBCD;
