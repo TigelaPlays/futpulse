@@ -1,4 +1,4 @@
-import { query, internalQuery } from "./_generated/server";
+import { query, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const listMatches = query({
@@ -322,5 +322,181 @@ export const getByExternalId = internalQuery({
     }
 
     return null;
+  },
+});
+
+export const saveMatchDetailsFromSofascore = mutation({
+  args: {
+    matchId: v.id("matches"),
+    homeScore: v.optional(v.number()),
+    awayScore: v.optional(v.number()),
+    status: v.optional(
+      v.union(
+        v.literal("SCHEDULED"),
+        v.literal("IN_PLAY"),
+        v.literal("LIVE"),
+        v.literal("HALFTIME"),
+        v.literal("PAUSED"),
+        v.literal("EXTRA_TIME"),
+        v.literal("PENALTY_SHOOTOUT"),
+        v.literal("FINISHED"),
+        v.literal("POSTPONED")
+      )
+    ),
+    statusShort: v.optional(v.string()),
+    minute: v.optional(v.number()),
+    statistics: v.optional(
+      v.union(
+        v.null(),
+        v.object({
+          possession: v.optional(v.object({ home: v.number(), away: v.number() })),
+          shotsTotal: v.optional(v.object({ home: v.number(), away: v.number() })),
+          shotsOnTarget: v.optional(v.object({ home: v.number(), away: v.number() })),
+          corners: v.optional(v.object({ home: v.number(), away: v.number() })),
+          fouls: v.optional(v.object({ home: v.number(), away: v.number() })),
+          passes: v.optional(v.object({ home: v.number(), away: v.number() })),
+          homePossession: v.optional(v.number()),
+          awayPossession: v.optional(v.number()),
+          homeShotsOnTarget: v.optional(v.number()),
+          awayShotsOnTarget: v.optional(v.number()),
+          homeTotalShots: v.optional(v.number()),
+          awayTotalShots: v.optional(v.number()),
+          homeCorners: v.optional(v.number()),
+          awayCorners: v.optional(v.number()),
+          homeFouls: v.optional(v.number()),
+          awayFouls: v.optional(v.number()),
+          homePasses: v.optional(v.number()),
+          awayPasses: v.optional(v.number()),
+          homeYellowCards: v.optional(v.number()),
+          awayYellowCards: v.optional(v.number()),
+          homeRedCards: v.optional(v.number()),
+          awayRedCards: v.optional(v.number()),
+        })
+      )
+    ),
+    events: v.optional(
+      v.array(
+        v.object({
+          minute: v.number(),
+          extraMinute: v.optional(v.union(v.number(), v.null())),
+          extraTime: v.optional(v.union(v.number(), v.null())),
+          type: v.string(),
+          text: v.optional(v.string()),
+          playerName: v.optional(v.string()),
+          assistPlayerName: v.optional(v.string()),
+          isHome: v.optional(v.boolean()),
+          teamId: v.optional(v.id("teams")),
+          detail: v.optional(v.string()),
+        })
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const match = await ctx.db.get(args.matchId);
+    if (!match) throw new Error(`Partida não encontrada: ${args.matchId}`);
+
+    // 1. Atualiza dados da partida
+    const matchPatch: Record<string, any> = {};
+    if (args.homeScore !== undefined) matchPatch.homeScore = args.homeScore;
+    if (args.awayScore !== undefined) matchPatch.awayScore = args.awayScore;
+    if (args.status !== undefined) matchPatch.status = args.status;
+    if (args.statusShort !== undefined) matchPatch.statusShort = args.statusShort;
+    if (args.minute !== undefined) matchPatch.minute = args.minute;
+
+    if (args.status === "IN_PLAY" || args.status === "LIVE") {
+      matchPatch.elapsedSecondsUpdatedAt = Date.now();
+    }
+
+    if (Object.keys(matchPatch).length > 0) {
+      await ctx.db.patch(match._id, matchPatch);
+    }
+
+    // 2. Upsert de estatísticas na tabela matchStatistics
+    let updatedStats = false;
+    if (args.statistics) {
+      const s = args.statistics;
+      const statsPayload = {
+        matchId: match._id,
+        homePossession: s.homePossession ?? s.possession?.home ?? 50,
+        awayPossession: s.awayPossession ?? s.possession?.away ?? 50,
+        homeShotsOnTarget: s.homeShotsOnTarget ?? s.shotsOnTarget?.home ?? 0,
+        awayShotsOnTarget: s.awayShotsOnTarget ?? s.shotsOnTarget?.away ?? 0,
+        homeTotalShots: s.homeTotalShots ?? s.shotsTotal?.home ?? 0,
+        awayTotalShots: s.awayTotalShots ?? s.shotsTotal?.away ?? 0,
+        homeCorners: s.homeCorners ?? s.corners?.home ?? 0,
+        awayCorners: s.awayCorners ?? s.corners?.away ?? 0,
+        homeFouls: s.homeFouls ?? s.fouls?.home ?? 0,
+        awayFouls: s.awayFouls ?? s.fouls?.away ?? 0,
+        homePasses: s.homePasses ?? s.passes?.home,
+        awayPasses: s.awayPasses ?? s.passes?.away,
+        homeYellowCards: s.homeYellowCards,
+        awayYellowCards: s.awayYellowCards,
+        homeRedCards: s.homeRedCards,
+        awayRedCards: s.awayRedCards,
+      };
+
+      const existingStats = await ctx.db
+        .query("matchStatistics")
+        .withIndex("by_match", (q) => q.eq("matchId", match._id))
+        .first();
+
+      if (existingStats) {
+        await ctx.db.patch(existingStats._id, statsPayload);
+      } else {
+        await ctx.db.insert("matchStatistics", statsPayload);
+      }
+      updatedStats = true;
+    }
+
+    // 3. Sincronização de eventos na tabela matchEvents (evitando duplicidades)
+    let insertedEventsCount = 0;
+    if (args.events && args.events.length > 0) {
+      const existingEvents = await ctx.db
+        .query("matchEvents")
+        .withIndex("by_match", (q) => q.eq("matchId", match._id))
+        .collect();
+
+      for (const ev of args.events) {
+        let normType: "GOAL" | "YELLOW_CARD" | "RED_CARD" | "SUBSTITUTION" | "VAR" = "VAR";
+        const rawType = ev.type?.toUpperCase() || "";
+        if (rawType.includes("GOAL")) normType = "GOAL";
+        else if (rawType.includes("RED") || rawType === "RED_CARD") normType = "RED_CARD";
+        else if (rawType.includes("YELLOW") || rawType === "YELLOW_CARD") normType = "YELLOW_CARD";
+        else if (rawType.includes("SUB")) normType = "SUBSTITUTION";
+        else if (rawType.includes("VAR")) normType = "VAR";
+
+        const playerName = (ev.playerName || ev.text || "Jogador").trim();
+        const teamId = ev.teamId ?? (ev.isHome === false ? match.awayTeamId : match.homeTeamId);
+        const extraMinute = ev.extraMinute ?? (ev.extraTime ? Number(ev.extraTime) : undefined);
+
+        const isDuplicate = existingEvents.some(
+          (ex) =>
+            ex.minute === ev.minute &&
+            ex.type === normType &&
+            ex.teamId === teamId &&
+            ex.playerName.toLowerCase() === playerName.toLowerCase()
+        );
+
+        if (!isDuplicate) {
+          await ctx.db.insert("matchEvents", {
+            matchId: match._id,
+            minute: ev.minute,
+            extraMinute,
+            teamId,
+            playerName,
+            assistPlayerName: ev.assistPlayerName,
+            type: normType,
+            detail: ev.detail || (normType === "GOAL" && ev.text?.toLowerCase().includes("pen") ? "Pênalti" : undefined),
+          });
+          insertedEventsCount++;
+        }
+      }
+    }
+
+    return {
+      matchId: match._id,
+      updatedStats,
+      insertedEventsCount,
+    };
   },
 });
