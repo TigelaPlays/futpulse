@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { resolveTeamByAlias } from "./teamAliases";
+import { resolveStadiumByAlias } from "./stadiumAliases";
 
 /**
  * 1. Gera URL segura de upload direto para o Convex File Storage.
@@ -103,6 +104,7 @@ export const linkLeagueLogo = mutation({
 
 /**
  * 4. Vincula a foto panorâmica enviada ao Estádio.
+ * Atualiza atomicamente os campos storageId, image e imageUrl.
  */
 export const linkStadiumImage = mutation({
   args: {
@@ -121,9 +123,14 @@ export const linkStadiumImage = mutation({
       stadium = await ctx.db.get(args.stadiumId);
     } else if (args.stadiumName) {
       const allStadiums = await ctx.db.query("stadiums").collect();
-      stadium = allStadiums.find(
-        (s) => s.name.toLowerCase() === args.stadiumName!.toLowerCase()
-      );
+      const resolved = resolveStadiumByAlias(args.stadiumName, allStadiums);
+      if (resolved) {
+        stadium = resolved.stadium;
+      } else {
+        stadium = allStadiums.find(
+          (s) => s.name.toLowerCase() === args.stadiumName!.toLowerCase()
+        );
+      }
     }
 
     if (!stadium) {
@@ -132,6 +139,8 @@ export const linkStadiumImage = mutation({
 
     await ctx.db.patch(stadium._id, {
       imageUrl: url,
+      image: url,
+      storageId: args.storageId,
       customImageStorageId: args.storageId,
     });
 
@@ -145,7 +154,65 @@ export const linkStadiumImage = mutation({
 });
 
 /**
- * 5. Lista todos os alvos elegíveis para upload (Times, Ligas, Estádios) e o status atual de logo customizado.
+ * 5. Garante que todos os estádios dos mandantes da Série A estejam cadastrados no banco.
+ */
+export const ensureSerieAStadiums = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const defaultStadiums = [
+      { name: "Arena MRV", city: "Belo Horizonte (MG)", teamName: "Atlético-MG" },
+      { name: "Couto Pereira", city: "Curitiba (PR)", teamName: "Coritiba" },
+      { name: "Beira-Rio", city: "Porto Alegre (RS)", teamName: "Internacional" },
+      { name: "Barradão", city: "Salvador (BA)", teamName: "Vitória" },
+      { name: "Maracanã", city: "Rio de Janeiro (RJ)", teamName: "Fluminense" },
+      { name: "Arena Condá", city: "Chapecó (SC)", teamName: "Chapecoense" },
+      { name: "Neo Química Arena", city: "São Paulo (SP)", teamName: "Corinthians" },
+      { name: "MorumBIS", city: "São Paulo (SP)", teamName: "São Paulo" },
+      { name: "Maião", city: "Mirassol (SP)", teamName: "Mirassol" },
+      { name: "Nilton Santos (Engenhão)", city: "Rio de Janeiro (RJ)", teamName: "Botafogo" },
+      { name: "Allianz Parque", city: "São Paulo (SP)", teamName: "Palmeiras" },
+      { name: "Vila Belmiro", city: "Santos (SP)", teamName: "Santos" },
+      { name: "Mineirão", city: "Belo Horizonte (MG)", teamName: "Cruzeiro" },
+      { name: "Arena do Grêmio", city: "Porto Alegre (RS)", teamName: "Grêmio" },
+      { name: "Arena da Baixada", city: "Curitiba (PR)", teamName: "Athletico" },
+      { name: "Arena Fonte Nova", city: "Salvador (BA)", teamName: "Bahia" },
+      { name: "São Januário", city: "Rio de Janeiro (RJ)", teamName: "Vasco" },
+      { name: "Cícero de Souza Marques", city: "Bragança Paulista (SP)", teamName: "RB Bragantino" },
+      { name: "Mangueirão", city: "Belém (PA)", teamName: "Remo" },
+    ];
+
+    const allTeams = await ctx.db.query("teams").collect();
+    const allStadiums = await ctx.db.query("stadiums").collect();
+
+    let createdCount = 0;
+
+    for (const item of defaultStadiums) {
+      const resolved = resolveStadiumByAlias(item.name, allStadiums);
+      if (!resolved) {
+        // Encontra o clube correspondente
+        const resolvedTeam = resolveTeamByAlias(item.teamName, allTeams);
+        const newId = await ctx.db.insert("stadiums", {
+          name: item.name,
+          city: item.city,
+          imageUrl: `https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80`,
+          teamId: resolvedTeam?.team._id,
+        });
+        const created = (await ctx.db.get(newId))!;
+        allStadiums.push(created);
+        createdCount++;
+      }
+    }
+
+    return {
+      success: true,
+      totalStadiums: allStadiums.length,
+      createdCount,
+    };
+  },
+});
+
+/**
+ * 6. Lista todos os alvos elegíveis para upload (Times, Ligas, Estádios) e o status atual de imagem customizada.
  */
 export const listUploadTargets = query({
   args: {},
@@ -177,9 +244,11 @@ export const listUploadTargets = query({
         name: s.name,
         city: s.city,
         imageUrl: s.imageUrl,
-        hasCustomImage: !!s.customImageStorageId,
-        storageId: s.customImageStorageId,
+        image: s.image || s.imageUrl,
+        hasCustomImage: !!(s.customImageStorageId || s.storageId),
+        storageId: s.storageId || s.customImageStorageId,
       })),
     };
   },
 });
+

@@ -36,7 +36,9 @@ export default defineSchema({
     city: v.string(),
     capacity: v.optional(v.number()),
     imageUrl: v.string(),
+    image: v.optional(v.string()),
     customImageStorageId: v.optional(v.id("_storage")),
+    storageId: v.optional(v.id("_storage")),
     teamId: v.optional(v.id("teams")),
   }).index("by_team", ["teamId"]),
 

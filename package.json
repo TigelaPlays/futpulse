@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "upload-assets": "node scripts/upload-assets.js",
     "upload:escudos": "node scripts/upload-team-logos.js",
+    "upload:estadios": "node scripts/upload-stadium-images.js",
     "sync:sofascore": "node scripts/sync-sofascore.js",
     "sync:batch": "node scripts/scrape-sofascore-batch.js",
     "worker": "node scripts/live-worker.js"
