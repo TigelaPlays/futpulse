@@ -10,15 +10,19 @@ const rootDir = path.resolve(__dirname, "..");
 
 // 1. Identificação do Endpoint Convex
 function getConvexUrl() {
-  if (process.env.CONVEX_URL) return process.env.CONVEX_URL.trim();
-  if (process.env.VITE_CONVEX_URL) return process.env.VITE_CONVEX_URL.trim();
+  if (process.env.CONVEX_URL && process.env.CONVEX_URL.trim() !== "") {
+    return process.env.CONVEX_URL.trim();
+  }
+  if (process.env.VITE_CONVEX_URL && process.env.VITE_CONVEX_URL.trim() !== "") {
+    return process.env.VITE_CONVEX_URL.trim();
+  }
 
   const envPath = path.join(rootDir, ".env.local");
   if (fs.existsSync(envPath)) {
     const content = fs.readFileSync(envPath, "utf-8");
     for (const line of content.split("\n")) {
       const match = line.match(/^(?:VITE_)?CONVEX_URL\s*=\s*(.+)$/);
-      if (match) return match[1].trim();
+      if (match && match[1].trim() !== "") return match[1].trim();
     }
   }
   return "https://kindly-hamster-661.convex.cloud";

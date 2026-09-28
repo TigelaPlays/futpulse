@@ -35,9 +35,9 @@ jobs:
 
       - name: Executar Sincronizador Sofascore
         env:
-          CONVEX_URL: ${{ secrets.CONVEX_URL || 'https://kindly-hamster-661.convex.cloud' }}
+          CONVEX_URL: ${{ secrets.CONVEX_URL }}
         run: |
-          if [ "${{ github.event.inputs.once }}" = "true" ]; then
+          if [ "${{ inputs.once }}" = "true" ]; then
             node scripts/cron-sync-sofascore.js --once
           else
             node scripts/cron-sync-sofascore.js
